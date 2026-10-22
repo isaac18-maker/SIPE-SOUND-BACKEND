@@ -3,9 +3,14 @@
 # de estos protocolos, no de Supabase: en la Fase 3 se agregan
 # implementaciones SQLAlchemy intercambiables (HU-B-301).
 # =========================================================
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from typing import Any, Protocol
 
 Fila = dict[str, Any]
+
+# Abre una unidad de trabajo (sesion con commit/rollback). Hoy: session_scope().
+AbrirSesion = Callable[[], AbstractContextManager[Any]]
 
 
 class LectorBloques(Protocol):
@@ -38,3 +43,12 @@ class RepositorioProgreso(Protocol):
 class LectorQuiz(Protocol):
     def preguntas_publicas(self, bloque_id: int) -> list[Fila]: ...
     def preguntas_con_respuesta(self, bloque_id: int) -> list[Fila]: ...
+
+
+class RepositorioPerfiles(Protocol):
+    """Opera dentro de la sesion que abre el servicio (unidad de trabajo)."""
+
+    def obtener(self, sesion: Any, usuario_id: str) -> Fila | None: ...
+    def obtener_para_actualizar(self, sesion: Any, usuario_id: str) -> Fila | None: ...
+    def contar_por_rol(self, sesion: Any, rol: str) -> int: ...
+    def actualizar_rol(self, sesion: Any, usuario_id: str, rol: str) -> Fila: ...

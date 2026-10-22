@@ -3,18 +3,15 @@
 # que devuelve la API REST de Supabase, para que cambiar de
 # implementacion no cambie las respuestas.
 # =========================================================
-from collections.abc import Callable
-from contextlib import AbstractContextManager
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import inspect
-from sqlalchemy.orm import Session
 
 from app.models.base import Base
-from app.repositories.base import Fila
+from app.repositories.base import AbrirSesion, Fila
 
-AbrirSesion = Callable[[], AbstractContextManager[Session]]
+__all__ = ["AbrirSesion", "a_fila", "formatear_fecha"]
 
 
 def formatear_fecha(valor: datetime) -> str:
