@@ -32,8 +32,9 @@ def main() -> int:
     parser.add_argument("--confirmar", action="store_true", help="obligatorio en produccion")
     args = parser.parse_args()
 
-    if get_settings().app_env == "production" and not args.confirmar:
-        print("APP_ENV=production: vuelve a ejecutar con --confirmar.")
+    motivo = get_settings().motivo_para_bloquear_operacion(confirmado=args.confirmar)
+    if motivo:
+        print(f"{motivo} En produccion, vuelve a ejecutar con --confirmar.")
         return 1
 
     with session_scope() as sesion:

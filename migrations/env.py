@@ -107,12 +107,14 @@ def _url_migraciones() -> str:
     return url
 
 
-# --- P4: produccion exige confirmacion explicita ---------------------------
+# --- P4: produccion exige confirmacion; una base remota exige APP_ENV coherente
 def _verificar_entorno() -> None:
-    if get_settings().app_env == "production" and _argumentos().get("confirmar") != "production":
+    confirmado = _argumentos().get("confirmar") == "production"
+    motivo = get_settings().motivo_para_bloquear_operacion(confirmado=confirmado)
+    if motivo:
         raise MigracionBloqueada(
-            "APP_ENV=production: agrega -x confirmar=production tras tomar el respaldo "
-            "(pg_dump) y revisar el SQL con --sql. No se abrio ninguna conexion."
+            f"{motivo} En produccion: toma el respaldo (scripts/respaldar_datos.py), revisa "
+            "el SQL con --sql y agrega -x confirmar=production. No se abrio ninguna conexion."
         )
 
 
