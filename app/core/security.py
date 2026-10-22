@@ -5,15 +5,15 @@
 # =========================================================
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache, wraps
 from typing import Any
 
 import jwt
-from flask import g, request
+from flask import Flask, current_app, g, request
 
 from app.core.config import get_settings
-from app.core.errors import NoAutenticado
+from app.core.errors import NoAutenticado, SinPermiso
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,11 @@ ALGORITMO_SECRETO = "HS256"
 TOLERANCIA_RELOJ_SEGUNDOS = 10
 MENSAJE_FALTA_AUTENTICACION = "Falta el token de autenticacion"
 MENSAJE_SESION_INVALIDA = "Token invalido o expirado"
+MENSAJE_SIN_PERMISO = "No tienes permiso para esta sección."
+CLAVE_PROVEEDOR_ROL = "sipe.proveedor_rol"
+
+# Dado un id de usuario, devuelve su rol (o None si no tiene perfil).
+ProveedorRol = Callable[[str], str | None]
 
 
 @dataclass(frozen=True)
@@ -31,6 +36,7 @@ class CurrentUser:
     id: str
     email: str | None
     token: str
+    rol: str | None = None  # se carga desde profiles solo cuando la ruta exige roles
 
 
 def auth_required(f: Callable) -> Callable:
@@ -46,12 +52,25 @@ def auth_required(f: Callable) -> Callable:
     return decorador
 
 
-def roles_required(*roles: str) -> Callable:  # noqa: ARG001 - se usa en HU-B-304
-    """Por ahora solo exige autenticacion.
-    TODO(HU-B-304): cargar el rol desde profiles y responder 403 si no esta en `roles`."""
+def configurar_proveedor_rol(app: Flask, proveedor: ProveedorRol) -> None:
+    """Se llama en create_app: core no conoce los servicios (regla de capas)."""
+    app.extensions[CLAVE_PROVEEDOR_ROL] = proveedor
+
+
+def roles_required(*roles: str) -> Callable:
+    """Exige un usuario autenticado cuyo rol (leido de profiles) este en `roles`."""
 
     def decorador(f: Callable) -> Callable:
-        return auth_required(f)
+        @wraps(f)
+        def verificar_rol(*args, **kwargs):
+            usuario = get_current_user()
+            rol = current_app.extensions[CLAVE_PROVEEDOR_ROL](usuario.id)
+            if rol not in roles:
+                raise SinPermiso(MENSAJE_SIN_PERMISO)
+            g.current_user = replace(usuario, rol=rol)
+            return f(*args, **kwargs)
+
+        return auth_required(verificar_rol)
 
     return decorador
 
