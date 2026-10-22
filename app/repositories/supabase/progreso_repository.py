@@ -1,9 +1,13 @@
 # =========================================================
 # Progreso del usuario via REST con su propio token (RLS).
 # =========================================================
+import logging
+
 from app.core.errors import ErrorProveedor
 from app.infrastructure.supabase_rest import supabase_rest
 from app.repositories.base import Fila
+
+logger = logging.getLogger(__name__)
 
 CONFLICTO_UPSERT = "usuario_id,tipo,contenido_id"
 
@@ -33,6 +37,8 @@ class SupabaseProgresoRepository:
 def _ejecutar(metodo: str, token: str, **kwargs) -> list[Fila]:
     respuesta = supabase_rest(metodo, "progreso", token, **kwargs)
     if respuesta.status_code >= 400:  # noqa: PLR2004 - rango de errores HTTP
-        # TODO(HU-B-204): no reenviar el texto del proveedor al cliente.
-        raise ErrorProveedor(respuesta.text, status=respuesta.status_code)
+        logger.error(
+            "PostgREST %s progreso respondio %s: %s", metodo, respuesta.status_code, respuesta.text
+        )
+        raise ErrorProveedor
     return respuesta.json()

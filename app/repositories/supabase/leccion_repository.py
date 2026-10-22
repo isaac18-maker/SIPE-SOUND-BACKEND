@@ -8,10 +8,9 @@ class SupabaseLeccionRepository:
         return get_supabase().table("lecciones").select("*").order("numero").execute().data
 
     def obtener(self, leccion_id: int) -> Fila | None:
-        # .single() lanza una excepcion si no hay filas (hoy responde 500).
-        # TODO(HU-B-204): usar maybe_single() para devolver None y responder 404.
         consulta = get_supabase().table("lecciones").select("*").eq("id", leccion_id)
-        return consulta.single().execute().data
+        respuesta = consulta.maybe_single().execute()
+        return respuesta.data if respuesta else None
 
     def existe(self, contenido_id: int) -> bool:
         return existe_id("lecciones", contenido_id)
