@@ -1,8 +1,8 @@
-from flask import Blueprint, g, request
+from flask import Blueprint, request
 
 from app.container import quiz_service
 from app.core.responses import ok
-from app.core.security import auth_required
+from app.core.security import auth_required, get_current_user
 from app.schemas.quiz import VerificarQuizIn
 
 bp = Blueprint("quiz", __name__)
@@ -18,5 +18,6 @@ def obtener_quiz(bloque_id: int):
 @auth_required
 def verificar_quiz(bloque_id: int):
     entrada = VerificarQuizIn.model_validate(request.get_json(silent=True) or {})
-    resultado = quiz_service().verificar(bloque_id, entrada.respuestas, g.user_id, g.token)
+    usuario = get_current_user()
+    resultado = quiz_service().verificar(bloque_id, entrada.respuestas, usuario.id, usuario.token)
     return ok(resultado)

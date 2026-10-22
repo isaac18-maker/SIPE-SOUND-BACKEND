@@ -4,9 +4,9 @@
 # no arranca y el error nombra la variable.
 # =========================================================
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Self
 
-from pydantic import AliasChoices, Field, ValidationError, field_validator
+from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -20,10 +20,11 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:5173"]
     )
     supabase_url: str
-    # TODO(HU-B-205): retirar el alias SUPABASE_KEY cuando todos los .env usen SUPABASE_ANON_KEY
-    supabase_anon_key: str = Field(
-        validation_alias=AliasChoices("SUPABASE_ANON_KEY", "SUPABASE_KEY")
-    )
+    supabase_anon_key: str
+    # Verificacion del JWT: JWKS para claves asimetricas (ES256/RS256) o
+    # secreto compartido para proyectos con la clave HS256 heredada.
+    supabase_jwks_url: str | None = None
+    supabase_jwt_secret: SecretStr | None = None
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -32,6 +33,16 @@ class Settings(BaseSettings):
         if isinstance(valor, str):
             return [origen.strip() for origen in valor.split(",") if origen.strip()]
         return valor
+
+    @model_validator(mode="after")
+    def exigir_verificacion_jwt(self) -> Self:
+        if not self.supabase_jwks_url and not self.supabase_jwt_secret:
+            raise ValueError("define SUPABASE_JWKS_URL o SUPABASE_JWT_SECRET")
+        return self
+
+    @property
+    def emisor_jwt(self) -> str:
+        return f"{self.supabase_url.rstrip('/')}/auth/v1"
 
 
 class ConfiguracionInvalida(RuntimeError):
@@ -44,8 +55,10 @@ def get_settings() -> Settings:
         return Settings()
     except ValidationError as error:
         # El mensaje de Pydantic copia el entorno completo (secretos incluidos):
-        # solo se reportan los nombres de las variables.
-        campos = sorted({str(e["loc"][0]).upper() for e in error.errors()})
+        # solo se reportan los nombres de las variables o la regla incumplida.
+        problemas = sorted(
+            str(e["loc"][0]).upper() if e["loc"] else e["msg"] for e in error.errors()
+        )
         raise ConfiguracionInvalida(
-            "Faltan o son invalidas estas variables de entorno: " + ", ".join(campos)
+            "Configuracion invalida. Revisa estas variables de entorno: " + "; ".join(problemas)
         ) from None
