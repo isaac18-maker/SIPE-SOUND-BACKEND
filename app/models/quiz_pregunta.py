@@ -1,4 +1,11 @@
-from sqlalchemy import ARRAY, ForeignKeyConstraint, Integer, PrimaryKeyConstraint, Text
+from sqlalchemy import (
+    ARRAY,
+    CheckConstraint,
+    ForeignKeyConstraint,
+    Integer,
+    PrimaryKeyConstraint,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, CreadoEnMixin, existente
@@ -15,6 +22,10 @@ class QuizPregunta(CreadoEnMixin, Base):
             ["bloques.id"],
             ondelete="CASCADE",
             name=existente("quiz_preguntas_bloque_id_fkey"),
+        ),
+        CheckConstraint(
+            "respuesta_correcta >= 0 AND respuesta_correcta < cardinality(opciones)",
+            name="respuesta_en_rango",
         ),
     )
 

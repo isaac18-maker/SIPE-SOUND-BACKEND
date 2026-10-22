@@ -43,6 +43,6 @@ class Leccion(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
     temas: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
     contenido: Mapped[str | None] = mapped_column(Text)
     # Una leccion pertenece a su bloque: si se borra el bloque, se borran sus lecciones.
-    bloque_id: Mapped[int | None] = mapped_column(
+    bloque_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("bloques.id", ondelete="CASCADE"), index=True
     )
