@@ -30,8 +30,8 @@ uv run alembic check
 |---|---|---|
 | P1 | Solo se gestiona `public`; `auth`, `storage`, `realtime`… se ignoran | `env.py` (`incluir_nombre`, `incluir_objeto`) |
 | P2 | Autogenerate aborta ante `DropTable`, `DropColumn`, `DropConstraint`, `DropIndex` o cambio de tipo, salvo `-x allow_destructive=true` | `env.py` (`bloquear_destructivas`) |
-| P3 | En `upgrade()`, cada `op.drop_*` u `op.execute` con DROP/TRUNCATE/DELETE necesita `# destructivo-aprobado: HU-B-NNN` en la misma línea o en la anterior | `scripts/check_migrations.py` |
-| P4 | Con `APP_ENV=production` se exige `-x confirmar=production` antes de abrir la conexión | `env.py` |
+| P3 | En `upgrade()` y en las funciones que llama, cada `op.drop_*` u `op.execute` con una sentencia DROP/TRUNCATE/DELETE (también si el SQL viene de constantes, bucles, `.format()` o f-strings) necesita `# destructivo-aprobado: HU-B-NNN` en la misma línea o en la anterior | `scripts/check_migrations.py` |
+| P4 | Con `APP_ENV=production` se exige `-x confirmar=production`; con `APP_ENV=local` y una base remota se bloquea. Todo antes de abrir la conexión | `env.py` |
 | P5 | `lock_timeout = 5s` y `statement_timeout = 60s` en la sesión | `env.py` |
 | P6 | Una transacción por revisión | `env.py` |
 | P7 | Se comparan tipos y defaults | `env.py` |
@@ -45,9 +45,9 @@ Además, la cabecera de cada revisión debe tener `HU:` y `Tipo:`, y `downgrade(
 ## P10 · Antes de migrar producción
 
 ```bash
-# 1. Respaldo del esquema y los datos de public (requiere pg_dump >= 17)
-pg_dump "$DATABASE_URL" --schema=public -Fc -f respaldo_$(date +%Y%m%d_%H%M).dump
-pg_restore --list respaldo_*.dump | head      # el respaldo se puede leer
+# 1. Respaldo de los datos de public (JSON, solo lectura, foto consistente)
+uv run python -m scripts.respaldar_datos     # respaldos/<fecha>/ + manifiesto.json
+#    Alternativa si hay pg_dump >= 17: pg_dump "$DATABASE_URL" --schema=public -Fc -f respaldo.dump
 
 # 2. Revisar el SQL exacto que se ejecutará
 uv run alembic upgrade head --sql > revisar.sql

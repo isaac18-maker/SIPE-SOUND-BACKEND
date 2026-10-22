@@ -98,13 +98,13 @@ Se implementa en HU-B-302. Cada punto es obligatorio.
 | P1 | **No tocar esquemas de Supabase** (`auth`, `storage`, `realtime`, `extensions`, `graphql`, `vault`, `supabase_*`). Sin esto, `--autogenerate` intenta **borrar** sus tablas. | `include_name` en `env.py`: solo `schema in (None, "public")`; `include_schemas=False`. |
 | P2 | **Bloqueo de operaciones destructivas en autogenerate.** | `process_revision_directives` recorre las operaciones; si encuentra `DropTable`, `DropColumn`, `DropConstraint` o cambio de tipo, aborta salvo `-x allow_destructive=true`. |
 | P3 | **Marca de aprobación en el archivo.** | `scripts/check_migrations.py` falla si el `upgrade()` de una revisión contiene `op.drop_*` u `op.execute("DELETE…/TRUNCATE…/DROP…")` sin el comentario `# destructivo-aprobado: HU-B-XXX` en la misma línea o en la anterior. `downgrade()` no se marca: siempre revierte lo que creó su `upgrade` y solo se ejecuta a propósito. Se ejecuta en CI y pre-commit. |
-| P4 | **Confirmación explícita en producción.** | Si `APP_ENV=production`, `env.py` exige `-x confirmar=production`; si no, aborta antes de conectar. |
+| P4 | **Confirmación explícita en producción.** | Si `APP_ENV=production`, `env.py` exige `-x confirmar=production`; si `APP_ENV=local` y `DATABASE_URL` es remota, bloquea (configuración incoherente). Aborta antes de conectar. `APP_ENV` solo admite `local`, `staging`, `production`. |
 | P5 | **Timeouts** para no bloquear tablas en horas de clase. | Al inicio de cada transacción: `SET lock_timeout = '5s'; SET statement_timeout = '60s';` |
 | P6 | **Una transacción por revisión.** | `context.configure(transaction_per_migration=True)`. |
 | P7 | **Detección de tipos y defaults.** | `compare_type=True`, `compare_server_default=True`. |
 | P8 | **Conexión correcta.** | Una sola variable, `DATABASE_URL`, compartida por la app y Alembic: **Session pooler** de Supabase (puerto 5432, IPv4) o conexión directa. Nunca el *Transaction pooler* (6543), que rompe DDL y *prepared statements*: `env.py` lo rechaza. |
 | P9 | **Una sola head.** | `check_migrations.py` verifica `alembic heads` = 1. |
-| P10 | **Respaldo previo en producción.** | Procedimiento documentado: `pg_dump --schema=public -Fc` antes de `upgrade`, y revisión del SQL con `alembic upgrade head --sql`. |
+| P10 | **Respaldo previo en producción.** | `uv run python -m scripts.respaldar_datos` (o `pg_dump` ≥ 17) antes de `upgrade`, y revisión del SQL con `alembic upgrade head --sql`. |
 | P11 | **Objetos que autogenerate no ve** (funciones, triggers, políticas RLS, extensiones). | Se escriben a mano con `op.execute()` y su reverso en `downgrade()`. |
 
 ## 6. Plantilla `script.py.mako` (cabecera obligatoria)
