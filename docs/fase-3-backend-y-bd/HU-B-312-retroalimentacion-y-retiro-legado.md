@@ -26,7 +26,7 @@
    - `drop column duracion` en `lecciones` y `ejercicios`.
    - Cabecera `Destructiva: si` y `# destructivo-aprobado: HU-B-312` en cada operación.
    - `downgrade()` recrea las estructuras (vacías) y documenta que los datos se restauran desde el respaldo.
-4. Eliminar `app/infrastructure/supabase_rest.py`, repositorios `supabase/` y `DATA_BACKEND`.
+4. ~~Eliminar `app/infrastructure/supabase_rest.py`, repositorios `supabase/` y `DATA_BACKEND`.~~ **Hecho en HU-B-315.**
 
 ## Prompt de ejecución
 ```text
