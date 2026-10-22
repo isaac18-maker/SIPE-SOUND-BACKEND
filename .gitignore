@@ -1,4 +1,24 @@
-.venv/
-__pycache__/
+# Entorno y secretos
 .env
+.env.*
+!.env.example
+
+# Entornos virtuales
+venv/
+.venv/
+
+# Python
+__pycache__/
 *.pyc
+.ruff_cache/
+
+# SonarQube
+.scannerwork/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
