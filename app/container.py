@@ -15,6 +15,7 @@ from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
 from app.repositories.sqlalchemy.ejercicio_repository import SqlEjercicioRepository
 from app.repositories.sqlalchemy.leccion_repository import SqlLeccionRepository
 from app.repositories.sqlalchemy.perfil_repository import SqlPerfilRepository
+from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
 from app.repositories.supabase.acorde_repository import SupabaseAcordeRepository
 from app.repositories.supabase.bloque_repository import SupabaseBloqueRepository
 from app.repositories.supabase.ejercicio_repository import SupabaseEjercicioRepository
@@ -72,11 +73,14 @@ def acorde_service() -> AcordeService:
 
 @lru_cache
 def progreso_service() -> ProgresoService:
-    # El progreso sigue en Supabase REST: usa el token del estudiante para RLS (HU-B-305).
+    # Lecciones y ejercicios por SQL (tablas con FK). Los bloques siguen en la tabla
+    # `progreso` via Supabase REST con el token del estudiante hasta HU-B-308.
     return ProgresoService(
-        SupabaseProgresoRepository(),
-        lecciones=_repo_lecciones(),
-        ejercicios=_repo_ejercicios(),
+        session_scope,
+        SqlProgresoRepository(),
+        progreso_bloques=SupabaseProgresoRepository(),
+        lecciones=SqlLeccionRepository(session_scope),
+        ejercicios=SqlEjercicioRepository(session_scope),
     )
 
 
