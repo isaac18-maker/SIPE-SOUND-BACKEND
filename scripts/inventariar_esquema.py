@@ -4,7 +4,7 @@ Alternativa a `pg_dump --schema-only` cuando no esta instalado: lee el catalogo 
 PostgreSQL y escribe la definicion exacta de cada objeto (las restricciones, indices,
 funciones y triggers salen de pg_get_*def, es decir, el mismo SQL que usaria pg_dump).
 
-Uso (la conexion DIRECTA de Supabase, puerto 5432, en DATABASE_URL_MIGRATIONS del .env):
+Uso (DATABASE_URL del .env: Session pooler o conexion directa):
 
     uv run --with "psycopg[binary]" python scripts/inventariar_esquema.py
 
@@ -92,11 +92,9 @@ order by evtname
 
 
 def url_conexion() -> str:
-    url = os.environ.get("DATABASE_URL_MIGRATIONS") or dotenv_values(".env").get(
-        "DATABASE_URL_MIGRATIONS"
-    )
+    url = os.environ.get("DATABASE_URL") or dotenv_values(".env").get("DATABASE_URL")
     if not url:
-        sys.exit("Falta DATABASE_URL_MIGRATIONS (conexion directa de Supabase, puerto 5432).")
+        sys.exit("Falta DATABASE_URL (Session pooler de Supabase).")
     return url
 
 

@@ -4,8 +4,8 @@ Reglas completas: [`docs/fase-1-contrato/05-contrato-base-datos.md`](../docs/fas
 Todo cambio de esquema pasa por aquí. **Nunca** se modifica la base desde el SQL Editor de Supabase.
 
 ## Requisito
-`DATABASE_URL_MIGRATIONS` en el `.env`: conexión **directa** de Supabase (puerto 5432).
-Nunca el *transaction pooler* (6543): rompe el DDL.
+`DATABASE_URL` en el `.env`: **Session pooler** de Supabase (puerto 5432), la misma que usa la app.
+Nunca el *Transaction pooler* (6543): rompe el DDL y `env.py` lo rechaza.
 
 ## Día a día
 
@@ -35,7 +35,7 @@ uv run alembic check
 | P5 | `lock_timeout = 5s` y `statement_timeout = 60s` en la sesión | `env.py` |
 | P6 | Una transacción por revisión | `env.py` |
 | P7 | Se comparan tipos y defaults | `env.py` |
-| P8 | La URL sale de `DATABASE_URL_MIGRATIONS`, nunca de `alembic.ini` | `env.py` |
+| P8 | La URL sale de `DATABASE_URL` (nunca de `alembic.ini`) y no puede ser el Transaction pooler | `env.py` |
 | P9 | Una sola head | `scripts/check_migrations.py` |
 | P10 | Respaldo y revisión del SQL antes de producción | Procedimiento abajo |
 | P11 | Objetos que autogenerate no ve | Regla abajo |
@@ -46,7 +46,7 @@ Además, la cabecera de cada revisión debe tener `HU:` y `Tipo:`, y `downgrade(
 
 ```bash
 # 1. Respaldo del esquema y los datos de public (requiere pg_dump >= 17)
-pg_dump "$DATABASE_URL_MIGRATIONS" --schema=public -Fc -f respaldo_$(date +%Y%m%d_%H%M).dump
+pg_dump "$DATABASE_URL" --schema=public -Fc -f respaldo_$(date +%Y%m%d_%H%M).dump
 pg_restore --list respaldo_*.dump | head      # el respaldo se puede leer
 
 # 2. Revisar el SQL exacto que se ejecutará
