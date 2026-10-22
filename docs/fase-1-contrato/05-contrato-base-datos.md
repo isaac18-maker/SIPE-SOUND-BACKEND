@@ -97,7 +97,7 @@ Se implementa en HU-B-302. Cada punto es obligatorio.
 |---|---|---|
 | P1 | **No tocar esquemas de Supabase** (`auth`, `storage`, `realtime`, `extensions`, `graphql`, `vault`, `supabase_*`). Sin esto, `--autogenerate` intenta **borrar** sus tablas. | `include_name` en `env.py`: solo `schema in (None, "public")`; `include_schemas=False`. |
 | P2 | **Bloqueo de operaciones destructivas en autogenerate.** | `process_revision_directives` recorre las operaciones; si encuentra `DropTable`, `DropColumn`, `DropConstraint` o cambio de tipo, aborta salvo `-x allow_destructive=true`. |
-| P3 | **Marca de aprobación en el archivo.** | `scripts/check_migrations.py` falla si una revisión contiene `op.drop_*`, `op.execute("DELETE…/TRUNCATE…/DROP…")` sin el comentario `# destructivo-aprobado: HU-B-XXX`. Se ejecuta en CI y pre-commit. |
+| P3 | **Marca de aprobación en el archivo.** | `scripts/check_migrations.py` falla si el `upgrade()` de una revisión contiene `op.drop_*` u `op.execute("DELETE…/TRUNCATE…/DROP…")` sin el comentario `# destructivo-aprobado: HU-B-XXX` en la misma línea o en la anterior. `downgrade()` no se marca: siempre revierte lo que creó su `upgrade` y solo se ejecuta a propósito. Se ejecuta en CI y pre-commit. |
 | P4 | **Confirmación explícita en producción.** | Si `APP_ENV=production`, `env.py` exige `-x confirmar=production`; si no, aborta antes de conectar. |
 | P5 | **Timeouts** para no bloquear tablas en horas de clase. | Al inicio de cada transacción: `SET lock_timeout = '5s'; SET statement_timeout = '60s';` |
 | P6 | **Una transacción por revisión.** | `context.configure(transaction_per_migration=True)`. |
