@@ -12,8 +12,7 @@ bp = Blueprint("progreso", __name__)
 @bp.get("/progreso")
 @auth_required
 def listar_progreso():
-    usuario = get_current_user()
-    return ok(progreso_service().listar(usuario.id, usuario.token))
+    return ok(progreso_service().listar(get_current_user()))
 
 
 @bp.post("/progreso")
@@ -23,5 +22,4 @@ def guardar_progreso():
     if not datos:
         raise ValidacionError("Cuerpo de la peticion vacio o invalido")
     entrada = ProgresoCreate.model_validate(datos)
-    usuario = get_current_user()
-    return ok(progreso_service().guardar(usuario.id, usuario.token, entrada))
+    return ok(progreso_service().guardar(get_current_user(), entrada))
