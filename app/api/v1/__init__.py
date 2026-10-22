@@ -4,6 +4,7 @@ from app.api.v1 import (
     acordes,
     admin,
     bloques,
+    cursos,
     ejercicios,
     health,
     lecciones,
@@ -12,6 +13,7 @@ from app.api.v1 import (
     progreso_contenido,
     quiz,
 )
+from app.core.limites import configurar_limites
 from app.core.responses import PREFIJO_V1
 
 # TODO(HU-B-312): retirar el prefijo legado cuando el frontend use solo /api/v1.
@@ -19,10 +21,11 @@ PREFIJO_LEGADO = "/api"
 
 BLUEPRINTS = (health, bloques, lecciones, ejercicios, acordes, progreso, quiz)
 # Endpoints nuevos: solo existen bajo /api/v1 (el prefijo legado no crece).
-BLUEPRINTS_SOLO_V1 = (me, admin, progreso_contenido)
+BLUEPRINTS_SOLO_V1 = (me, admin, progreso_contenido, cursos)
 
 
 def register_blueprints(app: Flask) -> None:
+    configurar_limites(app)
     for modulo in BLUEPRINTS:
         app.register_blueprint(modulo.bp, url_prefix=PREFIJO_V1)
         app.register_blueprint(
