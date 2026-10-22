@@ -22,7 +22,11 @@ CARPETA = Path("migrations/versions")
 PATRON_HU = re.compile(r"^HU:\s*HU-[BF]-\d{3}\s*$", re.MULTILINE)
 PATRON_TIPO = re.compile(r"^Tipo:\s*(esquema|datos)\s*$", re.MULTILINE)
 PATRON_MARCA = re.compile(r"#\s*destructivo-aprobado:\s*HU-[BF]-\d{3}")
-PATRON_SQL_DESTRUCTIVO = re.compile(r"\b(DROP|TRUNCATE|DELETE)\b", re.IGNORECASE)
+# Sentencias que EMPIEZAN por DROP/TRUNCATE/DELETE (al inicio o tras ";"). Asi
+# "revoke truncate on ..." (quitar un permiso) no cuenta como destructivo.
+PATRON_SQL_DESTRUCTIVO = re.compile(
+    r"(?:^|;)\s*(?:DROP|TRUNCATE|DELETE)\b", re.IGNORECASE | re.MULTILINE
+)
 
 
 def _funcion(arbol: ast.Module, nombre: str) -> ast.FunctionDef | None:
@@ -41,7 +45,50 @@ def _es_vacia(funcion: ast.FunctionDef) -> bool:
     return not utiles
 
 
-def _es_destructiva(llamada: ast.Call) -> bool:
+def _literales(nodo: ast.AST) -> list[str]:
+    """Textos de una constante de modulo: "…", ("…", "…") o ["…"]."""
+    if isinstance(nodo, ast.Constant) and isinstance(nodo.value, str):
+        return [nodo.value]
+    if isinstance(nodo, ast.Tuple | ast.List):
+        return [texto for elemento in nodo.elts for texto in _literales(elemento)]
+    return []
+
+
+def _constantes(arbol: ast.Module) -> dict[str, list[str]]:
+    constantes = {}
+    for nodo in arbol.body:
+        if isinstance(nodo, ast.Assign) and len(nodo.targets) == 1:
+            destino = nodo.targets[0]
+            if isinstance(destino, ast.Name) and (textos := _literales(nodo.value)):
+                constantes[destino.id] = textos
+    return constantes
+
+
+def _textos_sql(nodo: ast.AST, contexto: dict) -> list[str]:
+    """SQL posible de un argumento de op.execute, resolviendo constantes del modulo,
+    variables de bucle, .format() y f-strings (los valores interpolados valen "x")."""
+    if isinstance(nodo, ast.Name):
+        iterable = contexto["bucles"].get(nodo.id)
+        if iterable is not None:
+            return _textos_sql(iterable, contexto)
+        return contexto["constantes"].get(nodo.id, [])
+    if isinstance(nodo, ast.Tuple | ast.List):
+        return [texto for elemento in nodo.elts for texto in _textos_sql(elemento, contexto)]
+    es_format = isinstance(nodo, ast.Call) and isinstance(nodo.func, ast.Attribute)
+    if es_format and nodo.func.attr == "format":
+        return _textos_sql(nodo.func.value, contexto)
+    return [_texto_directo(nodo)]
+
+
+def _texto_directo(nodo: ast.AST) -> str:
+    if isinstance(nodo, ast.Constant) and isinstance(nodo.value, str):
+        return nodo.value
+    if isinstance(nodo, ast.JoinedStr):
+        return "".join(v.value if isinstance(v, ast.Constant) else "x" for v in nodo.values)
+    return ast.unparse(nodo)
+
+
+def _es_destructiva(llamada: ast.Call, contexto: dict) -> bool:
     funcion = llamada.func
     if not (
         isinstance(funcion, ast.Attribute)
@@ -52,9 +99,36 @@ def _es_destructiva(llamada: ast.Call) -> bool:
     if funcion.attr.startswith("drop_"):
         return True
     if funcion.attr == "execute" and llamada.args:
-        sql = ast.unparse(llamada.args[0])
-        return bool(PATRON_SQL_DESTRUCTIVO.search(sql))
+        textos = _textos_sql(llamada.args[0], contexto)
+        return any(PATRON_SQL_DESTRUCTIVO.search(texto) for texto in textos)
     return False
+
+
+def _alcanzables_desde_upgrade(arbol: ast.Module) -> list[ast.FunctionDef]:
+    """upgrade() y las funciones del modulo que llama (directa o indirectamente)."""
+    funciones = {n.name: n for n in arbol.body if isinstance(n, ast.FunctionDef)}
+    pendientes, vistas = ["upgrade"], []
+    while pendientes:
+        nombre = pendientes.pop()
+        if nombre not in funciones or funciones[nombre] in vistas or nombre == "downgrade":
+            continue
+        vistas.append(funciones[nombre])
+        pendientes += [
+            n.func.id
+            for n in ast.walk(funciones[nombre])
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+        ]
+    return vistas
+
+
+def _bucles(funciones: list[ast.FunctionDef]) -> dict[str, ast.AST]:
+    """Variable de bucle -> iterable (for sentencia in OCULTAR: op.execute(sentencia))."""
+    return {
+        n.target.id: n.iter
+        for funcion in funciones
+        for n in ast.walk(funcion)
+        if isinstance(n, ast.For) and isinstance(n.target, ast.Name)
+    }
 
 
 def _tiene_marca(lineas: list[str], llamada: ast.Call) -> bool:
@@ -77,13 +151,14 @@ def revisar(archivo: Path) -> list[str]:
     if downgrade is None or _es_vacia(downgrade):
         problemas.append("downgrade() esta vacio: debe revertir el upgrade")
 
-    upgrade = _funcion(arbol, "upgrade")
-    if upgrade is not None:
-        for nodo in ast.walk(upgrade):
+    funciones = _alcanzables_desde_upgrade(arbol)
+    contexto = {"constantes": _constantes(arbol), "bucles": _bucles(funciones)}
+    for funcion in funciones:
+        for nodo in ast.walk(funcion):
             es_call = isinstance(nodo, ast.Call)
-            if es_call and _es_destructiva(nodo) and not _tiene_marca(lineas, nodo):
+            if es_call and _es_destructiva(nodo, contexto) and not _tiene_marca(lineas, nodo):
                 problemas.append(
-                    f"linea {nodo.lineno}: operacion destructiva sin "
+                    f"linea {nodo.lineno} ({funcion.name}): operacion destructiva sin "
                     "'# destructivo-aprobado: HU-B-NNN'"
                 )
     return problemas

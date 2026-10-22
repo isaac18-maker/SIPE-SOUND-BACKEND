@@ -47,8 +47,12 @@ Indica en qué entorno corre el backend.
 
 | Valor | Efecto |
 |---|---|
-| `production` | Activa las protecciones: `alembic upgrade/downgrade/stamp/current/check` exigen `-x confirmar=production` y `scripts/promover_admin` exige `--confirmar`. |
-| `local`, `staging` u otro | Sin esas confirmaciones. |
+| `production` | Activa las protecciones: Alembic exige `-x confirmar=production` y `scripts.promover_admin` exige `--confirmar`. Además, `FLASK_DEBUG=1` o `SQLALCHEMY_ECHO=1` impiden arrancar. |
+| `staging` | Base de pruebas remota: sin confirmaciones. |
+| `local` | Base en tu computador. Si `DATABASE_URL` apunta a una base **remota**, Alembic y los scripts **se bloquean** hasta que corrijas `APP_ENV`. |
+
+Solo se aceptan esos tres valores (sin importar mayúsculas). Cualquier otro, como
+`produccion` o `prod`, impide arrancar y el error lista los valores válidos.
 
 > ⚠️ **Regla de oro:** si `DATABASE_URL` apunta a la base de producción, `APP_ENV`
 > debe ser `production` **aunque estés en tu computador**. La protección depende de
@@ -56,8 +60,7 @@ Indica en qué entorno corre el backend.
 > (la de producción), así que en la práctica tu `.env` local también lleva
 > `APP_ENV=production`.
 >
-> Se compara el texto exacto: `Production`, `produccion` o `prod` **no** activan la
-> protección.
+> Si lo olvidas, Alembic te avisa: `APP_ENV=local pero DATABASE_URL apunta a una base remota`.
 
 ### `FLASK_DEBUG`
 Solo lo usa el servidor de desarrollo (`uv run python run.py`).
@@ -72,7 +75,7 @@ Solo lo usa el servidor de desarrollo (`uv run python run.py`).
 > sino `wsgi.py` con un servidor WSGI (ver "Despliegue" abajo), que ignora esta variable.
 
 ### `LOG_LEVEL`
-Nivel mínimo de los mensajes del log: `DEBUG` < `INFO` < `WARNING` < `ERROR`.
+Nivel mínimo de los mensajes del log: `DEBUG` < `INFO` < `WARNING` < `ERROR` (solo esos valores).
 
 | Entorno | Recomendado | Por qué |
 |---|---|---|
@@ -89,7 +92,7 @@ frontend no está en la lista, el navegador bloquea las peticiones con un error 
   `https://app.sipesound.co,https://www.sipesound.co`
 - **Local:** `http://localhost:5173` (puerto de Vite). Si abres el frontend como
   `http://127.0.0.1:5173`, agrégalo también: es otro origen para el navegador.
-- **Producción:** solo el dominio público del frontend. **Nunca `*`.**
+- **Producción:** solo el dominio público del frontend. **Nunca `*`**: la app no arranca con `*` ni con orígenes sin `http://`/`https://`. La `/` final se elimina sola.
 
 ### `SUPABASE_URL`
 Dirección del proyecto de Supabase. El backend la usa para validar los tokens de
@@ -112,13 +115,19 @@ inicio de sesión: comprueba el emisor y descarga las claves públicas de
 Si es `1`, escribe en el log **cada sentencia SQL con sus valores**.
 
 - **Local:** `0`; `1` solo mientras depuras una consulta.
-- **Producción:** siempre `0`. Los valores pueden incluir datos de estudiantes y el volumen de log crece mucho.
+- **Producción:** siempre `0` (con `APP_ENV=production` la app no arranca si vale `1`). Los valores pueden incluir datos de estudiantes y el volumen de log crece mucho.
 
 ## Despliegue en producción
 
-- Arrancar con `wsgi.py` y un servidor WSGI (gunicorn en Linux, waitress en Windows), **no** con `run.py`.
+- Arrancar con **waitress** (incluido en las dependencias; funciona en Windows y Linux), **no** con `run.py`:
+  ```bash
+  uv run waitress-serve --listen=0.0.0.0:8000 --threads=8 wsgi:app
+  ```
 - Las variables se configuran en el panel del proveedor de hosting (sección *Environment variables* o *Secrets*), no con un archivo `.env` subido al servidor.
-- Antes de migrar: revisar `migrations/README.md` (P10, respaldo y revisión del SQL).
+- Antes de migrar: respaldar los datos y revisar el SQL (`migrations/README.md`, P10):
+  ```bash
+  uv run python -m scripts.respaldar_datos     # crea respaldos/<fecha>/ (ignorado por git)
+  ```
 
 ## Verificar la configuración
 
