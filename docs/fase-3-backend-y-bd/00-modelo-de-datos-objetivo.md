@@ -43,7 +43,7 @@ erDiagram
 | `acordes` | sin cambios estructurales (`diagram jsonb` se respeta) | — |
 | `quiz_preguntas` | se migra a `preguntas_evaluacion` y se elimina | HU-B-308 |
 | `progreso` (polimórfica) | se divide en `progreso_lecciones`, `progreso_ejercicios`; el progreso de bloque pasa a `intentos_evaluacion` | HU-B-305 |
-| `partituras` | sin uso; se conserva (decisión de producto pendiente) | — |
+| `partituras` | sin uso y vacía: **eliminada** | HU-B-314 |
 
 ### Nuevas
 
