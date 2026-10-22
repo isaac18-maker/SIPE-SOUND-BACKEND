@@ -83,9 +83,35 @@ def _respuesta(status: int, code: str, mensaje: str, details: list[dict] | None 
     return jsonify({"error": cuerpo}), status
 
 
+# Pydantic redacta sus mensajes en ingles; el contrato exige espanol para el usuario.
+# Los errores propios (PydanticCustomError) ya vienen en espanol y se respetan.
+MENSAJES_VALIDACION = {
+    "missing": "Este campo es obligatorio.",
+    "extra_forbidden": "Este campo no está permitido.",
+    "int_type": "Debe ser un número entero.",
+    "int_parsing": "Debe ser un número entero.",
+    "bool_type": "Debe ser verdadero o falso.",
+    "bool_parsing": "Debe ser verdadero o falso.",
+    "string_type": "Debe ser un texto.",
+    "dict_type": "Debe ser un objeto.",
+    "model_type": "Debe ser un objeto.",
+    "less_than_equal": "Debe ser menor o igual a {le}.",
+    "greater_than_equal": "Debe ser mayor o igual a {ge}.",
+    "literal_error": "Debe ser uno de: {expected}.",
+}
+
+
+def _mensaje_validacion(error: dict[str, Any]) -> str:
+    plantilla = MENSAJES_VALIDACION.get(error["type"])
+    if plantilla is None:
+        return error["msg"]
+    contexto = {k: str(v).replace(" or ", " o ") for k, v in error.get("ctx", {}).items()}
+    return plantilla.format(**contexto)
+
+
 def _detalles_validacion(error: ValidationError) -> list[dict]:
     return [
-        {"campo": ".".join(str(parte) for parte in e["loc"]), "mensaje": e["msg"]}
+        {"campo": ".".join(str(parte) for parte in e["loc"]), "mensaje": _mensaje_validacion(e)}
         for e in error.errors()
     ]
 
