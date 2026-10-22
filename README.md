@@ -9,13 +9,37 @@ El frontend vive en el repositorio `SIPE-SOUND-FULLSTACK`.
 - Python 3.11 o superior
 - [uv](https://docs.astral.sh/uv/)
 
+## Instalar uv
+
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+```bash
+# Linux / macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+## Correr el backend
+
+```bash
+uv sync
+uv run uvicorn src.main:app --reload                              # desarrollo ASGI: http://localhost:8000
+uv run python run.py                                              # alternativa Flask: http://localhost:5000
+uv run waitress-serve --listen=0.0.0.0:8000 --threads=8 wsgi:app  # produccion
+```
+
+El punto de entrada de Uvicorn adapta la aplicación Flask existente a ASGI; no
+cambia el framework ni las rutas de la API.
+
 ## Instalación
 
 ```bash
 uv sync
+uv sync --group dev     # agrega herramientas de desarrollo como Ruff
 cp .env.example .env   # completa SUPABASE_URL y DATABASE_URL (Session pooler)
 # Valores para local y produccion: docs/configuracion-entornos.md
-uv run python run.py   # http://localhost:5000
+uv run uvicorn src.main:app --reload
 ```
 
 ## Calidad
