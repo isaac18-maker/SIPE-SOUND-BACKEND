@@ -14,6 +14,7 @@ El frontend vive en el repositorio `SIPE-SOUND-FULLSTACK`.
 ```bash
 uv sync
 cp .env.example .env   # completa SUPABASE_URL y DATABASE_URL (Session pooler)
+# Valores para local y produccion: docs/configuracion-entornos.md
 uv run python run.py   # http://localhost:5000
 ```
 

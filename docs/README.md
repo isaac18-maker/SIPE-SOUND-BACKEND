@@ -13,6 +13,8 @@ revisable por el equipo.
    [`01-contrato-ia.md` §6](fase-1-contrato/01-contrato-ia.md#6-prompt-base-para-iniciar-una-hu)
    y luego el bloque *Prompt de ejecución* de la HU.
 
+> Configurar el `.env` (local y producción): [configuracion-entornos.md](configuracion-entornos.md).
+
 ## Fase 1 · Contrato para IA generativa
 
 | Documento | Contenido |
