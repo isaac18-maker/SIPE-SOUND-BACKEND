@@ -4,7 +4,7 @@
 # no arranca y el error nombra la variable.
 # =========================================================
 from functools import lru_cache
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     # secreto compartido para proyectos con la clave HS256 heredada.
     supabase_jwks_url: str | None = None
     supabase_jwt_secret: SecretStr | None = None
+    # Acceso a datos: "supabase" (API REST con la anon key) o "sql" (SQLAlchemy).
+    # TODO(HU-B-312): retirar "supabase" y la variable cuando todo use SQLAlchemy.
+    data_backend: Literal["supabase", "sql"] = "supabase"
+    # Conexion de la app (pooler de Supabase, puerto 6543) y conexion directa
+    # para migraciones (puerto 5432). Ambas contienen la contrasena: son secretas.
+    database_url: SecretStr | None = None
+    database_url_migrations: SecretStr | None = None
+    sqlalchemy_echo: bool = False
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -38,6 +46,12 @@ class Settings(BaseSettings):
     def exigir_verificacion_jwt(self) -> Self:
         if not self.supabase_jwks_url and not self.supabase_jwt_secret:
             raise ValueError("define SUPABASE_JWKS_URL o SUPABASE_JWT_SECRET")
+        return self
+
+    @model_validator(mode="after")
+    def exigir_base_de_datos(self) -> Self:
+        if self.data_backend == "sql" and not self.database_url:
+            raise ValueError("DATA_BACKEND=sql requiere DATABASE_URL")
         return self
 
     @property
