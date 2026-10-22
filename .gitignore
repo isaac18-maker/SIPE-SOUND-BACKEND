@@ -22,3 +22,6 @@ Thumbs.db
 # Editor
 .vscode/*
 !.vscode/extensions.json
+
+# Respaldos de datos (contienen datos personales de estudiantes)
+respaldos/
