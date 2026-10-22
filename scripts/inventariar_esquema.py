@@ -83,6 +83,13 @@ where not t.tgisinternal
 order by c.relname, t.tgname
 """
 
+# Los event triggers (p. ej. rls_auto_enable de Supabase) no aparecen en pg_trigger.
+CONSULTA_EVENT_TRIGGERS = """
+select evtname, evtevent, evtfoid::regproc::text, evtenabled, array_to_string(evttags, ', ')
+from pg_event_trigger
+order by evtname
+"""
+
 
 def url_conexion() -> str:
     url = os.environ.get("DATABASE_URL_MIGRATIONS") or dotenv_values(".env").get(
@@ -141,6 +148,14 @@ def main() -> None:
             partes.append("-- ---------------------------------------------------------")
             partes.append("-- Triggers (public y auth.users)")
             partes += [f"{d};" for (d,) in cur.execute(CONSULTA_TRIGGERS).fetchall()]
+            partes.append("-- ---------------------------------------------------------")
+            partes.append("-- Event triggers (base de datos completa)")
+            partes += [
+                f"-- {nombre}: on {evento} -> {funcion} (estado {estado}; tags: {tags or '-'})"
+                for nombre, evento, funcion, estado, tags in cur.execute(
+                    CONSULTA_EVENT_TRIGGERS
+                ).fetchall()
+            ]
         conexion.rollback()
     SALIDA.mkdir(parents=True, exist_ok=True)
     destino.write_text("\n".join(partes) + "\n", encoding="utf-8")
