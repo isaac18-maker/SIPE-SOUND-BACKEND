@@ -5,9 +5,9 @@
 # =========================================================
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, MetaData, Table, func
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, MetaData, Table, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 from sqlalchemy.sql.elements import conv
 
 NAMING_CONVENTION = {
@@ -49,3 +49,25 @@ auth_users = Table(
     Column("id", UUID(as_uuid=False), primary_key=True),
     schema="auth",
 )
+
+
+class EstadoMixin:
+    """Ciclo de vida del contenido: borrador -> publicado -> archivado (HU-B-306)."""
+
+    estado: Mapped[str] = mapped_column(Text, server_default="publicado")
+    actualizado_en: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class AutoriaMixin:
+    """Contenido creado por un docente; sobrevive a su autor (SET NULL)."""
+
+    @declared_attr
+    def autor_id(cls) -> Mapped[str | None]:  # noqa: N805 - declared_attr recibe la clase
+        return mapped_column(
+            UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), index=True
+        )
+
+    archivado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    duracion_min: Mapped[int | None] = mapped_column(Integer)
