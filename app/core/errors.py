@@ -72,10 +72,6 @@ class ReglaNegocio(AppError):
     status, code = 422, "REGLA_NEGOCIO"
 
 
-class ErrorProveedor(AppError):
-    """El proveedor de datos (Supabase) fallo. El detalle se registra en el log, no se expone."""
-
-
 def _respuesta(status: int, code: str, mensaje: str, details: list[dict] | None = None):
     if es_ruta_legada():
         return jsonify({"error": mensaje}), status

@@ -1,19 +1,18 @@
 # =========================================================
 # Progreso del estudiante.
 # - Lecciones y ejercicios: tablas con FK (progreso_lecciones / _ejercicios) por SQL.
-# - Bloques (resultado de quizzes): siguen en la tabla `progreso` via Supabase
-#   REST con el token del estudiante, hasta HU-B-308.
+# - Bloques (resultado de quizzes): siguen en la tabla `progreso` hasta HU-B-308.
 # GET/POST /progreso se mantienen con su forma anterior (adaptador _a_legado).
 # =========================================================
 from typing import Any
 
-from app.core.constants import TIPO_BLOQUE, TIPO_EJERCICIO, TIPO_LECCION
+from app.core.constants import TIPO_EJERCICIO, TIPO_LECCION
 from app.core.errors import NoEncontrado
 from app.core.security import CurrentUser
 from app.repositories.base import (
     AbrirSesion,
     Fila,
-    RepositorioProgreso,
+    RepositorioProgresoBloques,
     RepositorioProgresoContenido,
     VerificadorExistencia,
 )
@@ -41,7 +40,7 @@ class ProgresoService:
         self,
         abrir_sesion: AbrirSesion,
         progreso: RepositorioProgresoContenido,
-        progreso_bloques: RepositorioProgreso,
+        progreso_bloques: RepositorioProgresoBloques,
         lecciones: VerificadorExistencia,
         ejercicios: VerificadorExistencia,
     ) -> None:
@@ -126,8 +125,7 @@ class ProgresoService:
             raise NoEncontrado(f"No existe {tipo} con id {contenido_id}")
 
     def _bloques(self, usuario: CurrentUser) -> list[Fila]:
-        filas = self._progreso_bloques.listar(usuario.id, usuario.token)
-        return [f for f in filas if f["tipo"] == TIPO_BLOQUE]
+        return self._progreso_bloques.listar(usuario.id)
 
     @staticmethod
     def _avance(datos: ProgresoCreate) -> dict[str, Any]:
