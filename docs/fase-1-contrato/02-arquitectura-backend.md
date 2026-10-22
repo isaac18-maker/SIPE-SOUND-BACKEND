@@ -151,9 +151,11 @@ def obtener_leccion(leccion_id: int):
 ## 5. Configuración por entorno
 
 - `app/core/config.py` expone `get_settings()` (cacheado) con:
-  `APP_ENV` (`local|staging|production`), `DATABASE_URL`, `DATABASE_URL_MIGRATIONS`,
-  `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET` o `SUPABASE_JWKS_URL`,
-  `CORS_ORIGINS` (lista), `FLASK_DEBUG`, `LOG_LEVEL`.
+  `APP_ENV` (`local|staging|production`), `FLASK_DEBUG`, `LOG_LEVEL`, `CORS_ORIGINS` (lista),
+  `SQLALCHEMY_ECHO` y **solo dos variables de conexión** (HU-B-315):
+  - `SUPABASE_URL` (pública): emisor de los tokens; el JWKS se deduce (`/auth/v1/.well-known/jwks.json`).
+  - `DATABASE_URL` (secreta): **Session pooler** de Supabase, la única conexión a PostgreSQL, compartida por la app y Alembic.
+- El backend **no usa la API REST de Supabase** ni la *anon key*: todo el acceso a datos es por SQL.
 - Si falta una variable obligatoria, la app **no arranca** y dice cuál falta.
 - `debug` nunca está fijo en código.
 
@@ -163,5 +165,5 @@ Desde la Fase 3 el backend se conecta a PostgreSQL con SQLAlchemy usando un rol
 de servidor. Ese rol **no** está sujeto a RLS, por lo tanto:
 
 1. **Toda autorización vive en `services/`** (ej. "un docente solo ve los cursos donde `docente_id = usuario_actual`").
-2. Las políticas RLS se **mantienen** como defensa en profundidad para cualquier acceso con la `anon key`.
+2. Las políticas RLS se **mantienen** como defensa en profundidad para cualquier acceso con la `anon key` (la usa solo el frontend, para autenticarse).
 3. El frontend solo usa Supabase para **autenticación**; jamás `supabase.from(...)`.

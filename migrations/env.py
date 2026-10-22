@@ -7,7 +7,8 @@
 #   P5  lock_timeout y statement_timeout
 #   P6  una transaccion por revision
 #   P7  comparacion de tipos y defaults
-#   P8  conexion directa (DATABASE_URL_MIGRATIONS), nunca alembic.ini
+#   P8  DATABASE_URL (Session pooler o directa), nunca alembic.ini ni el
+#       transaction pooler (puerto 6543)
 # P3 y P9 los valida scripts/check_migrations.py.
 # =========================================================
 import logging
@@ -17,6 +18,7 @@ from logging.config import fileConfig
 from alembic import context
 from alembic.operations import ops
 from sqlalchemy import create_engine, pool
+from sqlalchemy.engine import make_url
 
 import app.models  # noqa: F401 - registra todos los modelos en Base.metadata
 from app.core.config import get_settings
@@ -92,13 +94,17 @@ def bloquear_destructivas(contexto, revision, directivas) -> None:  # noqa: ARG0
 
 
 # --- P8: la URL sale del entorno, nunca de alembic.ini ---------------------
+PUERTO_TRANSACTION_POOLER = 6543
+
+
 def _url_migraciones() -> str:
-    url = get_settings().database_url_migrations
-    if url is None:
+    url = get_settings().url_base_de_datos()
+    if make_url(url).port == PUERTO_TRANSACTION_POOLER:
         raise MigracionBloqueada(
-            "Falta DATABASE_URL_MIGRATIONS (conexion directa de Supabase, puerto 5432)."
+            "DATABASE_URL apunta al Transaction pooler (6543), que rompe el DDL. "
+            "Usa el Session pooler o la conexion directa (puerto 5432)."
         )
-    return url.get_secret_value()
+    return url
 
 
 # --- P4: produccion exige confirmacion explicita ---------------------------

@@ -52,7 +52,7 @@ migrations/
 script_location = migrations
 file_template = %%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d-%%(rev)s_%%(slug)s
 truncate_slug_length = 40
-# la URL NO va aquí: env.py la lee de DATABASE_URL_MIGRATIONS
+# la URL NO va aquí: env.py la lee de DATABASE_URL
 ```
 
 Identificadores de revisión **secuenciales legibles**: `alembic revision -m "..." --rev-id 0002`.
@@ -102,7 +102,7 @@ Se implementa en HU-B-302. Cada punto es obligatorio.
 | P5 | **Timeouts** para no bloquear tablas en horas de clase. | Al inicio de cada transacción: `SET lock_timeout = '5s'; SET statement_timeout = '60s';` |
 | P6 | **Una transacción por revisión.** | `context.configure(transaction_per_migration=True)`. |
 | P7 | **Detección de tipos y defaults.** | `compare_type=True`, `compare_server_default=True`. |
-| P8 | **Conexión correcta.** | `DATABASE_URL_MIGRATIONS` apunta a la conexión **directa** (puerto 5432), nunca al *pooler* en modo transacción (6543), que rompe DDL y *prepared statements*. |
+| P8 | **Conexión correcta.** | Una sola variable, `DATABASE_URL`, compartida por la app y Alembic: **Session pooler** de Supabase (puerto 5432, IPv4) o conexión directa. Nunca el *Transaction pooler* (6543), que rompe DDL y *prepared statements*: `env.py` lo rechaza. |
 | P9 | **Una sola head.** | `check_migrations.py` verifica `alembic heads` = 1. |
 | P10 | **Respaldo previo en producción.** | Procedimiento documentado: `pg_dump --schema=public -Fc` antes de `upgrade`, y revisión del SQL con `alembic upgrade head --sql`. |
 | P11 | **Objetos que autogenerate no ve** (funciones, triggers, políticas RLS, extensiones). | Se escriben a mano con `op.execute()` y su reverso en `downgrade()`. |

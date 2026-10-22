@@ -19,5 +19,5 @@ def obtener_quiz(bloque_id: int):
 def verificar_quiz(bloque_id: int):
     entrada = VerificarQuizIn.model_validate(request.get_json(silent=True) or {})
     usuario = get_current_user()
-    resultado = quiz_service().verificar(bloque_id, entrada.respuestas, usuario.id, usuario.token)
+    resultado = quiz_service().verificar(bloque_id, entrada.respuestas, usuario.id)
     return ok(resultado)

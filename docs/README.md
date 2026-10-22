@@ -13,6 +13,8 @@ revisable por el equipo.
    [`01-contrato-ia.md` §6](fase-1-contrato/01-contrato-ia.md#6-prompt-base-para-iniciar-una-hu)
    y luego el bloque *Prompt de ejecución* de la HU.
 
+> Configurar el `.env` (local y producción): [configuracion-entornos.md](configuracion-entornos.md).
+
 ## Fase 1 · Contrato para IA generativa
 
 | Documento | Contenido |
@@ -57,6 +59,7 @@ Los números de migración de las HU 307 en adelante se recalculan al implementa
 | 12 | [HU-B-312 Retroalimentación y retiro de legado](fase-3-backend-y-bd/HU-B-312-retroalimentacion-y-retiro-legado.md) | 5 | 308, 310, HU-F-304, HU-F-306 | 0010 (destructiva aprobada) |
 | 6.1 | [HU-B-313 Proteger respuestas de quizzes](fase-3-backend-y-bd/HU-B-313-proteger-respuestas-quiz.md) 🔴 seguridad | 2 | 301, 303 | 0005 |
 | 6.2 | [HU-B-314 Retirar tabla partituras](fase-3-backend-y-bd/HU-B-314-retirar-partituras.md) | 1 | 303 | 0008 (destructiva aprobada) |
+| 6.3 | [HU-B-315 Una sola conexión (Session pooler)](fase-3-backend-y-bd/HU-B-315-una-sola-conexion.md) | 3 | 305, 313 | — |
 
 ## Relación con el frontend
 
