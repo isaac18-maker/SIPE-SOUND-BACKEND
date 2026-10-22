@@ -1,7 +1,7 @@
 # =========================================================
 # Autenticacion: valida localmente el JWT emitido por Supabase Auth
 # (firma, exp, aud e iss) sin llamar a la red en cada peticion.
-# Con claves asimetricas solo se descarga el JWKS publico (cacheado).
+# Solo se descarga el JWKS publico del proyecto (cacheado); no hay secretos.
 # =========================================================
 import logging
 from collections.abc import Callable
@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 PREFIJO_BEARER = "Bearer "
 AUDIENCIA = "authenticated"
 ALGORITMOS_ASIMETRICOS = ["ES256", "RS256"]
-ALGORITMO_SECRETO = "HS256"
 TOLERANCIA_RELOJ_SEGUNDOS = 10
 MENSAJE_FALTA_AUTENTICACION = "Falta el token de autenticacion"
 MENSAJE_SESION_INVALIDA = "Token invalido o expirado"
@@ -92,16 +91,11 @@ def _extraer_token(cabecera: str) -> str:
 def _decodificar(token: str) -> dict[str, Any]:
     settings = get_settings()
     try:
-        if settings.supabase_jwks_url:
-            clave = _cliente_jwks(settings.supabase_jwks_url).get_signing_key_from_jwt(token).key
-            algoritmos = ALGORITMOS_ASIMETRICOS
-        else:
-            clave = settings.supabase_jwt_secret.get_secret_value()
-            algoritmos = [ALGORITMO_SECRETO]
+        clave = _cliente_jwks(settings.jwks_url).get_signing_key_from_jwt(token).key
         return jwt.decode(
             token,
             clave,
-            algorithms=algoritmos,
+            algorithms=ALGORITMOS_ASIMETRICOS,
             audience=AUDIENCIA,
             issuer=settings.emisor_jwt,
             leeway=TOLERANCIA_RELOJ_SEGUNDOS,

@@ -11,7 +11,6 @@ from app.core.security import configurar_proveedor_rol
 
 def create_app(settings: Settings | None = None) -> Flask:
     settings = settings or get_settings()
-    settings.url_base_de_datos()  # la app no arranca sin DATABASE_URL
     configure_logging(settings.log_level)
 
     app = Flask(__name__)
