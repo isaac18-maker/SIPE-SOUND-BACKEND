@@ -1,14 +1,13 @@
 # =========================================================
-# Conexion a Supabase, compartida por toda la aplicacion.
-# Cualquier archivo de rutas hace: from app.extensions import supabase
+# Shim temporal: mantiene funcionando los imports antiguos
+# (from ..extensions import supabase) mientras las rutas se
+# migran a capas.
+# TODO(HU-B-203): eliminar shim
 # =========================================================
-import os
-from supabase import create_client, Client
-from dotenv import load_dotenv
+from app.core.config import get_settings
+from app.infrastructure.supabase_client import get_supabase
 
-load_dotenv()
+SUPABASE_URL = get_settings().supabase_url
+SUPABASE_KEY = get_settings().supabase_anon_key
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = get_supabase()

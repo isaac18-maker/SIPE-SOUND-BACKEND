@@ -26,7 +26,7 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RET", "ARG", "PL", "S", "C90", "ERA"]
-ignore = ["PLR0913"]
+ignore = ["PLR0913", "N818"]  # N818: excepciones con nombres de dominio (NoEncontrado)
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

@@ -9,6 +9,7 @@ dependencies = [
     "supabase>=2.7.4",
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
+    "pydantic-settings>=2.15.0",
 ]
 
 [dependency-groups]
@@ -22,7 +23,8 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RET", "ARG", "PL", "S", "C90", "ERA"]
-ignore = ["PLR0913"]
+# N818: las excepciones siguen el dominio en espanol (NoEncontrado, SinPermiso), ver contrato 03
+ignore = ["PLR0913", "N818"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
