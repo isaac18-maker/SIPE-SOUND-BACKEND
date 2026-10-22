@@ -69,7 +69,7 @@ def revisar(archivo: Path) -> list[str]:
     cabecera = ast.get_docstring(arbol) or ""
     problemas = []
     if not PATRON_HU.search(cabecera):
-        problemas.append("la cabecera no tiene 'HU: HU-B-NNN' (¿quedo 'HU-B-XXX'?)")
+        problemas.append("la cabecera no tiene 'HU: HU-B-NNN' (quedo 'HU-B-XXX'?)")
     if not PATRON_TIPO.search(cabecera):
         problemas.append("la cabecera no tiene 'Tipo: esquema' o 'Tipo: datos'")
 
@@ -101,14 +101,14 @@ def main() -> int:
     errores = {str(a): p for a in archivos if (p := revisar(a))}
     heads = revisar_heads()
     for archivo, problemas in errores.items():
-        print(f"✗ {archivo}")
+        print(f"[ERROR] {archivo}")
         for problema in problemas:
             print(f"    - {problema}")
     for problema in heads:
-        print(f"✗ historia de migraciones: {problema}")
+        print(f"[ERROR] historia de migraciones: {problema}")
     if errores or heads:
         return 1
-    print(f"✓ {len(archivos)} revision(es) revisada(s), una sola head. Sin problemas.")
+    print(f"[OK] {len(archivos)} revision(es) revisada(s), una sola head. Sin problemas.")
     return 0
 
 
