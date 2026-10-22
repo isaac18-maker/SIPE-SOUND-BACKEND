@@ -1,9 +1,9 @@
-from flask import Blueprint, g, request
+from flask import Blueprint, request
 
 from app.container import progreso_service
 from app.core.errors import ValidacionError
 from app.core.responses import ok
-from app.core.security import auth_required
+from app.core.security import auth_required, get_current_user
 from app.schemas.progreso import ProgresoCreate
 
 bp = Blueprint("progreso", __name__)
@@ -12,7 +12,8 @@ bp = Blueprint("progreso", __name__)
 @bp.get("/progreso")
 @auth_required
 def listar_progreso():
-    return ok(progreso_service().listar(g.user_id, g.token))
+    usuario = get_current_user()
+    return ok(progreso_service().listar(usuario.id, usuario.token))
 
 
 @bp.post("/progreso")
@@ -22,4 +23,5 @@ def guardar_progreso():
     if not datos:
         raise ValidacionError("Cuerpo de la peticion vacio o invalido")
     entrada = ProgresoCreate.model_validate(datos)
-    return ok(progreso_service().guardar(g.user_id, g.token, entrada))
+    usuario = get_current_user()
+    return ok(progreso_service().guardar(usuario.id, usuario.token, entrada))
