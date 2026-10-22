@@ -1,13 +1,17 @@
 # =========================================================
-# Entrada de POST /progreso. Los mensajes y el orden de las
-# validaciones replican el comportamiento anterior al refactor.
+# Entrada de los endpoints de progreso.
+# ProgresoCreate (POST /progreso, compatibilidad): los mensajes y el orden
+# de las validaciones replican el comportamiento anterior al refactor.
 # =========================================================
 from typing import Any
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_core import PydanticCustomError
 
 from app.core.constants import PORCENTAJE_MAXIMO, PORCENTAJE_MINIMO, TIPO_EJERCICIO, TIPO_LECCION
+
+BPM_MINIMO = 20
+BPM_MAXIMO = 300
 
 
 def _invalido(mensaje: str) -> PydanticCustomError:
@@ -40,3 +44,18 @@ class ProgresoCreate(BaseModel):
         if not isinstance(valor, int) or not PORCENTAJE_MINIMO <= valor <= PORCENTAJE_MAXIMO:
             raise _invalido("El campo 'porcentaje' debe ser un numero entre 0 y 100")
         return valor
+
+
+class AvanceIn(BaseModel):
+    """PUT /progreso/lecciones/{id}."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    porcentaje: int = Field(default=0, ge=PORCENTAJE_MINIMO, le=PORCENTAJE_MAXIMO)
+    completado: bool = False
+
+
+class AvanceEjercicioIn(AvanceIn):
+    """PUT /progreso/ejercicios/{id}: ademas, el tempo al que se logro tocar."""
+
+    mejor_bpm: int | None = Field(default=None, ge=BPM_MINIMO, le=BPM_MAXIMO)
