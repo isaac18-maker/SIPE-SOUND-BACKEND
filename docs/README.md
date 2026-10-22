@@ -39,6 +39,7 @@ revisable por el equipo.
 ## Fase 3 · Backend, base de datos y panel docente
 
 Referencia: [modelo de datos objetivo](fase-3-backend-y-bd/00-modelo-de-datos-objetivo.md).
+Los números de migración de las HU 307 en adelante se recalculan al implementarlas (se insertaron 0005 y 0008).
 
 | Orden | HU | Pts | Depende de | Migraciones |
 |---|---|---|---|---|
@@ -47,7 +48,7 @@ Referencia: [modelo de datos objetivo](fase-3-backend-y-bd/00-modelo-de-datos-ob
 | 3 | [HU-B-303 Migración baseline](fase-3-backend-y-bd/HU-B-303-migracion-baseline.md) | 3 | 302 | 0001 |
 | 4 | [HU-B-304 Roles y autorización](fase-3-backend-y-bd/HU-B-304-roles-y-autorizacion.md) | 3 | 303, 205 | 0002 |
 | 5 | [HU-B-305 Progreso con integridad](fase-3-backend-y-bd/HU-B-305-progreso-con-integridad.md) | 5 | 304 | 0003, 0004 |
-| 6 | [HU-B-306 Contenido editable](fase-3-backend-y-bd/HU-B-306-contenido-editable.md) | 5 | 305 | 0005, 0006 |
+| 6 | [HU-B-306 Contenido editable](fase-3-backend-y-bd/HU-B-306-contenido-editable.md) | 5 | 305 | 0006, 0007 |
 | 7 | [HU-B-307 Cursos e inscripciones](fase-3-backend-y-bd/HU-B-307-cursos-e-inscripciones.md) | 3 | 306 | 0007 |
 | 8 | [HU-B-308 Evaluaciones e intentos](fase-3-backend-y-bd/HU-B-308-evaluaciones-e-intentos.md) | 8 | 307 | 0008, 0009 |
 | 9 | [HU-B-309 API docente: contenido](fase-3-backend-y-bd/HU-B-309-api-docente-contenido.md) | 5 | 306, 304 | — |
@@ -55,6 +56,7 @@ Referencia: [modelo de datos objetivo](fase-3-backend-y-bd/00-modelo-de-datos-ob
 | 11 | [HU-B-311 API docente: evaluaciones](fase-3-backend-y-bd/HU-B-311-api-docente-evaluaciones.md) | 5 | 308, 310 | — |
 | 12 | [HU-B-312 Retroalimentación y retiro de legado](fase-3-backend-y-bd/HU-B-312-retroalimentacion-y-retiro-legado.md) | 5 | 308, 310, HU-F-304, HU-F-306 | 0010 (destructiva aprobada) |
 | 6.1 | [HU-B-313 Proteger respuestas de quizzes](fase-3-backend-y-bd/HU-B-313-proteger-respuestas-quiz.md) 🔴 seguridad | 2 | 301, 303 | 0005 |
+| 6.2 | [HU-B-314 Retirar tabla partituras](fase-3-backend-y-bd/HU-B-314-retirar-partituras.md) | 1 | 303 | 0008 (destructiva aprobada) |
 
 ## Relación con el frontend
 

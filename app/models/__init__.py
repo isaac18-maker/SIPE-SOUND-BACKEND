@@ -5,7 +5,6 @@ from app.models.base import Base, auth_users
 from app.models.bloque import Bloque
 from app.models.ejercicio import Ejercicio
 from app.models.leccion import Leccion
-from app.models.partitura import Partitura
 from app.models.profile import Profile
 from app.models.progreso import Progreso
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
@@ -17,7 +16,6 @@ __all__ = [
     "Bloque",
     "Ejercicio",
     "Leccion",
-    "Partitura",
     "Profile",
     "Progreso",
     "ProgresoEjercicio",
