@@ -16,12 +16,12 @@ from app.repositories.sqlalchemy.ejercicio_repository import SqlEjercicioReposit
 from app.repositories.sqlalchemy.leccion_repository import SqlLeccionRepository
 from app.repositories.sqlalchemy.perfil_repository import SqlPerfilRepository
 from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
+from app.repositories.sqlalchemy.quiz_repository import SqlQuizRepository
 from app.repositories.supabase.acorde_repository import SupabaseAcordeRepository
 from app.repositories.supabase.bloque_repository import SupabaseBloqueRepository
 from app.repositories.supabase.ejercicio_repository import SupabaseEjercicioRepository
 from app.repositories.supabase.leccion_repository import SupabaseLeccionRepository
 from app.repositories.supabase.progreso_repository import SupabaseProgresoRepository
-from app.repositories.supabase.quiz_repository import SupabaseQuizRepository
 from app.services.acorde_service import AcordeService
 from app.services.bloque_service import BloqueService
 from app.services.ejercicio_service import EjercicioService
@@ -86,7 +86,9 @@ def progreso_service() -> ProgresoService:
 
 @lru_cache
 def quiz_service() -> QuizService:
-    return QuizService(SupabaseQuizRepository(), SupabaseProgresoRepository())
+    # Preguntas por SQL (HU-B-313): la anon key ya no puede leer respuesta_correcta.
+    # El resultado del bloque sigue en `progreso` via Supabase REST hasta HU-B-308.
+    return QuizService(SqlQuizRepository(session_scope), SupabaseProgresoRepository())
 
 
 @lru_cache

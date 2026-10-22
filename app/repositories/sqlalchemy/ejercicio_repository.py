@@ -1,5 +1,6 @@
 from sqlalchemy import exists, select
 
+from app.core.constants import ESTADO_PUBLICADO
 from app.models.ejercicio import Ejercicio
 from app.repositories.base import Fila
 from app.repositories.sqlalchemy._comun import AbrirSesion, a_fila
@@ -12,8 +13,10 @@ class SqlEjercicioRepository:
     def listar(self) -> list[Fila]:
         with self._abrir_sesion() as sesion:
             # Sin ORDER BY, igual que la consulta original a Supabase.
-            return [a_fila(e) for e in sesion.scalars(select(Ejercicio))]
+            publicados = select(Ejercicio).where(Ejercicio.estado == ESTADO_PUBLICADO)
+            return [a_fila(e) for e in sesion.scalars(publicados)]
 
     def existe(self, contenido_id: int) -> bool:
         with self._abrir_sesion() as sesion:
-            return bool(sesion.scalar(select(exists().where(Ejercicio.id == contenido_id))))
+            condicion = (Ejercicio.id == contenido_id) & (Ejercicio.estado == ESTADO_PUBLICADO)
+            return bool(sesion.scalar(select(exists().where(condicion))))
