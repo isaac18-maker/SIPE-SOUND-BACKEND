@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     data_backend: Literal["supabase", "sql"] = "supabase"
     # Conexion de la app (pooler de Supabase, puerto 6543) y conexion directa
     # para migraciones (puerto 5432). Ambas contienen la contrasena: son secretas.
+    # DATABASE_URL es obligatoria para la app desde HU-B-304 (el rol se lee siempre
+    # con la conexion del servidor). Alembic y los scripts de solo migraciones no la usan.
     database_url: SecretStr | None = None
     database_url_migrations: SecretStr | None = None
     sqlalchemy_echo: bool = False
@@ -48,11 +50,13 @@ class Settings(BaseSettings):
             raise ValueError("define SUPABASE_JWKS_URL o SUPABASE_JWT_SECRET")
         return self
 
-    @model_validator(mode="after")
-    def exigir_base_de_datos(self) -> Self:
-        if self.data_backend == "sql" and not self.database_url:
-            raise ValueError("DATA_BACKEND=sql requiere DATABASE_URL")
-        return self
+    def url_base_de_datos(self) -> str:
+        """URL de la app; falla con un mensaje claro si no esta configurada."""
+        if self.database_url is None:
+            raise ConfiguracionInvalida(
+                "Configuracion invalida. Revisa estas variables de entorno: DATABASE_URL"
+            )
+        return self.database_url.get_secret_value()
 
     @property
     def emisor_jwt(self) -> str:

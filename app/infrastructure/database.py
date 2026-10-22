@@ -34,7 +34,7 @@ def opciones_conexion(url: str) -> dict[str, Any]:
 @lru_cache
 def get_engine() -> Engine:
     settings = get_settings()
-    url = settings.database_url.get_secret_value()
+    url = settings.url_base_de_datos()
     return create_engine(
         normalizar_url(url),
         pool_pre_ping=True,
