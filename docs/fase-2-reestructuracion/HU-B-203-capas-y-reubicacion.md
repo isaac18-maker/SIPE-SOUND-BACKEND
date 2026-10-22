@@ -32,7 +32,7 @@ Hoy cada archivo de [app/routes/](../../app/routes/) mezcla HTTP, validación, r
 | `app/extensions.py` | **eliminado** | Shim de HU-B-202 ya no es necesario. |
 | `app/routes/` | **eliminado** | |
 | — | `app/repositories/base.py` | Protocolos `LectorBloques`, `LectorLecciones`, … |
-| — | `app/core/container.py` | Fábricas que ensamblan servicio + repositorio. |
+| — | `app/container.py` | Fábricas que ensamblan servicio + repositorio (*composition root*, fuera de `core/` por la regla de capas). |
 
 ## Alcance
 **Incluye**: todo el mapa anterior. Los endpoints conservan **ruta y forma de respuesta** (`/api/...`).

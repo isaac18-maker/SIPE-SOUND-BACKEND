@@ -39,6 +39,7 @@ SIPE-SOUND-BACKEND/
 │       └── schema_supabase_v0.sql   # script histórico (solo referencia)
 └── app/
     ├── __init__.py               # create_app(): solo ensambla
+    ├── container.py              # composition root: servicio + repositorio (fuera de las capas)
     ├── core/                     # transversal, sin lógica de negocio
     │   ├── config.py             # Settings (pydantic-settings) por entorno
     │   ├── errors.py             # jerarquía AppError + handlers
@@ -104,7 +105,7 @@ Una capa **solo** importa de la capa inmediatamente inferior o de `core`/`schema
 | **O** – Abierto/cerrado | Nuevos tipos de pregunta se agregan con una nueva estrategia de calificación, sin tocar las existentes. | `CalificadorOpcionUnica`, futuro `CalificadorAudio`. |
 | **L** – Sustitución de Liskov | Toda implementación de un repositorio respeta el protocolo y sus excepciones. | `SupabaseLeccionRepository` (Fase 2) y `SqlLeccionRepository` (Fase 3) son intercambiables. |
 | **I** – Segregación de interfaces | Protocolos pequeños por necesidad. | `LectorLecciones` vs `EditorLecciones`; el servicio público solo pide el lector. |
-| **D** – Inversión de dependencias | Los servicios reciben repositorios por constructor; el ensamblado se hace en un único lugar. | `app/core/container.py` o fábricas en `api/v1/__init__.py`. |
+| **D** – Inversión de dependencias | Los servicios reciben repositorios por constructor; el ensamblado se hace en un único lugar. | `app/container.py` (*composition root*). No va en `core/` porque depende de `services` y `repositories`. |
 
 ### Ejemplo de referencia (forma esperada)
 
@@ -138,11 +139,11 @@ class LeccionService:
 # app/api/v1/lecciones.py
 from flask import Blueprint
 from app.core.responses import ok
-from app.core.container import leccion_service
+from app.container import leccion_service
 
-bp = Blueprint("lecciones_v1", __name__, url_prefix="/lecciones")
+bp = Blueprint("lecciones", __name__)
 
-@bp.get("/<int:leccion_id>")
+@bp.get("/lecciones/<int:leccion_id>")
 def obtener_leccion(leccion_id: int):
     return ok(leccion_service().obtener(leccion_id))
 ```

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:5173"]
     )
     supabase_url: str
-    # TODO(HU-B-203): retirar el alias SUPABASE_KEY cuando todos los .env usen SUPABASE_ANON_KEY
+    # TODO(HU-B-205): retirar el alias SUPABASE_KEY cuando todos los .env usen SUPABASE_ANON_KEY
     supabase_anon_key: str = Field(
         validation_alias=AliasChoices("SUPABASE_ANON_KEY", "SUPABASE_KEY")
     )
