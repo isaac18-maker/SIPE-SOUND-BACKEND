@@ -32,6 +32,14 @@ uv run waitress-serve --listen=0.0.0.0:8000 --threads=8 wsgi:app  # produccion
 El punto de entrada de Uvicorn adapta la aplicación Flask existente a ASGI; no
 cambia el framework ni las rutas de la API.
 
+## Documentación de la API
+
+Con el backend en ejecución, abre Swagger UI en
+`http://localhost:8000/docs/` (Uvicorn) o `http://localhost:5000/docs/` (Flask).
+El esquema OpenAPI está disponible en `/openapi.json`. Swagger lista las rutas
+activas de `/api/v1` y las rutas legadas de `/api`; para las operaciones
+protegidas, usa **Authorize** e ingresa el token JWT de Supabase.
+
 ## Instalación
 
 ```bash
