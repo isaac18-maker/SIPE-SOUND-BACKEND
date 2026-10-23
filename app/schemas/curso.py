@@ -1,20 +1,32 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from app.core.constants import ALFABETO_CODIGO, LARGO_CODIGO
-from app.core.longitudes import DESCRIPCION_MAX, TITULO_MAX, TITULO_MIN
+from app.core.longitudes import (
+    MENSAJE_RETROALIMENTACION_MAX,
+    MENSAJE_RETROALIMENTACION_MIN,
+    POR_PAGINA_MAX,
+)
+from app.schemas.contenido import Busqueda, Descripcion, EntradaEditable, Nivel, Titulo
 
 MAXIMO_BLOQUES_EN_RUTA = 100
 
 
 class CursoCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid")
 
-    nombre: str = Field(min_length=TITULO_MIN, max_length=TITULO_MAX)
-    descripcion: str | None = Field(default=None, max_length=DESCRIPCION_MAX)
-    nivel: Literal["principiante", "intermedio", "avanzado"] = "principiante"
+    nombre: Titulo
+    descripcion: Descripcion | None = None
+    nivel: Nivel = "principiante"
 
 
 class UnirseCursoIn(BaseModel):
@@ -59,3 +71,42 @@ class RutaCursoIn(BaseModel):
         if len(set(ordenes)) != len(ordenes):
             raise ValueError("dos bloques no pueden tener el mismo orden")
         return self
+
+
+# --- Panel docente (HU-B-310) -----------------------------------------------
+class CursoEditar(EntradaEditable):
+    NO_NULOS = ("nombre", "nivel")
+
+    nombre: Titulo | None = None
+    descripcion: Descripcion | None = None
+    nivel: Nivel | None = None
+
+
+class RetroalimentacionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mensaje: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True,
+            min_length=MENSAJE_RETROALIMENTACION_MIN,
+            max_length=MENSAJE_RETROALIMENTACION_MAX,
+        ),
+    ]
+
+
+class CursosQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    estado: Literal["activo", "archivado"] = "activo"
+
+
+class EstudiantesQuery(BaseModel):
+    """?q=&orden=-avance_pct|nombre|-ultimo_avance&pagina=&por_pagina=."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    q: Busqueda | None = None
+    orden: Literal["nombre", "-avance_pct", "-ultimo_avance"] = "nombre"
+    pagina: int = Field(default=1, ge=1)
+    por_pagina: int = Field(default=20, ge=1, le=POR_PAGINA_MAX)

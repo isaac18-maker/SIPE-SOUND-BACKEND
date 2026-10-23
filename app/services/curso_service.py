@@ -1,10 +1,15 @@
+# =========================================================
+# Cursos (HU-B-307 / HU-B-310). Toda verificacion "este curso es del
+# docente" pasa por _curso_propio (404 si no lo es; el admin ve todo).
+# =========================================================
 import secrets
-from typing import Any
+from typing import Any, Protocol
 
 from sqlalchemy.exc import IntegrityError
 
 from app.core.constants import ALFABETO_CODIGO, LARGO_CODIGO, ROL_ADMIN
 from app.core.errors import NoEncontrado, ReglaNegocio
+from app.core.privacidad import enmascarar_email
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila, RepositorioCursos
 from app.schemas.curso import CursoCreate, RutaCursoIn
@@ -13,6 +18,7 @@ INTENTOS_CODIGO = 5
 MENSAJE_CODIGO_INVALIDO = (
     "El código no existe o el curso ya cerró. Pídele a tu docente un código nuevo."
 )
+MENSAJE_ARCHIVADO = "El curso está archivado: no admite cambios."
 
 
 def generar_codigo() -> str:
@@ -20,12 +26,67 @@ def generar_codigo() -> str:
     return "".join(secrets.choice(ALFABETO_CODIGO) for _ in range(LARGO_CODIGO))
 
 
+class RepositorioSeguimiento(Protocol):
+    def estudiantes(
+        self,
+        sesion: Any,
+        curso_id: int,
+        *,
+        q: str | None,
+        orden: str,
+        pagina: int,
+        por_pagina: int,
+    ) -> tuple[list[Fila], int]: ...
+    def inscripcion(self, sesion: Any, curso_id: int, estudiante_id: str) -> Fila | None: ...
+    def ejercicios_de_lecciones(
+        self, sesion: Any, leccion_ids: list[int], estudiante_id: str
+    ) -> list[Fila]: ...
+    def intentos_del_estudiante(
+        self, sesion: Any, curso_id: int, estudiante_id: str
+    ) -> list[Fila]: ...
+    def retroalimentaciones(self, sesion: Any, curso_id: int, estudiante_id: str) -> list[Fila]: ...
+    def resumen(self, sesion: Any, docente_id: str | None) -> Fila: ...
+
+
+class RutaDeEstudiante(Protocol):
+    def ruta_de_estudiante(
+        self, sesion: Any, usuario_id: str | None, curso_id: int | None
+    ) -> list[Fila]: ...
+
+
+def _sin_email(fila: Fila) -> Fila:
+    """El docente nunca recibe el correo completo del estudiante."""
+    return {**fila, "email": enmascarar_email(fila.get("email"))}
+
+
 class CursoService:
-    def __init__(self, abrir_sesion: AbrirSesion, cursos: RepositorioCursos) -> None:
+    def __init__(
+        self,
+        abrir_sesion: AbrirSesion,
+        cursos: RepositorioCursos,
+        seguimiento: RepositorioSeguimiento | None = None,
+        ruta: RutaDeEstudiante | None = None,
+    ) -> None:
         self._abrir_sesion = abrir_sesion
         self._cursos = cursos
+        self._seguimiento = seguimiento
+        self._ruta = ruta
 
-    # --- Docente (endpoints en HU-B-310) -------------------------------------
+    # --- Docente: cursos --------------------------------------------------------
+    def listar_de_docente(self, usuario: CurrentUser, *, archivados: bool) -> list[Fila]:
+        docente = None if usuario.rol == ROL_ADMIN else usuario.id
+        with self._abrir_sesion() as sesion:
+            return self._cursos.listar_de_docente(sesion, docente, archivados=archivados)
+
+    def detalle(self, usuario: CurrentUser, curso_id: int) -> Fila:
+        with self._abrir_sesion() as sesion:
+            curso = self._curso_propio(sesion, usuario, curso_id)
+            return {
+                **curso,
+                "ruta": self._cursos.ruta(sesion, curso_id),
+                "estudiantes": self._cursos.contar_estudiantes(sesion, curso_id),
+            }
+
     def crear(self, docente: CurrentUser, datos: CursoCreate) -> Fila:
         """Crea el curso con un codigo de invitacion unico (reintenta si colisiona)."""
         with self._abrir_sesion() as sesion:
@@ -42,6 +103,25 @@ class CursoService:
                     continue
         raise ReglaNegocio("No se pudo generar un código de invitación. Inténtalo de nuevo.")
 
+    def actualizar(self, usuario: CurrentUser, curso_id: int, cambios: Fila) -> Fila:
+        with self._abrir_sesion() as sesion:
+            self._curso_propio(sesion, usuario, curso_id, bloquear=True, activo=True)
+            return self._cursos.actualizar(sesion, curso_id, cambios)
+
+    def regenerar_codigo(self, usuario: CurrentUser, curso_id: int) -> Fila:
+        """Los estudiantes ya inscritos siguen en el curso; el codigo anterior deja de servir."""
+        with self._abrir_sesion() as sesion:
+            self._curso_propio(sesion, usuario, curso_id, bloquear=True, activo=True)
+            for _ in range(INTENTOS_CODIGO):
+                try:
+                    with sesion.begin_nested():
+                        return self._cursos.actualizar(
+                            sesion, curso_id, {"codigo_invitacion": generar_codigo()}
+                        )
+                except IntegrityError:
+                    continue
+        raise ReglaNegocio("No se pudo generar un código de invitación. Inténtalo de nuevo.")
+
     def archivar(self, usuario: CurrentUser, curso_id: int) -> Fila:
         """Soft delete: el curso y su historial se conservan."""
         with self._abrir_sesion() as sesion:
@@ -52,7 +132,7 @@ class CursoService:
         """Reemplaza la ruta del curso en una sola transaccion (todo o nada)."""
         pedidos = {b.bloque_id for b in ruta.bloques}
         with self._abrir_sesion() as sesion:
-            self._curso_propio(sesion, usuario, curso_id, bloquear=True)
+            self._curso_propio(sesion, usuario, curso_id, bloquear=True, activo=True)
             faltantes = pedidos - self._cursos.bloques_publicados(sesion, pedidos)
             if faltantes:
                 raise ReglaNegocio(
@@ -62,6 +142,66 @@ class CursoService:
                 sesion, curso_id, [(b.bloque_id, b.orden) for b in ruta.bloques]
             )
         return [b.model_dump() for b in sorted(ruta.bloques, key=lambda b: b.orden)]
+
+    # --- Docente: estudiantes ---------------------------------------------------
+    def estudiantes(
+        self, usuario: CurrentUser, curso_id: int, filtros: dict[str, Any]
+    ) -> tuple[list[Fila], int]:
+        with self._abrir_sesion() as sesion:
+            self._curso_propio(sesion, usuario, curso_id)
+            filas, total = self._seguimiento.estudiantes(sesion, curso_id, **filtros)
+        return [_sin_email(f) for f in filas], total
+
+    def detalle_estudiante(self, usuario: CurrentUser, curso_id: int, estudiante_id: str) -> Fila:
+        """Progreso por bloque -> leccion/ejercicio, intentos y comentarios (consultas fijas)."""
+        with self._abrir_sesion() as sesion:
+            self._curso_propio(sesion, usuario, curso_id)
+            inscrito = self._inscrito(sesion, curso_id, estudiante_id)
+            ruta = self._ruta.ruta_de_estudiante(sesion, estudiante_id, curso_id)
+            leccion_ids = [lec["id"] for b in ruta for lec in b["lecciones"]]
+            ejercicios = self._seguimiento.ejercicios_de_lecciones(
+                sesion, leccion_ids, estudiante_id
+            )
+            intentos = self._seguimiento.intentos_del_estudiante(sesion, curso_id, estudiante_id)
+            comentarios = self._seguimiento.retroalimentaciones(sesion, curso_id, estudiante_id)
+        for bloque in ruta:
+            for leccion in bloque["lecciones"]:
+                leccion["ejercicios"] = [e for e in ejercicios if e["leccion_id"] == leccion["id"]]
+            bloque["intentos"] = [i for i in intentos if i["bloque_id"] == bloque["id"]]
+        return {
+            **_sin_email(inscrito),
+            "curso_id": curso_id,
+            "bloques": ruta,
+            "intentos_del_curso": [i for i in intentos if i["bloque_id"] is None],
+            "retroalimentaciones": comentarios,
+        }
+
+    def retirar(self, usuario: CurrentUser, curso_id: int, estudiante_id: str) -> None:
+        with self._abrir_sesion() as sesion:
+            self._curso_propio(sesion, usuario, curso_id, bloquear=True)
+            if not self._cursos.retirar(sesion, curso_id, estudiante_id):
+                raise NoEncontrado("Ese estudiante no está inscrito en el curso.")
+
+    def comentar(
+        self, usuario: CurrentUser, curso_id: int, estudiante_id: str, mensaje: str
+    ) -> Fila:
+        with self._abrir_sesion() as sesion:
+            self._curso_propio(sesion, usuario, curso_id, activo=True)
+            self._inscrito(sesion, curso_id, estudiante_id)
+            return self._cursos.crear_retroalimentacion(
+                sesion,
+                {
+                    "curso_id": curso_id,
+                    "estudiante_id": estudiante_id,
+                    "docente_id": usuario.id,
+                    "mensaje": mensaje,
+                },
+            )
+
+    def resumen(self, usuario: CurrentUser) -> Fila:
+        docente = None if usuario.rol == ROL_ADMIN else usuario.id
+        with self._abrir_sesion() as sesion:
+            return self._seguimiento.resumen(sesion, docente)
 
     # --- Estudiante -------------------------------------------------------------
     def unirse(self, estudiante_id: str, codigo: str) -> dict[str, Any]:
@@ -80,7 +220,13 @@ class CursoService:
 
     # --- Privados ---------------------------------------------------------------
     def _curso_propio(
-        self, sesion: Any, usuario: CurrentUser, curso_id: int, *, bloquear: bool = False
+        self,
+        sesion: Any,
+        usuario: CurrentUser,
+        curso_id: int,
+        *,
+        bloquear: bool = False,
+        activo: bool = False,
     ) -> Fila:
         """Un curso ajeno responde 404 (no 403) para no revelar que existe.
         El administrador puede operar cualquier curso."""
@@ -90,4 +236,12 @@ class CursoService:
         )
         if not es_suyo:
             raise NoEncontrado(f"No existe el curso {curso_id}")
+        if activo and curso["archivado_en"] is not None:
+            raise ReglaNegocio(MENSAJE_ARCHIVADO)
         return curso
+
+    def _inscrito(self, sesion: Any, curso_id: int, estudiante_id: str) -> Fila:
+        fila = self._seguimiento.inscripcion(sesion, curso_id, estudiante_id)
+        if fila is None:
+            raise NoEncontrado("Ese estudiante no está inscrito en el curso.")
+        return fila

@@ -79,7 +79,7 @@ DuracionMin = Annotated[int, Field(ge=DURACION_MIN_MINIMO, le=DURACION_MIN_MAXIM
 Bpm = Annotated[int, Field(ge=BPM_MINIMO, le=BPM_MAXIMO)]
 
 
-class _Entrada(BaseModel):
+class EntradaEditable(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=False)
 
     # Campos que la base no admite nulos: en un PATCH no se pueden "borrar".
@@ -111,7 +111,7 @@ class _Compas(BaseModel):
         return valor
 
 
-class LeccionCrear(_Entrada):
+class LeccionCrear(EntradaEditable):
     bloque_id: int = Field(gt=0)
     numero: int = Field(ge=1, le=9999)
     titulo: Titulo
@@ -123,7 +123,7 @@ class LeccionCrear(_Entrada):
     temas: Temas = []
 
 
-class LeccionEditar(_Entrada):
+class LeccionEditar(EntradaEditable):
     NO_NULOS = ("bloque_id", "numero", "titulo", "nivel")
 
     bloque_id: int | None = Field(default=None, gt=0)
@@ -137,7 +137,7 @@ class LeccionEditar(_Entrada):
     temas: Temas | None = None
 
 
-class EjercicioCrear(_Entrada, _Compas):
+class EjercicioCrear(EntradaEditable, _Compas):
     leccion_id: int | None = Field(default=None, gt=0)
     nombre: Titulo
     descripcion: Descripcion | None = None
@@ -149,7 +149,7 @@ class EjercicioCrear(_Entrada, _Compas):
     pasos: Pasos = []
 
 
-class EjercicioEditar(_Entrada, _Compas):
+class EjercicioEditar(EntradaEditable, _Compas):
     NO_NULOS = ("nombre", "nivel", "bpm_recomendado", "compas")
 
     leccion_id: int | None = Field(default=None, gt=0)
@@ -163,7 +163,7 @@ class EjercicioEditar(_Entrada, _Compas):
     pasos: Pasos | None = None
 
 
-class BloqueCrear(_Entrada):
+class BloqueCrear(EntradaEditable):
     numero: int = Field(ge=1, le=999)
     titulo: Titulo
     descripcion: Descripcion | None = None
@@ -171,7 +171,7 @@ class BloqueCrear(_Entrada):
     orden_index: int = Field(ge=1, le=999)
 
 
-class BloqueEditar(_Entrada):
+class BloqueEditar(EntradaEditable):
     NO_NULOS = ("numero", "titulo", "nivel", "orden_index")
 
     numero: int | None = Field(default=None, ge=1, le=999)

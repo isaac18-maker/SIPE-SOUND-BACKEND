@@ -122,6 +122,11 @@ MENSAJES_VALIDACION = {
 
 
 def _mensaje_validacion(error: dict[str, Any]) -> str:
+    if (
+        error["type"] in {"string_too_short", "too_short"}
+        and error.get("ctx", {}).get("min_length") == 1
+    ):
+        return "No puede estar vacío."
     plantilla = MENSAJES_VALIDACION.get(error["type"])
     if plantilla is None:
         return error["msg"].removeprefix("Value error, ")

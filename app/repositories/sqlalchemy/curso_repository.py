@@ -77,6 +77,69 @@ class SqlCursoRepository:
                 [{"curso_id": curso_id, "bloque_id": b, "orden": o} for b, o in ruta],
             )
 
+    # --- Panel docente (HU-B-310) ----------------------------------------------
+    def listar_de_docente(
+        self, sesion: Session, docente_id: str | None, *, archivados: bool
+    ) -> list[Fila]:
+        """docente_id None = administrador. Con conteo de estudiantes y de bloques (1 consulta)."""
+        estudiantes = (
+            select(func.count())
+            .where(Inscripcion.curso_id == Curso.id)
+            .correlate(Curso)
+            .scalar_subquery()
+        )
+        bloques = (
+            select(func.count())
+            .where(CursoBloque.curso_id == Curso.id)
+            .correlate(Curso)
+            .scalar_subquery()
+        )
+        consulta = select(Curso, estudiantes.label("estudiantes"), bloques.label("bloques_en_ruta"))
+        consulta = consulta.where(
+            Curso.archivado_en.is_not(None) if archivados else Curso.archivado_en.is_(None)
+        )
+        if docente_id is not None:
+            consulta = consulta.where(Curso.docente_id == docente_id)
+        return [
+            {**a_fila(f.Curso), "estudiantes": f.estudiantes, "bloques_en_ruta": f.bloques_en_ruta}
+            for f in sesion.execute(consulta.order_by(Curso.creado_en.desc()))
+        ]
+
+    def ruta(self, sesion: Session, curso_id: int) -> list[Fila]:
+        consulta = (
+            select(CursoBloque.bloque_id, CursoBloque.orden, Bloque.titulo, Bloque.numero)
+            .join(Bloque, Bloque.id == CursoBloque.bloque_id)
+            .where(CursoBloque.curso_id == curso_id)
+            .order_by(CursoBloque.orden)
+        )
+        return [dict(f._mapping) for f in sesion.execute(consulta)]
+
+    def contar_estudiantes(self, sesion: Session, curso_id: int) -> int:
+        consulta = select(func.count()).where(Inscripcion.curso_id == curso_id)
+        return sesion.scalar(consulta) or 0
+
+    def actualizar(self, sesion: Session, curso_id: int, cambios: Fila) -> Fila:
+        curso = sesion.scalars(
+            update(Curso).where(Curso.id == curso_id).values(**cambios).returning(Curso),
+            execution_options={"populate_existing": True},
+        ).one()
+        return a_fila(curso)
+
+    def retirar(self, sesion: Session, curso_id: int, estudiante_id: str) -> bool:
+        """Borra solo la inscripcion: el progreso del estudiante es suyo y se conserva."""
+        resultado = sesion.execute(
+            delete(Inscripcion).where(
+                Inscripcion.curso_id == curso_id, Inscripcion.estudiante_id == estudiante_id
+            )
+        )
+        return resultado.rowcount > 0
+
+    def crear_retroalimentacion(self, sesion: Session, datos: Fila) -> Fila:
+        fila = sesion.scalars(
+            insert(Retroalimentacion).values(**datos).returning(Retroalimentacion)
+        ).one()
+        return a_fila(fila)
+
     def cursos_de_estudiante(self, sesion: Session, estudiante_id: str) -> list[Fila]:
         """Una sola consulta: curso + nombre del docente + comentarios sin leer."""
         sin_leer = (

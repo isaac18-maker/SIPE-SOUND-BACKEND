@@ -28,6 +28,7 @@ from app.repositories.sqlalchemy.leccion_repository import SqlLeccionRepository
 from app.repositories.sqlalchemy.perfil_repository import SqlPerfilRepository
 from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
 from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
+from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRepository
 from app.services.acorde_service import AcordeService
 from app.services.bloque_service import BloqueService
 from app.services.contenido_service import ContenidoService
@@ -102,7 +103,9 @@ def admin_usuarios_service() -> AdminUsuariosService:
 
 @lru_cache
 def curso_service() -> CursoService:
-    return CursoService(session_scope, SqlCursoRepository())
+    return CursoService(
+        session_scope, SqlCursoRepository(), SqlSeguimientoRepository(), ruta_service()
+    )
 
 
 @lru_cache

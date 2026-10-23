@@ -64,6 +64,12 @@ class RutaService:
                 raise NoAutenticado("Inicia sesión para ver la ruta de tu curso.")
             if not self._cursos.puede_ver(sesion, curso_id, usuario_id):
                 raise NoEncontrado(f"No existe el curso {curso_id}")
+        return self.ruta_de_estudiante(sesion, usuario_id, curso_id)
+
+    def ruta_de_estudiante(
+        self, sesion: Any, usuario_id: str | None, curso_id: int | None
+    ) -> list[Fila]:
+        """Sin verificar acceso: para quien ya lo verifico (p. ej. el docente del curso)."""
         bloques = self._ruta.bloques(sesion, curso_id)
         ids = [b["id"] for b in bloques]
         evaluaciones = self._ruta.evaluaciones_de_bloques(sesion, ids)
