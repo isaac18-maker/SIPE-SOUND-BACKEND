@@ -93,6 +93,16 @@ class ReglaNegocio(AppError):
     status, code = 422, "REGLA_NEGOCIO"
 
 
+class DemasiadasSolicitudes(AppError):
+    status, code = 429, "DEMASIADAS_SOLICITUDES"
+    mensaje_por_defecto = "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
+
+
+class ServicioNoDisponible(AppError):
+    status, code = 503, "SERVICIO_NO_DISPONIBLE"
+    mensaje_por_defecto = "Este servicio no está disponible en este momento."
+
+
 def _respuesta(status: int, code: str, mensaje: str, details: list[dict] | None = None):
     # Estructura estandar (HU-B-317): el codigo de error va en "status".
     errores = [

@@ -17,7 +17,9 @@ def create_app(settings: Settings | None = None) -> Flask:
     app = Flask(__name__)
     # Respetar el orden de la respuesta estandar (statusCode, status, data, ...).
     app.json.sort_keys = False
-    CORS(app, origins=settings.cors_origins)
+    # Credenciales: la cookie httpOnly del refresh token (HU-B-322). Seguro porque los
+    # origenes son explicitos (nunca "*", ver config).
+    CORS(app, origins=settings.cors_origins, supports_credentials=True)
     register_error_handlers(app)
     register_blueprints(app)
     registrar_documentacion(app)

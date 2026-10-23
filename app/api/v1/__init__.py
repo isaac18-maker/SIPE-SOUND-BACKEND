@@ -3,6 +3,7 @@ from flask import Flask
 from app.api.v1 import (
     acordes,
     admin,
+    auth,
     bloques,
     cursos,
     docente,
@@ -19,6 +20,7 @@ from app.core.responses import PREFIJO_V1
 # La API solo existe bajo /api/v1: el prefijo /api sin version se retiro en HU-B-319.
 BLUEPRINTS = (
     health,
+    auth,
     bloques,
     lecciones,
     ejercicios,

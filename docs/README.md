@@ -66,6 +66,7 @@ Los números de migración de las HU 307 en adelante se recalculan al implementa
 | 7.3 | [HU-B-319 Retiro inmediato del legado](fase-3-backend-y-bd/HU-B-319-retiro-del-legado.md) | 3 | 317 | 0012 (destructiva aprobada) |
 | 7.4 | [HU-B-320 Límites de los campos](fase-3-backend-y-bd/HU-B-320-limites-de-campos.md) | 3 | 319 | 0013 |
 | 7.5 | [HU-B-321 Cuentas sin clave service_role](fase-3-backend-y-bd/HU-B-321-registro-sin-service-role.md) | 3 | 320 | 0014 |
+| 7.6 | [HU-B-322 Autenticación a través del backend](fase-3-backend-y-bd/HU-B-322-autenticacion-por-backend.md) | 5 | 321 | — |
 
 ## Relación con el frontend
 
@@ -75,6 +76,7 @@ Las HU del frontend (`SIPE-SOUND-FULLSTACK/docs/`) que consumen estas APIs:
 |---|---|
 | HU-B-204 (`/api/v1`) | HU-F-203 (cliente HTTP) |
 | HU-B-304 (`/me`, roles) | HU-F-204 (sesión), HU-F-303 (navegación por rol) |
+| HU-B-322 (`/auth/*`) | HU-F-207 (autenticación por el backend) |
 | HU-B-305, HU-B-308 | HU-F-304 (ruta), HU-F-306 (evaluación y progreso) |
 | HU-B-312 | HU-F-311 (retroalimentación) |
 | HU-B-307 | HU-F-311 (unirse a curso) |

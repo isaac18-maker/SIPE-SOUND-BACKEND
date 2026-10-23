@@ -9,6 +9,7 @@ from functools import lru_cache
 from sqlalchemy import exists
 
 from app.infrastructure.database import session_scope
+from app.infrastructure.supabase_auth import ClienteSupabaseAuth
 from app.models.bloque import Bloque
 from app.models.ejercicio import Ejercicio
 from app.models.evaluacion import Evaluacion
@@ -33,6 +34,7 @@ from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepositor
 from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRepository
 from app.services.acorde_service import AcordeService
+from app.services.auth_service import AuthService
 from app.services.bloque_service import BloqueService
 from app.services.contenido_service import ContenidoService
 from app.services.curso_service import CursoService
@@ -180,3 +182,8 @@ def gestion_evaluacion_service() -> GestionEvaluacionService:
     return GestionEvaluacionService(
         session_scope, SqlGestionEvaluacionRepository(), curso_service()
     )
+
+
+@lru_cache
+def auth_service() -> AuthService:
+    return AuthService(ClienteSupabaseAuth())
