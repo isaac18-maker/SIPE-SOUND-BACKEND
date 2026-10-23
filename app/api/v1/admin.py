@@ -1,13 +1,26 @@
 from flask import Blueprint, request
 
-from app.container import admin_usuarios_service, docente_service
+from app.api.v1._crud_contenido import registrar_crud
+from app.container import admin_usuarios_service, bloque_contenido_service, docente_service
 from app.core.constants import ROL_ADMIN
 from app.core.responses import created, ok
 from app.core.security import get_current_user, roles_required
+from app.schemas.contenido import BloqueCrear, BloqueEditar
 from app.schemas.docente import PreautorizacionDocenteIn
 from app.schemas.perfil import CambioRolIn
 
 bp = Blueprint("admin", __name__)
+
+# Catalogo global de bloques de la ruta (contrato 4.4).
+registrar_crud(
+    bp,
+    recurso="admin/bloques",
+    nombre="el bloque",
+    servicio=bloque_contenido_service,
+    crear=BloqueCrear,
+    editar=BloqueEditar,
+    roles=(ROL_ADMIN,),
+)
 
 
 @bp.patch("/admin/usuarios/<uuid:usuario_id>/rol")

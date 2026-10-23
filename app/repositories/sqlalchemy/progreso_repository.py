@@ -2,6 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.core.constants import ESTADO_PUBLICADO
 from app.models.ejercicio import Ejercicio
 from app.models.leccion import Leccion
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
@@ -68,9 +69,12 @@ class SqlProgresoRepository:
         return _ejecutar(sesion, upsert, ProgresoEjercicio)
 
     def totales_catalogo(self, sesion: Session) -> dict[str, int]:
+        """Solo lo publicado: los borradores del panel docente no cuentan (HU-B-309)."""
+        lecciones = select(func.count()).where(Leccion.estado == ESTADO_PUBLICADO)
+        ejercicios = select(func.count()).where(Ejercicio.estado == ESTADO_PUBLICADO)
         return {
-            "lecciones": sesion.scalar(select(func.count()).select_from(Leccion)) or 0,
-            "ejercicios": sesion.scalar(select(func.count()).select_from(Ejercicio)) or 0,
+            "lecciones": sesion.scalar(lecciones) or 0,
+            "ejercicios": sesion.scalar(ejercicios) or 0,
         }
 
 

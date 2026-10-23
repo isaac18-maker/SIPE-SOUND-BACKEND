@@ -6,9 +6,20 @@
 # =========================================================
 from functools import lru_cache
 
+from sqlalchemy import exists
+
 from app.infrastructure.database import session_scope
+from app.models.bloque import Bloque
+from app.models.ejercicio import Ejercicio
+from app.models.evaluacion import Evaluacion
+from app.models.leccion import Leccion
+from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
 from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
+from app.repositories.sqlalchemy.contenido_repository import (
+    SqlCatalogoRepository,
+    SqlContenidoRepository,
+)
 from app.repositories.sqlalchemy.curso_repository import SqlCursoRepository
 from app.repositories.sqlalchemy.docente_repository import SqlDocenteRepository
 from app.repositories.sqlalchemy.ejercicio_repository import SqlEjercicioRepository
@@ -19,6 +30,7 @@ from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepositor
 from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.services.acorde_service import AcordeService
 from app.services.bloque_service import BloqueService
+from app.services.contenido_service import ContenidoService
 from app.services.curso_service import CursoService
 from app.services.docente_service import DocenteService
 from app.services.ejercicio_service import EjercicioService
@@ -100,3 +112,63 @@ def docente_service() -> DocenteService:
 
 def rol_de_usuario(usuario_id: str) -> str | None:
     return perfil_service().rol_de(usuario_id)
+
+
+# --- Contenido editable (HU-B-309): un servicio generico configurado por tipo ---
+@lru_cache
+def leccion_contenido_service() -> ContenidoService:
+    repositorio = SqlContenidoRepository(
+        Leccion,
+        columna_texto=Leccion.titulo,
+        filtros=("estado", "bloque_id"),
+        en_uso=lambda i: exists().where(ProgresoLeccion.leccion_id == i),
+    )
+    return ContenidoService(
+        session_scope,
+        repositorio,
+        SqlCatalogoRepository(),
+        nombre="la lección",
+        con_autor=True,
+        referencias={"bloque_id": "bloques"},
+        en_uso="La lección tiene avance de estudiantes. Archívala para ocultarla sin perderlo.",
+    )
+
+
+@lru_cache
+def ejercicio_contenido_service() -> ContenidoService:
+    repositorio = SqlContenidoRepository(
+        Ejercicio,
+        columna_texto=Ejercicio.nombre,
+        filtros=("estado", "leccion_id"),
+        en_uso=lambda i: exists().where(ProgresoEjercicio.ejercicio_id == i),
+    )
+    return ContenidoService(
+        session_scope,
+        repositorio,
+        SqlCatalogoRepository(),
+        nombre="el ejercicio",
+        con_autor=True,
+        referencias={"leccion_id": "lecciones"},
+        en_uso="El ejercicio tiene avance de estudiantes. Archívalo para ocultarlo sin perderlo.",
+    )
+
+
+@lru_cache
+def bloque_contenido_service() -> ContenidoService:
+    repositorio = SqlContenidoRepository(
+        Bloque,
+        columna_texto=Bloque.titulo,
+        filtros=("estado",),
+        en_uso=lambda i: (
+            exists().where(Leccion.bloque_id == i) | exists().where(Evaluacion.bloque_id == i)
+        ),
+    )
+    return ContenidoService(
+        session_scope,
+        repositorio,
+        SqlCatalogoRepository(),
+        nombre="el bloque",
+        con_autor=False,
+        referencias={},
+        en_uso="El bloque tiene lecciones o evaluaciones. Archívalo en lugar de borrarlo.",
+    )
