@@ -68,6 +68,8 @@ Los números de migración de las HU 307 en adelante se recalculan al implementa
 | 7.5 | [HU-B-321 Cuentas sin clave service_role](fase-3-backend-y-bd/HU-B-321-registro-sin-service-role.md) | 3 | 320 | 0014 |
 | 7.6 | [HU-B-322 Autenticación a través del backend](fase-3-backend-y-bd/HU-B-322-autenticacion-por-backend.md) | 5 | 321 | — |
 | 8 | [HU-B-324 Actividad del estudiante para su inicio](fase-3-backend-y-bd/HU-B-324-datos-del-inicio-del-estudiante.md) | 3 | 305, 308 | — |
+| 8.1 | [HU-B-325 Poner la base al día (0012–0017)](fase-3-backend-y-bd/HU-B-325-migraciones-0012-0017.md) | 2 | 312, 321 | 0012–0017 (aplicadas 2026-10-23) |
+| 8.2 | [HU-B-326 Datos semilla: ruta real, cursos y cuentas de prueba](fase-3-backend-y-bd/HU-B-326-datos-semilla.md) | 5 | 325, 324 | — |
 
 ## Relación con el frontend
 
