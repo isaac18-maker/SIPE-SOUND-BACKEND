@@ -48,6 +48,7 @@ def auth_required(f: Callable) -> Callable:
         g.current_user = CurrentUser(id=reclamos["sub"], email=reclamos.get("email"), token=token)
         return f(*args, **kwargs)
 
+    decorador.__dict__["requires_authentication"] = True
     return decorador
 
 
