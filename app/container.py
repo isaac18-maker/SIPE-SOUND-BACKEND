@@ -43,7 +43,6 @@ from app.services.gestion_evaluacion_service import GestionEvaluacionService
 from app.services.leccion_service import LeccionService
 from app.services.perfil_service import AdminUsuariosService, PerfilService
 from app.services.progreso_service import ProgresoService
-from app.services.quiz_service import QuizService
 from app.services.ruta_service import RutaService
 
 
@@ -76,11 +75,6 @@ def progreso_service() -> ProgresoService:
         lecciones=SqlLeccionRepository(session_scope),
         ejercicios=SqlEjercicioRepository(session_scope),
     )
-
-
-@lru_cache
-def quiz_service() -> QuizService:
-    return QuizService(evaluacion_service())
 
 
 @lru_cache

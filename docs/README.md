@@ -56,7 +56,7 @@ Los números de migración de las HU 307 en adelante se recalculan al implementa
 | 9 | [HU-B-309 API docente: contenido](fase-3-backend-y-bd/HU-B-309-api-docente-contenido.md) | 5 | 306, 304 | — |
 | 10 | [HU-B-310 API docente: cursos y estudiantes](fase-3-backend-y-bd/HU-B-310-api-docente-cursos-y-estudiantes.md) | 8 | 307, 308 | — |
 | 11 | [HU-B-311 API docente: evaluaciones](fase-3-backend-y-bd/HU-B-311-api-docente-evaluaciones.md) | 5 | 308, 310 | — |
-| 12 | [HU-B-312 Retroalimentación y retiro de legado](fase-3-backend-y-bd/HU-B-312-retroalimentacion-y-retiro-legado.md) | 5 | 308, 310, HU-F-304, HU-F-306 | 0010 (destructiva aprobada) |
+| 12 | [HU-B-312 Retroalimentación y retiro de legado](fase-3-backend-y-bd/HU-B-312-retroalimentacion-y-retiro-legado.md) | 5 | 308, 310 | 0017 (destructiva aprobada) |
 | 6.1 | [HU-B-313 Proteger respuestas de quizzes](fase-3-backend-y-bd/HU-B-313-proteger-respuestas-quiz.md) 🔴 seguridad | 2 | 301, 303 | 0005 |
 | 6.2 | [HU-B-314 Retirar tabla partituras](fase-3-backend-y-bd/HU-B-314-retirar-partituras.md) | 1 | 303 | 0008 (destructiva aprobada) |
 | 6.3 | [HU-B-315 Una sola conexión (Session pooler)](fase-3-backend-y-bd/HU-B-315-una-sola-conexion.md) | 3 | 305, 313 | — |

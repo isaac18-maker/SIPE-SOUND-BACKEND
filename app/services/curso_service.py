@@ -218,6 +218,16 @@ class CursoService:
         with self._abrir_sesion() as sesion:
             return self._cursos.cursos_de_estudiante(sesion, estudiante_id)
 
+    def mis_retroalimentaciones(self, estudiante_id: str, curso_id: int) -> list[Fila]:
+        """Comentarios del docente para el estudiante; al leerlos quedan marcados (leida_en).
+        `nueva` indica cuales no habia leido antes de esta consulta."""
+        with self._abrir_sesion() as sesion:
+            if self._seguimiento.inscripcion(sesion, curso_id, estudiante_id) is None:
+                raise NoEncontrado(f"No existe el curso {curso_id}")
+            comentarios = self._seguimiento.retroalimentaciones(sesion, curso_id, estudiante_id)
+            self._cursos.marcar_leidas(sesion, curso_id, estudiante_id)
+        return [{**c, "nueva": c["leida_en"] is None} for c in comentarios]
+
     def curso_propio(
         self, sesion: Any, usuario: CurrentUser, curso_id: int, *, activo: bool = False
     ) -> Fila:

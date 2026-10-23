@@ -26,3 +26,10 @@ def unirse():
 def mis_cursos():
     """Cursos activos en los que esta inscrito el estudiante."""
     return ok(curso_service().mis_cursos(get_current_user().id))
+
+
+@bp.get("/cursos/<int:curso_id>/retroalimentaciones")
+@roles_required(ROL_ESTUDIANTE)
+def mis_retroalimentaciones(curso_id: int):
+    """Comentarios de mi docente en este curso (los marca como leidos)."""
+    return ok(curso_service().mis_retroalimentaciones(get_current_user().id, curso_id))

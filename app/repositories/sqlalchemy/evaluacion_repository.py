@@ -1,7 +1,6 @@
 from sqlalchemy import func, insert, select, text
 from sqlalchemy.orm import Session
 
-from app.core.constants import EVALUACION_PUBLICADA
 from app.models.evaluacion import Evaluacion, IntentoEvaluacion, PreguntaEvaluacion
 from app.repositories.base import Fila
 from app.repositories.sqlalchemy._comun import a_fila, formatear_fecha
@@ -19,16 +18,6 @@ class SqlEvaluacionRepository:
 
     def obtener(self, sesion: Session, evaluacion_id: int) -> Fila | None:
         evaluacion = sesion.get(Evaluacion, evaluacion_id)
-        return a_fila(evaluacion) if evaluacion else None
-
-    def de_bloque(self, sesion: Session, bloque_id: int) -> Fila | None:
-        """La evaluacion global publicada del bloque (la que lo desbloquea)."""
-        consulta = select(Evaluacion).where(
-            Evaluacion.bloque_id == bloque_id,
-            Evaluacion.curso_id.is_(None),
-            Evaluacion.estado == EVALUACION_PUBLICADA,
-        )
-        evaluacion = sesion.scalar(consulta)
         return a_fila(evaluacion) if evaluacion else None
 
     def preguntas(self, sesion: Session, evaluacion_id: int, *, con_respuesta: bool) -> list[Fila]:

@@ -12,7 +12,6 @@ from app.api.v1 import (
     lecciones,
     me,
     progreso_contenido,
-    quiz,
 )
 from app.core.limites import configurar_limites
 from app.core.responses import PREFIJO_V1
@@ -24,7 +23,6 @@ BLUEPRINTS = (
     lecciones,
     ejercicios,
     acordes,
-    quiz,
     me,
     admin,
     progreso_contenido,

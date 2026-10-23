@@ -140,6 +140,17 @@ class SqlCursoRepository:
         ).one()
         return a_fila(fila)
 
+    def marcar_leidas(self, sesion: Session, curso_id: int, estudiante_id: str) -> None:
+        sesion.execute(
+            update(Retroalimentacion)
+            .where(
+                Retroalimentacion.curso_id == curso_id,
+                Retroalimentacion.estudiante_id == estudiante_id,
+                Retroalimentacion.leida_en.is_(None),
+            )
+            .values(leida_en=func.now())
+        )
+
     def cursos_de_estudiante(self, sesion: Session, estudiante_id: str) -> list[Fila]:
         """Una sola consulta: curso + nombre del docente + comentarios sin leer."""
         sin_leer = (
