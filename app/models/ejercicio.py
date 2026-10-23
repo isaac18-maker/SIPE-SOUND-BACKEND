@@ -47,8 +47,6 @@ class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
     descripcion: Mapped[str | None] = mapped_column(Text)
     nivel: Mapped[str] = mapped_column(Text, server_default="principiante")
     bpm_recomendado: Mapped[int | None] = mapped_column(Integer, server_default="60")
-    # TODO(HU-B-312): retirar `duracion` (texto) cuando el frontend use duracion_min.
-    duracion: Mapped[str | None] = mapped_column(Text)
     compas: Mapped[str | None] = mapped_column(Text, server_default="4/4")
     acordes: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
     pasos: Mapped[list[str] | None] = mapped_column(ARRAY(Text))

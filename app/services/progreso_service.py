@@ -2,7 +2,6 @@
 # Progreso del estudiante.
 # - Lecciones y ejercicios: tablas con FK (progreso_lecciones / _ejercicios) por SQL.
 # - Bloques (resultado de quizzes): siguen en la tabla `progreso` hasta HU-B-308.
-# GET/POST /progreso se mantienen con su forma anterior (adaptador _a_legado).
 # =========================================================
 from typing import Any
 
@@ -16,23 +15,7 @@ from app.repositories.base import (
     RepositorioProgresoContenido,
     VerificadorExistencia,
 )
-from app.schemas.progreso import AvanceEjercicioIn, AvanceIn, ProgresoCreate
-
-COLUMNA_CONTENIDO = {TIPO_LECCION: "leccion_id", TIPO_EJERCICIO: "ejercicio_id"}
-
-
-def _a_legado(tipo: str, fila: Fila) -> Fila:
-    """Forma de la antigua tabla `progreso` que espera el frontend actual."""
-    contenido_id = fila[COLUMNA_CONTENIDO[tipo]]
-    return {
-        "id": f"{tipo}-{contenido_id}",
-        "usuario_id": fila["estudiante_id"],
-        "tipo": tipo,
-        "contenido_id": contenido_id,
-        "porcentaje": fila["porcentaje"],
-        "completado": fila["completado"],
-        "actualizado_en": fila["actualizado_en"],
-    }
+from app.schemas.progreso import AvanceEjercicioIn, AvanceIn
 
 
 class ProgresoService:
@@ -49,7 +32,6 @@ class ProgresoService:
         self._progreso_bloques = progreso_bloques
         self._existe = {TIPO_LECCION: lecciones, TIPO_EJERCICIO: ejercicios}
 
-    # --- API v1 -------------------------------------------------------------
     def registrar_leccion(self, usuario_id: str, leccion_id: int, avance: AvanceIn) -> Fila:
         """El avance nunca retrocede: porcentaje maximo y completado permanente."""
         self._exigir(TIPO_LECCION, leccion_id)
@@ -97,28 +79,6 @@ class ProgresoService:
             "ultimo_avance": max(fechas) if fechas else None,
         }
 
-    # --- Compatibilidad con GET/POST /progreso ------------------------------
-    def listar(self, usuario: CurrentUser) -> list[Fila]:
-        with self._abrir_sesion() as sesion:
-            lecciones = self._progreso.listar_lecciones(sesion, usuario.id)
-            ejercicios = self._progreso.listar_ejercicios(sesion, usuario.id)
-        return [
-            *(_a_legado(TIPO_LECCION, f) for f in lecciones),
-            *(_a_legado(TIPO_EJERCICIO, f) for f in ejercicios),
-            *self._bloques(usuario),
-        ]
-
-    def guardar(self, usuario: CurrentUser, datos: ProgresoCreate) -> list[Fila]:
-        if datos.tipo == TIPO_LECCION:
-            fila = self.registrar_leccion(
-                usuario.id, datos.contenido_id, AvanceIn(**self._avance(datos))
-            )
-        else:
-            fila = self.registrar_ejercicio(
-                usuario.id, datos.contenido_id, AvanceEjercicioIn(**self._avance(datos))
-            )
-        return [_a_legado(datos.tipo, fila)]
-
     # --- Privados -----------------------------------------------------------
     def _exigir(self, tipo: str, contenido_id: int) -> None:
         if not self._existe[tipo].existe(contenido_id):
@@ -126,7 +86,3 @@ class ProgresoService:
 
     def _bloques(self, usuario: CurrentUser) -> list[Fila]:
         return self._progreso_bloques.listar(usuario.id)
-
-    @staticmethod
-    def _avance(datos: ProgresoCreate) -> dict[str, Any]:
-        return {"porcentaje": datos.porcentaje, "completado": bool(datos.completado)}

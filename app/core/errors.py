@@ -1,17 +1,16 @@
 # =========================================================
 # Errores de la aplicacion. Los servicios los lanzan y un unico
-# conjunto de handlers los convierte en la respuesta del contrato:
-#   error -> code, message, details  (ver contrato de API, seccion 3)
-# En las rutas legadas /api/* se conserva {"error": "<mensaje>"}.
+# conjunto de handlers los convierte en la respuesta estandar
+# (ver contrato de API, seccion 3).
 # =========================================================
 import logging
 from typing import Any
 
-from flask import Flask, jsonify
+from flask import Flask
 from pydantic import ValidationError
 from werkzeug.exceptions import HTTPException
 
-from app.core.responses import es_ruta_legada, respuesta
+from app.core.responses import respuesta
 
 logger = logging.getLogger(__name__)
 
@@ -86,8 +85,6 @@ class ServicioNoDisponible(AppError):
 
 
 def _respuesta(status: int, code: str, mensaje: str, details: list[dict] | None = None):
-    if es_ruta_legada():
-        return jsonify({"error": mensaje}), status
     # Estructura estandar (HU-B-317): el codigo de error va en "status".
     errores = [
         f"{d['campo']}: {d['mensaje']}" if d.get("campo") else d["mensaje"] for d in details or []
@@ -139,11 +136,12 @@ def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(ValidationError)
     def manejar_validacion(error: ValidationError):
         detalles = _detalles_validacion(error)
-        # En /api/* el frontend actual muestra un solo texto: el primer error.
-        mensaje = (
-            detalles[0]["mensaje"] if es_ruta_legada() else ValidacionError.mensaje_por_defecto
+        return _respuesta(
+            ValidacionError.status,
+            ValidacionError.code,
+            ValidacionError.mensaje_por_defecto,
+            detalles,
         )
-        return _respuesta(ValidacionError.status, ValidacionError.code, mensaje, detalles)
 
     @app.errorhandler(HTTPException)
     def manejar_http(error: HTTPException):
