@@ -2,11 +2,40 @@
 name = "sipesound-backend"
 version = "0.1.0"
 description = "Backend API para Sipe Sound"
-requires-python = ">=3.10"
+requires-python = ">=3.11, <3.14"
 dependencies = [
     "flask>=3.0.3",
     "flask-cors>=4.0.1",
-    "supabase>=2.7.4",
     "python-dotenv>=1.0.1",
-    "requests>=2.32.3",
+    "pydantic-settings>=2.15.0",
+    "pyjwt[crypto]>=2.14.0",
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.20.0",
+    "asgiref>=3.8.1",
+    "uvicorn>=0.34.0",
+    "waitress>=3.0.2",
+    "flask-limiter>=4.1.1",
+    "flask-swagger-ui>=5.34.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RET", "ARG", "PL", "S", "C90", "ERA"]
+# N818: las excepciones siguen el dominio en espanol (NoEncontrado, SinPermiso), ver contrato 03
+ignore = ["PLR0913", "N818"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"migrations/versions/*" = ["E501", "N999"]

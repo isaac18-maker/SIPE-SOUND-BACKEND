@@ -1,0 +1,40 @@
+PORCENTAJE_APROBACION = 80
+PORCENTAJE_MINIMO = 0
+PORCENTAJE_MAXIMO = 100
+
+TIPO_LECCION = "leccion"
+TIPO_EJERCICIO = "ejercicio"
+
+ROL_ESTUDIANTE = "estudiante"
+ROL_DOCENTE = "docente"
+ROL_ADMIN = "admin"
+ROLES = (ROL_ESTUDIANTE, ROL_DOCENTE, ROL_ADMIN)
+
+ESTADO_BORRADOR = "borrador"
+ESTADO_PUBLICADO = "publicado"
+ESTADO_ARCHIVADO = "archivado"
+ESTADOS_CONTENIDO = (ESTADO_BORRADOR, ESTADO_PUBLICADO, ESTADO_ARCHIVADO)
+
+# Codigo de invitacion a un curso: 8 caracteres sin ambiguedades (sin 0/O/1/I/L).
+ALFABETO_CODIGO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+LARGO_CODIGO = 8
+
+# Evaluaciones (HU-B-308). El umbral por defecto solo se usa al crear.
+EVALUACION_BORRADOR = "borrador"
+EVALUACION_PUBLICADA = "publicada"
+EVALUACION_CERRADA = "cerrada"
+ESTADOS_EVALUACION = (EVALUACION_BORRADOR, EVALUACION_PUBLICADA, EVALUACION_CERRADA)
+TIPO_PREGUNTA_OPCION_UNICA = "opcion_unica"
+
+# Estado de un bloque en la ruta del estudiante (lo calcula RutaService).
+BLOQUE_BLOQUEADO = "bloqueado"
+BLOQUE_DISPONIBLE = "disponible"
+BLOQUE_APROBADO = "aprobado"
+
+# Inicio del estudiante (HU-B-324): actividad reciente y avance por dia.
+ZONA_HORARIA = "America/Bogota"
+ACTIVIDAD_DIAS_MIN = 7
+ACTIVIDAD_DIAS_MAX = 90
+ACTIVIDAD_DIAS_DEFECTO = 28
+ACTIVIDAD_RECIENTES = 10
+ACORDES_POR_BLOQUE = 6
