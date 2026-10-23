@@ -30,3 +30,11 @@ TIPO_PREGUNTA_OPCION_UNICA = "opcion_unica"
 BLOQUE_BLOQUEADO = "bloqueado"
 BLOQUE_DISPONIBLE = "disponible"
 BLOQUE_APROBADO = "aprobado"
+
+# Inicio del estudiante (HU-B-324): actividad reciente y avance por dia.
+ZONA_HORARIA = "America/Bogota"
+ACTIVIDAD_DIAS_MIN = 7
+ACTIVIDAD_DIAS_MAX = 90
+ACTIVIDAD_DIAS_DEFECTO = 28
+ACTIVIDAD_RECIENTES = 10
+ACORDES_POR_BLOQUE = 6

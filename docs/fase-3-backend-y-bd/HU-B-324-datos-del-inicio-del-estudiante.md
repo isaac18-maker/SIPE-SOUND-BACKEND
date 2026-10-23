@@ -82,7 +82,7 @@ Escenario: Días sin práctica
 
 Escenario: Rango inválido
   Cuando consulto ?dias=365
-  Entonces recibo 400 VALIDACION con "dias: debe estar entre 7 y 90."
+  Entonces recibo 400 VALIDACION con el error del campo "dias": "Debe ser menor o igual a 90."
 
 Escenario: Acordes del bloque
   Dado un bloque cuyas lecciones usan Em, Am y Em

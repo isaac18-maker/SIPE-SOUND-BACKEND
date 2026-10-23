@@ -3,7 +3,13 @@
 # =========================================================
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.core.constants import PORCENTAJE_MAXIMO, PORCENTAJE_MINIMO
+from app.core.constants import (
+    ACTIVIDAD_DIAS_DEFECTO,
+    ACTIVIDAD_DIAS_MAX,
+    ACTIVIDAD_DIAS_MIN,
+    PORCENTAJE_MAXIMO,
+    PORCENTAJE_MINIMO,
+)
 from app.core.longitudes import BPM_MAXIMO, BPM_MINIMO
 
 
@@ -20,3 +26,11 @@ class AvanceEjercicioIn(AvanceIn):
     """PUT /progreso/ejercicios/{id}: ademas, el tempo al que se logro tocar."""
 
     mejor_bpm: int | None = Field(default=None, ge=BPM_MINIMO, le=BPM_MAXIMO)
+
+
+class ActividadQuery(BaseModel):
+    """GET /progreso/actividad?dias= (HU-B-324). Llega como texto en la URL: sin strict."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    dias: int = Field(default=ACTIVIDAD_DIAS_DEFECTO, ge=ACTIVIDAD_DIAS_MIN, le=ACTIVIDAD_DIAS_MAX)

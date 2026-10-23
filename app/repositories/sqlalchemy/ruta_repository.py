@@ -46,6 +46,7 @@ class SqlRutaRepository:
             Leccion.numero,
             Leccion.titulo,
             Leccion.duracion_min,
+            Leccion.acordes,
             completado.label("completado"),
         ).where(Leccion.bloque_id.in_(bloque_ids), Leccion.estado == ESTADO_PUBLICADO)
         if estudiante_id:
