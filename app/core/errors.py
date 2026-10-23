@@ -8,6 +8,7 @@ from typing import Any
 
 from flask import Flask
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import HTTPException
 
 from app.core.responses import respuesta
@@ -32,6 +33,15 @@ MENSAJES_HTTP = {
     404: "La ruta solicitada no existe.",
     405: "Este método no está permitido en la ruta solicitada.",
     429: "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
+}
+
+
+# Codigos SQLSTATE de PostgreSQL para las restricciones de integridad.
+SQLSTATE_UNICO = "23505"
+MENSAJES_INTEGRIDAD = {
+    "23514": "Un valor está fuera de los límites permitidos.",
+    "23503": "Una referencia no existe o todavía está en uso.",
+    "23502": "Falta un campo obligatorio.",
 }
 
 
@@ -140,6 +150,20 @@ def register_error_handlers(app: Flask) -> None:
             ValidacionError.mensaje_por_defecto,
             detalles,
         )
+
+    @app.errorhandler(IntegrityError)
+    def manejar_integridad(error: IntegrityError):
+        """Red de seguridad: la base rechazo algo que la API no valido antes."""
+        sqlstate = getattr(error.orig, "sqlstate", None)
+        restriccion = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+        logger.warning("Restriccion de la base: %s (%s)", restriccion, sqlstate)
+        if sqlstate == SQLSTATE_UNICO:
+            return _respuesta(409, Conflicto.code, "Ya existe un registro con ese valor.")
+        mensaje = MENSAJES_INTEGRIDAD.get(sqlstate)
+        if mensaje is None:
+            logger.exception("Error de integridad no clasificado", exc_info=error)
+            return _respuesta(500, AppError.code, MENSAJE_ERROR_INTERNO)
+        return _respuesta(400, ValidacionError.code, mensaje)
 
     @app.errorhandler(HTTPException)
     def manejar_http(error: HTTPException):

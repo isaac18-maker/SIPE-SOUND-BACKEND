@@ -5,6 +5,7 @@ from app.api.v1 import (
     admin,
     bloques,
     cursos,
+    docente,
     ejercicios,
     evaluaciones,
     health,
@@ -29,6 +30,7 @@ BLUEPRINTS = (
     progreso_contenido,
     cursos,
     evaluaciones,
+    docente,
 )
 
 

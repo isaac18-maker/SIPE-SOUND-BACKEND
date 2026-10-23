@@ -140,7 +140,7 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | GET | `/docente/cursos/{id}/estudiantes/{estudiante_id}` | Detalle: progreso por lección/ejercicio e intentos. |
 | DELETE | `/docente/cursos/{id}/estudiantes/{estudiante_id}` | Retirar del curso (borra inscripción). |
 | POST | `/docente/cursos/{id}/estudiantes/{estudiante_id}/retroalimentaciones` | Enviar comentario. |
-| GET · POST | `/docente/lecciones` | Lecciones propias / crear. |
+| GET · POST | `/docente/lecciones` | Lecciones propias (admin: todas) con `?estado=&bloque_id=&q=&pagina=&por_pagina=` / crear en `borrador`. |
 | GET · PATCH · DELETE | `/docente/lecciones/{id}` | Detalle / editar / borrar (409 si tiene progreso → archivar). |
 | PATCH | `/docente/lecciones/{id}/estado` | `borrador` · `publicado` · `archivado`. |
 | GET · POST | `/docente/ejercicios` | Igual que lecciones. |
@@ -157,7 +157,9 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | Método | Ruta | Descripción |
 |---|---|---|
 | PATCH | `/admin/usuarios/{id}/rol` | Asignar `docente`/`estudiante`. |
-| CRUD | `/admin/bloques` | Catálogo global de la ruta. |
+| GET · POST | `/admin/bloques` | Catálogo global de la ruta (todos los estados). |
+| GET · PATCH · DELETE | `/admin/bloques/{id}` | `DELETE` → 409 si tiene lecciones o evaluaciones (archivar). |
+| PATCH | `/admin/bloques/{id}/estado` | Igual que lecciones. |
 
 ## 5. Esquemas de referencia
 
