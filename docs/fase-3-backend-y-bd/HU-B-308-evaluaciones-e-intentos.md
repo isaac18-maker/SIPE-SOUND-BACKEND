@@ -46,6 +46,9 @@ Ejecuta HU-B-308 en SIPE-SOUND-BACKEND.
 - Los endpoints /quiz/* existentes deben devolver exactamente lo mismo que antes.
 ```
 
+## Límites de los campos
+Aplica los de [04-contrato-api §7.2](../fase-1-contrato/04-contrato-api.md#72-para-las-hu-pendientes-se-aplican-al-crearlas) en el esquema Pydantic **y** con CHECK en la migración.
+
 ## Criterios de aceptación
 ```gherkin
 Escenario: Historial

@@ -10,14 +10,30 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import ESTADOS_CONTENIDO
+from app.core.longitudes import (
+    BPM_MAXIMO,
+    BPM_MINIMO,
+    DESCRIPCION_MAX,
+    DURACION_MIN_MAXIMO,
+    DURACION_MIN_MINIMO,
+    MAXIMO_ACORDES,
+    MAXIMO_PASOS,
+    PATRON_COMPAS,
+    TITULO_MAX,
+    TITULO_MIN,
+)
 from app.models.base import (
     NIVELES,
     AutoriaMixin,
     Base,
     CreadoEnMixin,
     EstadoMixin,
+    elementos_maximo,
     en_lista,
+    entero_entre,
     existente,
+    largo_entre,
+    largo_maximo,
 )
 
 
@@ -38,7 +54,18 @@ class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
         CheckConstraint(
             "(estado = 'archivado') = (archivado_en IS NOT NULL)", name="archivado_coherente"
         ),
-        CheckConstraint("duracion_min IS NULL OR duracion_min > 0", name="duracion_min"),
+        CheckConstraint(
+            entero_entre("duracion_min", DURACION_MIN_MINIMO, DURACION_MIN_MAXIMO),
+            name="duracion_min",
+        ),
+        CheckConstraint(largo_entre("nombre", TITULO_MIN, TITULO_MAX), name="nombre"),
+        CheckConstraint(largo_maximo("descripcion", DESCRIPCION_MAX), name="descripcion"),
+        CheckConstraint(
+            entero_entre("bpm_recomendado", BPM_MINIMO, BPM_MAXIMO), name="bpm_recomendado"
+        ),
+        CheckConstraint(f"compas ~ '{PATRON_COMPAS}'", name="compas"),
+        CheckConstraint(elementos_maximo("acordes", MAXIMO_ACORDES), name="acordes"),
+        CheckConstraint(elementos_maximo("pasos", MAXIMO_PASOS), name="pasos"),
     )
 
     id: Mapped[int] = mapped_column(Integer)

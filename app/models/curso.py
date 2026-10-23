@@ -12,7 +12,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import NIVELES, Base, en_lista
+from app.core.longitudes import DESCRIPCION_MAX
+from app.models.base import NIVELES, Base, en_lista, largo_maximo
 
 
 class Curso(Base):
@@ -23,6 +24,7 @@ class Curso(Base):
         UniqueConstraint("codigo_invitacion"),
         CheckConstraint(en_lista("nivel", NIVELES), name="nivel"),
         CheckConstraint("char_length(nombre) BETWEEN 3 AND 120", name="nombre"),
+        CheckConstraint(largo_maximo("descripcion", DESCRIPCION_MAX), name="descripcion"),
         CheckConstraint("codigo_invitacion ~ '^[A-HJKMNP-Z2-9]{8}$'", name="codigo_invitacion"),
     )
 

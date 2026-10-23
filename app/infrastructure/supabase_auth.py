@@ -43,11 +43,15 @@ class ClienteSupabaseAuth:
 
     def _enviar(self, ruta: str, cuerpo: dict, *, redirigir_a: str) -> dict[str, Any]:
         settings = get_settings()
-        if settings.supabase_service_role_key is None:
+        clave = (
+            settings.supabase_service_role_key.get_secret_value().strip()
+            if settings.supabase_service_role_key
+            else ""
+        )
+        if not clave:  # ausente o vacia: no se llama a Supabase
             raise ServicioNoDisponible(
                 "El registro no está disponible: falta configurar SUPABASE_SERVICE_ROLE_KEY."
             )
-        clave = settings.supabase_service_role_key.get_secret_value()
         url = f"{settings.emisor_jwt}/{ruta}"
         if not url.startswith("https://"):
             # S310: urlopen aceptaria file:// u otros esquemas; solo se permite HTTPS.
