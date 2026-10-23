@@ -15,6 +15,8 @@ def create_app(settings: Settings | None = None) -> Flask:
     configure_logging(settings.log_level)
 
     app = Flask(__name__)
+    # Respetar el orden de la respuesta estandar (statusCode, status, data, ...).
+    app.json.sort_keys = False
     CORS(app, origins=settings.cors_origins)
     register_error_handlers(app)
     register_blueprints(app)
