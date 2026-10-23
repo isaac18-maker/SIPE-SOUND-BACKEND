@@ -29,10 +29,29 @@ class Settings(BaseSettings):
     # Proyecto de Supabase: de aqui salen el emisor y las claves publicas (JWKS)
     # con que se validan los tokens de los usuarios.
     supabase_url: str
+    # Clave publica (anon / publishable) del proyecto. El backend la usa para hablar con
+    # Supabase Auth en nombre del frontend: registro, inicio y cierre de sesion (HU-B-322).
+    # No ignora RLS (no es service_role), pero solo vive en el servidor. Sin ella, /auth/* -> 503.
+    supabase_anon_key: SecretStr | None = None
+    # Cookie httpOnly con el refresh token (HU-B-322). Secure: si no se define, se exige
+    # fuera de "local". SameSite "None" solo si frontend y API estan en sitios distintos.
+    auth_cookie_secure: bool | None = None
+    auth_cookie_samesite: Literal["Lax", "Strict", "None"] = "Lax"
     # UNICA conexion a PostgreSQL: Session pooler de Supabase (puerto 5432).
     # La usan la app y Alembic. Contiene la contrasena: es secreta (HU-B-315).
     database_url: SecretStr
     sqlalchemy_echo: bool = False
+
+    @field_validator("auth_cookie_secure", mode="before")
+    @classmethod
+    def vacio_es_automatico(cls, valor: object) -> object:
+        """AUTH_COOKIE_SECURE= (vacio) deja la decision a APP_ENV."""
+        return None if isinstance(valor, str) and not valor.strip() else valor
+
+    @field_validator("auth_cookie_samesite", mode="before")
+    @classmethod
+    def capitalizar_samesite(cls, valor: object) -> object:
+        return valor.strip().capitalize() if isinstance(valor, str) else valor
 
     @field_validator("app_env", "log_level", mode="before")
     @classmethod
@@ -71,6 +90,11 @@ class Settings(BaseSettings):
             raise ValueError("FLASK_DEBUG debe ser 0 cuando APP_ENV=production")
         if self.es_produccion and self.sqlalchemy_echo:
             raise ValueError("SQLALCHEMY_ECHO debe ser 0 cuando APP_ENV=production")
+        # Una cookie de sesion sin Secure viaja en claro por HTTP (HU-B-322).
+        if self.app_env != "local" and self.auth_cookie_secure is False:
+            raise ValueError("AUTH_COOKIE_SECURE debe ser 1 fuera de APP_ENV=local")
+        if self.auth_cookie_samesite == "None" and not self.cookie_segura:
+            raise ValueError("AUTH_COOKIE_SAMESITE=None exige AUTH_COOKIE_SECURE=1")
         return self
 
     def url_base_de_datos(self) -> str:
@@ -83,6 +107,12 @@ class Settings(BaseSettings):
     @property
     def base_es_local(self) -> bool:
         return make_url(self.url_base_de_datos()).host in HOSTS_LOCALES
+
+    @property
+    def cookie_segura(self) -> bool:
+        if self.auth_cookie_secure is None:
+            return self.app_env != "local"
+        return self.auth_cookie_secure
 
     @property
     def emisor_jwt(self) -> str:

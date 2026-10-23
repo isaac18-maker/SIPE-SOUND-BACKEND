@@ -92,13 +92,31 @@ Leyenda de acceso: 🌐 público · 🎓 estudiante · 🧑‍🏫 docente · �
 | GET | `/ejercicios` | 🌐 | Lista. |
 | GET | `/acordes` | 🌐 | Lista con `diagram` (`frets`, `fingers`, `baseFret`, `barre`). |
 
-### 4.1.1 Cuentas (HU-B-321)
+### 4.1.1 Cuentas y sesión (HU-B-321, HU-B-322)
 
-El backend **no crea cuentas** ni guarda claves de Supabase:
+El backend es el **único** que habla con Supabase Auth (con la clave pública `SUPABASE_ANON_KEY`;
+nunca la *service_role*). El frontend no usa `@supabase/supabase-js`.
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/auth/registro` | 🌐 (20/h por IP) | `{nombre, email, password}` → 201 `{email, requiere_confirmacion: true}`. Misma respuesta exista o no el correo. |
+| POST | `/auth/sesion` | 🌐 (30/min por IP) | `{email, password}` → 200 `{access_token, token_type, expira_en, usuario: {id, email, nombre}}` + cookie `sipe_refresh`. 401 credenciales; 422 correo sin confirmar. |
+| POST | `/auth/sesion/renovar` | 🍪 (60/min por IP) | Cuerpo `{}` (JSON obligatorio). Usa la cookie, la **rota** y devuelve un nuevo `access_token` con la misma forma. 401 sin cookie o vencida. |
+| DELETE | `/auth/sesion` | 🍪 | Cuerpo `{}` (JSON obligatorio) y `Authorization: Bearer` opcional. Revoca el refresh token en Supabase y borra la cookie. Siempre 200. |
+
+- **Access token**: en el cuerpo; el frontend lo guarda **en memoria** y lo envía como
+  `Authorization: Bearer` (las rutas 🎓🧑‍🏫🛡️ no cambian).
+- **Refresh token**: nunca en el cuerpo; solo en la cookie `sipe_refresh` (`HttpOnly`,
+  `Path=/api/v1/auth`, `SameSite` según `AUTH_COOKIE_SAMESITE`, `Secure` fuera de local).
+- **Peticiones con cookie**: el frontend usa `credentials: "include"`; CORS responde
+  `Access-Control-Allow-Credentials: true` solo para `CORS_ORIGINS`.
+- **CSRF**: `renovar` y `DELETE /auth/sesion` exigen `Content-Type: application/json`
+  (un formulario de otro sitio no puede enviarlo sin *preflight*, que CORS rechaza).
+- El rol **no** viaja en la sesión: se consulta con `GET /me`.
 
 | Rol | Cómo entra |
 |---|---|
-| Estudiante | El frontend llama a `supabase.auth.signUp` (con `options.data.nombre`). El trigger `handle_new_user` crea el perfil con rol `estudiante` y normaliza el nombre. |
+| Estudiante | `POST /auth/registro`. El trigger `handle_new_user` crea el perfil con rol `estudiante` y normaliza el nombre. |
 | Docente | Un admin **preautoriza** su correo; la persona se registra como cualquiera y, al **confirmar** su correo, la base le asigna `docente`. Si ya tenía cuenta confirmada, el cambio es inmediato. |
 
 | Método | Ruta | Acceso | Descripción |
@@ -208,17 +226,18 @@ Cada límite se aplica **tres veces**: en el formulario del frontend, en la API
 (`app/core/longitudes.py` → esquemas Pydantic, error `400 VALIDACION`) y en la
 base (CHECK, revisión `0013`). Cambiar uno exige cambiar los tres en PRs enlazados.
 Los textos se recortan (`trim`) antes de medir; "   " no es un valor válido.
-Excepción: el registro va directo del frontend a Supabase Auth (HU-B-321), así que nombre,
-correo y contraseña los protegen el formulario, la configuración de Supabase y la base.
+Desde HU-B-322 el registro y el inicio de sesión pasan por la API (`app/schemas/auth.py`),
+así que nombre, correo y contraseña se validan en el formulario, en la API y en Supabase/la base.
 
 ### 7.1 Vigentes
 
 | Campo | Tipo | Regla | Base |
 |---|---|---|---|
-| `nombre` (persona, registro con Supabase Auth) | texto | 2–80; solo letras (con tildes y ñ), espacios, `'`, `.` y `-` (formulario) | `handle_new_user` lo normaliza a 2–80 y `profiles` lo exige con CHECK |
-| `email` (registro e inicio de sesión) | correo | máx. 254; formato `usuario@dominio.tld` (formulario) | Supabase Auth |
+| `nombre` (persona, `POST /auth/registro`) | texto | 2–80; solo letras (con tildes y ñ), espacios, `'`, `.` y `-`; espacios repetidos se colapsan (formulario y API) | `handle_new_user` lo normaliza a 2–80 y `profiles` lo exige con CHECK |
+| `email` (registro e inicio de sesión) | correo | máx. 254; formato `usuario@dominio.tld`; se pasa a minúsculas (formulario y API) | Supabase Auth |
 | `email` (preautorizar docente) | correo | máx. 254; formato; se guarda en minúsculas (API) | CHECK en `docentes_preautorizados` |
-| `password` | contraseña | 8–72; al menos una letra y un número; **no** se recorta (formulario) | Supabase Auth (configurar mínimo 8, letras y dígitos) |
+| `password` (registro) | contraseña | 8–72; al menos una letra y un número; **no** se recorta (formulario y API) | Supabase Auth (configurar mínimo 8, letras y dígitos) |
+| `password` (inicio de sesión) | contraseña | 1–72, sin mínimo por cuentas antiguas (formulario y API) | Supabase Auth |
 | `acepta_terminos` | booleano | debe estar marcado (formulario) | — |
 | `codigo` (unirse a curso) | código | exactamente 8; `A–Z` y `2–9` sin `0 O 1 I L`; se acepta en minúsculas y con espacios a los lados | `^[A-HJKMNP-Z2-9]{8}$` |
 | `cursos.nombre` | texto | 3–120 | 3–120 |

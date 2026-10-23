@@ -10,7 +10,7 @@
 | ORM | SQLAlchemy 2.x (estilo 2.0, tipado) | Desde Fase 3. En Fase 2 se sigue usando el cliente de Supabase detrás de repositorios. |
 | Migraciones | Alembic | Carpeta `migrations/versions/`. |
 | Base de datos | PostgreSQL gestionado por Supabase | Supabase Auth sigue siendo el proveedor de identidad. |
-| Autenticación | JWT emitido por Supabase Auth | El backend valida el token; el frontend nunca consulta tablas directamente. |
+| Autenticación | JWT emitido por Supabase Auth | El backend es el único cliente de Supabase Auth (`/auth/*`, HU-B-322) y valida el token en cada petición. El frontend no usa Supabase. |
 | Calidad | Ruff (lint + format) + SonarQube | Sin cobertura obligatoria en esta etapa. |
 
 ## 2. Estructura objetivo
@@ -155,7 +155,10 @@ def obtener_leccion(leccion_id: int):
   `SQLALCHEMY_ECHO` y **solo dos variables de conexión** (HU-B-315):
   - `SUPABASE_URL` (pública): emisor de los tokens; el JWKS se deduce (`/auth/v1/.well-known/jwks.json`).
   - `DATABASE_URL` (secreta): **Session pooler** de Supabase, la única conexión a PostgreSQL, compartida por la app y Alembic.
-- El backend **no usa la API REST de Supabase** ni la *anon key*: todo el acceso a datos es por SQL.
+- Autenticación (HU-B-322): `SUPABASE_ANON_KEY` (pública, opcional: sin ella `/auth/*` → 503),
+  `AUTH_COOKIE_SECURE` y `AUTH_COOKIE_SAMESITE` (cookie del refresh token).
+- El backend **no usa la API REST de Supabase**: todo el acceso a datos es por SQL. La *anon key*
+  solo se usa contra Supabase Auth (`app/infrastructure/supabase_auth.py`).
 - Si falta una variable obligatoria, la app **no arranca** y dice cuál falta.
 - `debug` nunca está fijo en código.
 
@@ -165,5 +168,5 @@ Desde la Fase 3 el backend se conecta a PostgreSQL con SQLAlchemy usando un rol
 de servidor. Ese rol **no** está sujeto a RLS, por lo tanto:
 
 1. **Toda autorización vive en `services/`** (ej. "un docente solo ve los cursos donde `docente_id = usuario_actual`").
-2. Las políticas RLS se **mantienen** como defensa en profundidad para cualquier acceso con la `anon key` (la usa solo el frontend, para autenticarse).
-3. El frontend solo usa Supabase para **autenticación**; jamás `supabase.from(...)`.
+2. Las políticas RLS se **mantienen** como defensa en profundidad para cualquier acceso con la `anon key` (la usa solo el backend, contra Supabase Auth).
+3. El frontend **no usa Supabase** (HU-B-322): ni para autenticarse ni para datos.
