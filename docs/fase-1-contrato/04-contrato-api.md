@@ -75,7 +75,7 @@
 | 422 | `REGLA_NEGOCIO` | Ej. presentar evaluación de un bloque bloqueado. |
 | 429 | `DEMASIADAS_SOLICITUDES` | Límite de intentos superado (p. ej. unirse a un curso). |
 | 500 | `ERROR_INTERNO` | Cualquier otro. El mensaje **nunca** expone detalles internos. |
-| 503 | `SERVICIO_NO_DISPONIBLE` | Un servicio externo (Supabase Auth) no responde o no está configurado. |
+| 503 | `SERVICIO_NO_DISPONIBLE` | El servidor no puede atender la petición por ahora. |
 
 ## 4. Catálogo de endpoints
 
@@ -94,12 +94,20 @@ Leyenda de acceso: 🌐 público · 🎓 estudiante · 🧑‍🏫 docente · �
 | GET | `/quiz/{bloque_id}` | 🌐 | Preguntas **sin** `respuesta_correcta`. |
 | POST | `/quiz/{bloque_id}/verificar` | 🎓 | Calificación + detalle. |
 
-### 4.1.1 Cuentas (HU-B-318)
+### 4.1.1 Cuentas (HU-B-321)
+
+El backend **no crea cuentas** ni guarda claves de Supabase:
+
+| Rol | Cómo entra |
+|---|---|
+| Estudiante | El frontend llama a `supabase.auth.signUp` (con `options.data.nombre`). El trigger `handle_new_user` crea el perfil con rol `estudiante` y normaliza el nombre. |
+| Docente | Un admin **preautoriza** su correo; la persona se registra como cualquiera y, al **confirmar** su correo, la base le asigna `docente`. Si ya tenía cuenta confirmada, el cambio es inmediato. |
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| POST | `/auth/registro` | 🌐 (20/hora por IP) | Registro de **estudiante**: `{nombre, email, password, acepta_terminos}`. Siempre 201 con el mismo mensaje (no revela si el correo existía). |
-| POST | `/admin/docentes/invitaciones` | 🛡️ | Invita a un **docente**: `{nombre, email}`. Correo para crear contraseña; entra con rol `docente`. 409 si el correo ya tiene cuenta (usar `PATCH /admin/usuarios/{id}/rol`). |
+| POST | `/admin/docentes/preautorizaciones` | 🛡️ | `{email}` → 201 con `{email, estado: "pendiente" \| "aplicada", creado_en, usado_en, …}`. 409 si ya está preautorizado. |
+| GET | `/admin/docentes/preautorizaciones` | 🛡️ | Lista con su estado. |
+| DELETE | `/admin/docentes/preautorizaciones/{email}` | 🛡️ | Retira una **pendiente**. 409 si ya se usó (cambiar el rol con `PATCH /admin/usuarios/{id}/rol`). |
 
 Los administradores **nunca** se crean por la API: el primero con `scripts.promover_admin`, los siguientes con `PATCH /admin/usuarios/{id}/rol` por otro admin.
 
@@ -198,15 +206,18 @@ Cada límite se aplica **tres veces**: en el formulario del frontend, en la API
 (`app/core/longitudes.py` → esquemas Pydantic, error `400 VALIDACION`) y en la
 base (CHECK, revisión `0013`). Cambiar uno exige cambiar los tres en PRs enlazados.
 Los textos se recortan (`trim`) antes de medir; "   " no es un valor válido.
+Excepción: el registro va directo del frontend a Supabase Auth (HU-B-321), así que nombre,
+correo y contraseña los protegen el formulario, la configuración de Supabase y la base.
 
 ### 7.1 Vigentes
 
 | Campo | Tipo | Regla | Base |
 |---|---|---|---|
-| `nombre` (persona: registro, invitación, perfil) | texto | 2–80; solo letras (con tildes y ñ), espacios, `'`, `.` y `-`; espacios repetidos se colapsan | 2–80, sin caracteres de control |
-| `email` | correo | máx. 254; formato `usuario@dominio.tld`; se guarda en minúsculas | Supabase Auth |
-| `password` | contraseña | 8–72; al menos una letra y un número; **no** se recorta | Supabase Auth (configurar mínimo 8) |
-| `acepta_terminos` | booleano | debe ser `true` | — |
+| `nombre` (persona, registro con Supabase Auth) | texto | 2–80; solo letras (con tildes y ñ), espacios, `'`, `.` y `-` (formulario) | `handle_new_user` lo normaliza a 2–80 y `profiles` lo exige con CHECK |
+| `email` (registro e inicio de sesión) | correo | máx. 254; formato `usuario@dominio.tld` (formulario) | Supabase Auth |
+| `email` (preautorizar docente) | correo | máx. 254; formato; se guarda en minúsculas (API) | CHECK en `docentes_preautorizados` |
+| `password` | contraseña | 8–72; al menos una letra y un número; **no** se recorta (formulario) | Supabase Auth (configurar mínimo 8, letras y dígitos) |
+| `acepta_terminos` | booleano | debe estar marcado (formulario) | — |
 | `codigo` (unirse a curso) | código | exactamente 8; `A–Z` y `2–9` sin `0 O 1 I L`; se acepta en minúsculas y con espacios a los lados | `^[A-HJKMNP-Z2-9]{8}$` |
 | `cursos.nombre` | texto | 3–120 | 3–120 |
 | `cursos.descripcion` | texto largo | máx. 2000 (opcional) | máx. 2000 |

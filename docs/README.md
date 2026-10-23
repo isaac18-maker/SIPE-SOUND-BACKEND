@@ -65,6 +65,7 @@ Los números de migración de las HU 307 en adelante se recalculan al implementa
 | 7.2 | [HU-B-318 Registro e invitaciones](fase-3-backend-y-bd/HU-B-318-registro-de-cuentas.md) | 5 | 304, 317 | — |
 | 7.3 | [HU-B-319 Retiro inmediato del legado](fase-3-backend-y-bd/HU-B-319-retiro-del-legado.md) | 3 | 317 | 0012 (destructiva aprobada) |
 | 7.4 | [HU-B-320 Límites de los campos](fase-3-backend-y-bd/HU-B-320-limites-de-campos.md) | 3 | 319 | 0013 |
+| 7.5 | [HU-B-321 Cuentas sin clave service_role](fase-3-backend-y-bd/HU-B-321-registro-sin-service-role.md) | 3 | 320 | 0014 |
 
 ## Relación con el frontend
 
