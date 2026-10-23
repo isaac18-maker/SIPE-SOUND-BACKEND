@@ -3,6 +3,7 @@ from flask import Flask
 from app.api.v1 import (
     acordes,
     admin,
+    auth,
     bloques,
     cursos,
     ejercicios,
@@ -21,7 +22,7 @@ PREFIJO_LEGADO = "/api"
 
 BLUEPRINTS = (health, bloques, lecciones, ejercicios, acordes, progreso, quiz)
 # Endpoints nuevos: solo existen bajo /api/v1 (el prefijo legado no crece).
-BLUEPRINTS_SOLO_V1 = (me, admin, progreso_contenido, cursos)
+BLUEPRINTS_SOLO_V1 = (me, admin, progreso_contenido, cursos, auth)
 
 
 def register_blueprints(app: Flask) -> None:

@@ -7,6 +7,7 @@
 from functools import lru_cache
 
 from app.infrastructure.database import session_scope
+from app.infrastructure.supabase_auth import ClienteSupabaseAuth
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
 from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
 from app.repositories.sqlalchemy.curso_repository import SqlCursoRepository
@@ -24,6 +25,7 @@ from app.services.leccion_service import LeccionService
 from app.services.perfil_service import AdminUsuariosService, PerfilService
 from app.services.progreso_service import ProgresoService
 from app.services.quiz_service import QuizService
+from app.services.registro_service import RegistroService
 
 
 @lru_cache
@@ -77,6 +79,11 @@ def admin_usuarios_service() -> AdminUsuariosService:
 @lru_cache
 def curso_service() -> CursoService:
     return CursoService(session_scope, SqlCursoRepository())
+
+
+@lru_cache
+def registro_service() -> RegistroService:
+    return RegistroService(ClienteSupabaseAuth(), session_scope, SqlPerfilRepository())
 
 
 def rol_de_usuario(usuario_id: str) -> str | None:
