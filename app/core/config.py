@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # UNICA conexion a PostgreSQL: Session pooler de Supabase (puerto 5432).
     # La usan la app y Alembic. Contiene la contrasena: es secreta (HU-B-315).
     database_url: SecretStr
+    # Clave secreta service_role de Supabase (SOLO servidor): registro de estudiantes e
+    # invitacion de docentes (HU-B-318). Opcional: sin ella esos endpoints responden 503.
+    supabase_service_role_key: SecretStr | None = None
+    # URL publica del frontend: a donde vuelve el usuario desde los correos de
+    # confirmacion e invitacion (debe estar en Supabase > Auth > URL Configuration).
+    frontend_url: str | None = None
     sqlalchemy_echo: bool = False
 
     @field_validator("app_env", "log_level", mode="before")
