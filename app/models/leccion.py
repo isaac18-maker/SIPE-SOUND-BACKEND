@@ -16,6 +16,8 @@ from app.core.longitudes import (
     DURACION_MIN_MINIMO,
     MAXIMO_ACORDES,
     MAXIMO_TEMAS,
+    NOMBRE_ACORDE_MAX,
+    TEMA_MAX,
     TITULO_MAX,
     TITULO_MIN,
 )
@@ -25,6 +27,7 @@ from app.models.base import (
     Base,
     CreadoEnMixin,
     EstadoMixin,
+    elementos_caben,
     elementos_maximo,
     en_lista,
     entero_entre,
@@ -52,6 +55,8 @@ class Leccion(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
         CheckConstraint(largo_maximo("contenido", CONTENIDO_LECCION_MAX), name="contenido"),
         CheckConstraint(elementos_maximo("acordes", MAXIMO_ACORDES), name="acordes"),
         CheckConstraint(elementos_maximo("temas", MAXIMO_TEMAS), name="temas"),
+        CheckConstraint(elementos_caben("acordes", NOMBRE_ACORDE_MAX), name="acordes_largo"),
+        CheckConstraint(elementos_caben("temas", TEMA_MAX), name="temas_largo"),
     )
 
     id: Mapped[int] = mapped_column(Integer)

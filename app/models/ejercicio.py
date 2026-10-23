@@ -18,6 +18,8 @@ from app.core.longitudes import (
     DURACION_MIN_MINIMO,
     MAXIMO_ACORDES,
     MAXIMO_PASOS,
+    NOMBRE_ACORDE_MAX,
+    PASO_MAX,
     PATRON_COMPAS,
     TITULO_MAX,
     TITULO_MIN,
@@ -28,6 +30,7 @@ from app.models.base import (
     Base,
     CreadoEnMixin,
     EstadoMixin,
+    elementos_caben,
     elementos_maximo,
     en_lista,
     entero_entre,
@@ -66,6 +69,8 @@ class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
         CheckConstraint(f"compas ~ '{PATRON_COMPAS}'", name="compas"),
         CheckConstraint(elementos_maximo("acordes", MAXIMO_ACORDES), name="acordes"),
         CheckConstraint(elementos_maximo("pasos", MAXIMO_PASOS), name="pasos"),
+        CheckConstraint(elementos_caben("acordes", NOMBRE_ACORDE_MAX), name="acordes_largo"),
+        CheckConstraint(elementos_caben("pasos", PASO_MAX), name="pasos_largo"),
     )
 
     id: Mapped[int] = mapped_column(Integer)

@@ -29,3 +29,6 @@ PATRON_COMPAS = "^(2|3|4|5|6|7|9|12)/(2|4|8)$"
 MAXIMO_ACORDES = 24
 MAXIMO_TEMAS = 20
 MAXIMO_PASOS = 30
+# Largo de cada elemento de las listas
+TEMA_MAX = 60
+PASO_MAX = 300

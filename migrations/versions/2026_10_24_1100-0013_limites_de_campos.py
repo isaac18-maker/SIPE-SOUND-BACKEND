@@ -39,6 +39,8 @@ LIMITES = {
         "contenido": "char_length(contenido) <= 20000",
         "acordes": "cardinality(acordes) <= 24",
         "temas": "cardinality(temas) <= 20",
+        "acordes_largo": "public.elementos_caben(acordes, 20)",
+        "temas_largo": "public.elementos_caben(temas, 60)",
     },
     "ejercicios": {
         "nombre": "char_length(btrim(nombre)) BETWEEN 3 AND 120",
@@ -48,6 +50,8 @@ LIMITES = {
         "compas": "compas ~ '^(2|3|4|5|6|7|9|12)/(2|4|8)$'",
         "acordes": "cardinality(acordes) <= 24",
         "pasos": "cardinality(pasos) <= 30",
+        "acordes_largo": "public.elementos_caben(acordes, 20)",
+        "pasos_largo": "public.elementos_caben(pasos, 300)",
     },
     "acordes": {
         "nombre": "char_length(btrim(nombre)) BETWEEN 1 AND 20",
@@ -55,6 +59,19 @@ LIMITES = {
     },
     "cursos": {"descripcion": "char_length(descripcion) <= 2000"},
 }
+# Un CHECK no admite subconsultas: el largo de cada elemento se mide con una funcion
+# IMMUTABLE (misma entrada, mismo resultado). NULL o lista vacia -> cumple.
+FUNCION_ELEMENTOS = """
+create or replace function public.elementos_caben(lista text[], maximo integer)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $function$
+  select coalesce(bool_and(char_length(btrim(x)) between 1 and maximo), true)
+  from unnest(lista) as x
+$function$
+"""
 TABLAS_CON_DURACION = ("lecciones", "ejercicios")
 DURACION_ANTERIOR = "duracion_min IS NULL OR duracion_min > 0"
 DURACION_NUEVA = "duracion_min IS NULL OR (duracion_min >= 1 AND duracion_min <= 600)"
@@ -104,6 +121,7 @@ $function$
 
 def upgrade() -> None:
     op.execute(FUNCION_NUEVA)
+    op.execute(FUNCION_ELEMENTOS)
     for tabla in TABLAS_CON_DURACION:
         # destructivo-aprobado: HU-B-320 (reemplaza un CHECK por uno mas estricto; sin datos)
         op.drop_constraint(op.f(f"ck_{tabla}_duracion_min"), tabla, type_="check")
@@ -120,6 +138,8 @@ def downgrade() -> None:
     for tabla in TABLAS_CON_DURACION:
         op.drop_constraint(op.f(f"ck_{tabla}_duracion_min"), tabla, type_="check")
         op.create_check_constraint(op.f(f"ck_{tabla}_duracion_min"), tabla, DURACION_ANTERIOR)
+    # destructivo-aprobado: HU-B-320 (funcion creada en esta misma revision)
+    op.execute("drop function public.elementos_caben(text[], integer)")
     op.execute(FUNCION_ANTERIOR)
     # create or replace no quita el SET de la version nueva: se retira explicitamente.
     op.execute("alter function public.handle_new_user() reset search_path")

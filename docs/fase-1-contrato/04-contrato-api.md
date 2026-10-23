@@ -213,9 +213,9 @@ Los textos se recortan (`trim`) antes de medir; "   " no es un valor válido.
 | `bloques.titulo`, `lecciones.titulo`, `ejercicios.nombre` | texto | 3–120 | 3–120 |
 | `bloques/lecciones/ejercicios.descripcion` | texto largo | máx. 2000 (opcional) | máx. 2000 |
 | `lecciones.contenido` | texto largo | máx. 20000 | máx. 20000 |
-| `lecciones.acordes`, `ejercicios.acordes` | lista | máx. 24 elementos | máx. 24 |
-| `lecciones.temas` | lista | máx. 20 elementos | máx. 20 |
-| `ejercicios.pasos` | lista | máx. 30 elementos | máx. 30 |
+| `lecciones.acordes`, `ejercicios.acordes` | lista | máx. 24 elementos de 1–20 caracteres | igual |
+| `lecciones.temas` | lista | máx. 20 elementos de 1–60 caracteres | igual |
+| `ejercicios.pasos` | lista | máx. 30 elementos de 1–300 caracteres | igual |
 | `duracion_min` | entero | 1–600 (opcional) | 1–600 |
 | `ejercicios.bpm_recomendado`, `mejor_bpm` | entero | 20–300 | 20–300 |
 | `ejercicios.compas` | texto | `N/D` con N ∈ {2,3,4,5,6,7,9,12} y D ∈ {2,4,8} (p. ej. `4/4`, `6/8`) | mismo patrón |
@@ -232,5 +232,9 @@ Los textos se recortan (`trim`) antes de medir; "   " no es un valor válido.
 | `evaluaciones.titulo` | HU-B-308 | 3–120 |
 | `preguntas.enunciado` | HU-B-308 | 3–300 |
 | `preguntas.opciones` | HU-B-308 | 2–6 opciones de 1–120 caracteres, sin repetidas |
+| `evaluaciones.descripcion` | HU-B-308 | máx. 2000 |
+| `evaluaciones.porcentaje_aprobacion` | HU-B-308 | entero 50–100 |
+| `evaluaciones.intentos_maximos` | HU-B-308 | entero 1–10 o vacío |
+| `evaluaciones.fecha_limite` | HU-B-308 | futura o vacía |
 | `?q=` (búsqueda) | HU-B-310 | máx. 80 |
 | `?pagina`, `?por_pagina` | todas | `pagina ≥ 1`; `por_pagina` 1–100 |

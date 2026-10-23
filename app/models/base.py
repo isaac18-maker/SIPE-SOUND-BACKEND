@@ -53,6 +53,11 @@ def elementos_maximo(columna: str, maximo: int) -> str:
     return f"cardinality({columna}) <= {maximo}"
 
 
+def elementos_caben(columna: str, maximo: int) -> str:
+    """Cada elemento de la lista con 1..maximo caracteres (funcion de la revision 0013)."""
+    return f"public.elementos_caben({columna}, {maximo})"
+
+
 class CreadoEnMixin:
     creado_en: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
