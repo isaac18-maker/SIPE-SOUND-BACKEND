@@ -67,6 +67,7 @@ Los números de migración de las HU 307 en adelante se recalculan al implementa
 | 7.4 | [HU-B-320 Límites de los campos](fase-3-backend-y-bd/HU-B-320-limites-de-campos.md) | 3 | 319 | 0013 |
 | 7.5 | [HU-B-321 Cuentas sin clave service_role](fase-3-backend-y-bd/HU-B-321-registro-sin-service-role.md) | 3 | 320 | 0014 |
 | 7.6 | [HU-B-322 Autenticación a través del backend](fase-3-backend-y-bd/HU-B-322-autenticacion-por-backend.md) | 5 | 321 | — |
+| 7.7 | [HU-B-323 Aceptación de términos en el registro](fase-3-backend-y-bd/HU-B-323-acepta-terminos.md) | 1 | 322 | — |
 
 ## Relación con el frontend
 

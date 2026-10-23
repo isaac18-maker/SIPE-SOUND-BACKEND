@@ -49,8 +49,7 @@ también en la API y la identidad tenga un único punto de control.
 
 **No incluye**
 - Recuperar contraseña ni cambiar correo (nueva HU si se necesitan).
-- `acepta_terminos` en `RegistroIn`: el formulario aún no tiene la casilla (HU-F-313). Cuando
-  exista, se agrega al esquema como `Literal[True]`.
+- `acepta_terminos` en `RegistroIn`: se agregó en HU-B-323 junto con la casilla de HU-F-313.
 - Limitador compartido entre procesos (Redis): sigue en memoria (ver `app/core/limites.py`).
 
 ## Prompt de ejecución

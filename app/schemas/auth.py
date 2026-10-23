@@ -1,6 +1,6 @@
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 from pydantic_core import PydanticCustomError
 
 from app.core.longitudes import (
@@ -45,8 +45,17 @@ class RegistroIn(BaseModel):
     nombre: str = Field(min_length=NOMBRE_PERSONA_MIN, max_length=NOMBRE_PERSONA_MAX)
     email: str = Field(max_length=EMAIL_MAX)
     password: str = Field(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
+    # Consentimiento (Ley 1581 de 2012): la API no crea cuentas sin él (HU-B-323).
+    acepta_terminos: StrictBool
 
     _email = field_validator("email", mode="before")(_normalizar_email)
+
+    @field_validator("acepta_terminos")
+    @classmethod
+    def exigir_terminos(cls, valor: bool) -> bool:
+        if not valor:
+            raise PydanticCustomError("valor_invalido", "Debes aceptar los términos y condiciones.")
+        return valor
 
     @field_validator("nombre", mode="before")
     @classmethod
