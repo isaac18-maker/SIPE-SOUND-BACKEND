@@ -95,6 +95,15 @@ Leyenda de acceso: 🌐 público · 🎓 estudiante · 🧑‍🏫 docente · �
 | GET | `/progreso` | 🎓 | Progreso del usuario actual. |
 | POST | `/progreso` | 🎓 | Upsert de progreso. |
 
+### 4.1.1 Cuentas (HU-B-318)
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/auth/registro` | 🌐 (20/hora por IP) | Registro de **estudiante**: `{nombre, email, password, acepta_terminos}`. Siempre 201 con el mismo mensaje (no revela si el correo existía). |
+| POST | `/admin/docentes/invitaciones` | 🛡️ | Invita a un **docente**: `{nombre, email}`. Correo para crear contraseña; entra con rol `docente`. 409 si el correo ya tiene cuenta (usar `PATCH /admin/usuarios/{id}/rol`). |
+
+Los administradores **nunca** se crean por la API: el primero con `scripts.promover_admin`, los siguientes con `PATCH /admin/usuarios/{id}/rol` por otro admin.
+
 ### 4.2 Nuevos — estudiante (Fase 3)
 
 | Método | Ruta | Acceso | Descripción |
