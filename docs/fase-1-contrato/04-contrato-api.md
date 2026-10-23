@@ -8,7 +8,7 @@
 
 | Aspecto | Regla |
 |---|---|
-| Prefijo | `/api/v1`. Se mantiene `/api/*` (sin versión) solo durante la transición de la Fase 2 y se elimina en HU-B-312. |
+| Prefijo | **Solo** `/api/v1`. El prefijo `/api/*` sin versión se retiró en HU-B-319 (responde 404). |
 | Formato | JSON UTF-8. Fechas ISO-8601 en UTC (`2026-10-21T14:05:00Z`). |
 | Nombres de campos | `snake_case`, en español, iguales a las columnas cuando aplique. |
 | Recursos | Sustantivos en plural. Acciones no-CRUD como sub-recurso verbal: `POST /evaluaciones/{id}/intentos`. |
@@ -92,8 +92,6 @@ Leyenda de acceso: 🌐 público · 🎓 estudiante · 🧑‍🏫 docente · �
 | GET | `/acordes` | 🌐 | Lista con `diagram` (`frets`, `fingers`, `baseFret`, `barre`). |
 | GET | `/quiz/{bloque_id}` | 🌐 | Preguntas **sin** `respuesta_correcta`. |
 | POST | `/quiz/{bloque_id}/verificar` | 🎓 | Calificación + detalle. |
-| GET | `/progreso` | 🎓 | Progreso del usuario actual. |
-| POST | `/progreso` | 🎓 | Upsert de progreso. |
 
 ### 4.1.1 Cuentas (HU-B-318)
 
@@ -187,6 +185,8 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 
 ## 6. Compatibilidad
 
-- Mientras exista el frontend antiguo, los endpoints de 4.1 conservan su forma de
-  respuesta **sin** envoltura `data` bajo `/api/*`. Bajo `/api/v1/*` ya usan la envoltura.
-- La eliminación de `/api/*` sin versión se hace en HU-B-312, después de desplegar HU-F-304 y HU-F-306.
+No hay modo de compatibilidad (retirado en HU-B-319):
+- `/api/*` sin versión, `GET /progreso` y `POST /progreso` responden 404.
+  El progreso se registra con `PUT /progreso/lecciones/{id}` y
+  `PUT /progreso/ejercicios/{id}`, y se consulta con `GET /progreso/resumen`.
+- `duracion` (texto) ya no existe en lecciones ni ejercicios: usar `duracion_min` (entero).

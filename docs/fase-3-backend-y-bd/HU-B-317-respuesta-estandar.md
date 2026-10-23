@@ -16,7 +16,7 @@
 
 ## Alcance
 - Estructura única en `/api/v1`: `statusCode`, `status`, `data`, `success`, `message`, `errors`, `timestamp`, `meta`.
-- `/api` (legado) conserva su forma hasta que el frontend migre (HU-B-312).
+- `/api` (legado) conservaba su forma; se retiró en HU-B-319.
 - Swagger: solo `/api/v1`, esquema `RespuestaEstandar` en todas las operaciones y desactivado en producción.
 
 ## Criterios de aceptación
