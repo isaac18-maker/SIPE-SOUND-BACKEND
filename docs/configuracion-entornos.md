@@ -111,6 +111,20 @@ inicio de sesión: comprueba el emisor y descarga las claves públicas de
 - Si la contraseña tiene `@ # / : %`, genera una nueva solo con letras y números (Project Settings → Database → Reset database password).
 - **Es secreta:** da control total de la base. Solo en el `.env` o en los secretos del servidor; nunca en el frontend, en git ni en el chat. Si se filtra, cambia la contraseña de la base.
 
+### Variables que ya NO existen
+`SUPABASE_SERVICE_ROLE_KEY` y `FRONTEND_URL` (HU-B-318) se retiraron en HU-B-321, igual que
+`SUPABASE_ANON_KEY`, `DATABASE_URL_MIGRATIONS`, `DATA_BACKEND` y `SUPABASE_JWKS_URL` en HU-B-315.
+Si siguen en tu `.env`, bórralas: la app las ignora. El backend no guarda ninguna clave de
+Supabase; el único secreto es `DATABASE_URL`.
+
+### Configuración de cuentas en Supabase (no son variables del backend)
+El registro lo hace el frontend con Supabase Auth. En el panel de Supabase:
+- Authentication → Providers → Email: **Confirm email activado** (obligatorio: el rol docente
+  se asigna al confirmar el correo) y contraseña mínima 8 con letras y dígitos.
+- Authentication → URL Configuration → *Redirect URLs*: `<url-del-frontend>/login`.
+- ⚠️ El correo incluido en Supabase envía **muy pocos correos por hora**. Para un salón
+  completo, configura un SMTP propio en Authentication → Emails → SMTP Settings.
+
 ### `SQLALCHEMY_ECHO`
 Si es `1`, escribe en el log **cada sentencia SQL con sus valores**.
 

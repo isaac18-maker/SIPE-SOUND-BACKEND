@@ -8,6 +8,15 @@
 | Depende de | HU-B-308, HU-B-310, **HU-F-304, HU-F-306 desplegadas** |
 | Rama | `hu/HU-B-312-ruta-y-limpieza` |
 
+## Implementación (2026-10-24)
+- `GET /api/v1/cursos/{id}/retroalimentaciones`: del más reciente al más antiguo, con el nombre
+  del docente y `nueva` (no leída antes de esta consulta); al consultarlas se marca `leida_en`.
+- Se retiran `/quiz/*`, `QuizService`, los modelos `Progreso` y `QuizPregunta`.
+- Revisión **0017** destructiva aprobada: `drop table quiz_preguntas` y `drop table progreso`,
+  con guardia que aborta si algo no está copiado (0004 y 0016). Verificado en local: con una fila
+  sin copiar aborta sin borrar; `downgrade` recrea las tablas vacías con RLS, políticas y permisos.
+- Se ejecutó sin esperar HU-F-304/306 por decisión del equipo (el frontend se migra en HU-F-203).
+
 ## Historia
 **Como** estudiante
 **quiero** leer los comentarios que mi docente me deja
@@ -20,10 +29,10 @@
 ## Alcance
 **Incluye**
 1. `GET /api/v1/cursos/{id}/retroalimentaciones` (marca `leida_en`).
-2. Retiro del prefijo `/api/*` sin versión.
-3. Revisión `0010` **destructiva aprobada**:
-   - `drop table quiz_preguntas` y `drop table progreso` (previo respaldo).
-   - `drop column duracion` en `lecciones` y `ejercicios`.
+2. ~~Retiro del prefijo `/api/*` sin versión.~~ **Hecho en HU-B-319.**
+3. Revisión **destructiva aprobada**:
+   - `drop table quiz_preguntas` y `drop table progreso` (previo respaldo), cuando HU-B-308 los reemplace.
+   - ~~`drop column duracion` en `lecciones` y `ejercicios`.~~ **Hecho en HU-B-319 (0012).**
    - Cabecera `Destructiva: si` y `# destructivo-aprobado: HU-B-312` en cada operación.
    - `downgrade()` recrea las estructuras (vacías) y documenta que los datos se restauran desde el respaldo.
 4. ~~Eliminar `app/infrastructure/supabase_rest.py`, repositorios `supabase/` y `DATA_BACKEND`.~~ **Hecho en HU-B-315.**

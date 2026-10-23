@@ -4,29 +4,35 @@ from app.api.v1 import (
     acordes,
     admin,
     bloques,
+    cursos,
+    docente,
     ejercicios,
+    evaluaciones,
     health,
     lecciones,
     me,
-    progreso,
     progreso_contenido,
-    quiz,
 )
+from app.core.limites import configurar_limites
 from app.core.responses import PREFIJO_V1
 
-# TODO(HU-B-312): retirar el prefijo legado cuando el frontend use solo /api/v1.
-PREFIJO_LEGADO = "/api"
-
-BLUEPRINTS = (health, bloques, lecciones, ejercicios, acordes, progreso, quiz)
-# Endpoints nuevos: solo existen bajo /api/v1 (el prefijo legado no crece).
-BLUEPRINTS_SOLO_V1 = (me, admin, progreso_contenido)
+# La API solo existe bajo /api/v1: el prefijo /api sin version se retiro en HU-B-319.
+BLUEPRINTS = (
+    health,
+    bloques,
+    lecciones,
+    ejercicios,
+    acordes,
+    me,
+    admin,
+    progreso_contenido,
+    cursos,
+    evaluaciones,
+    docente,
+)
 
 
 def register_blueprints(app: Flask) -> None:
+    configurar_limites(app)
     for modulo in BLUEPRINTS:
-        app.register_blueprint(modulo.bp, url_prefix=PREFIJO_V1)
-        app.register_blueprint(
-            modulo.bp, url_prefix=PREFIJO_LEGADO, name=f"{modulo.bp.name}_legado"
-        )
-    for modulo in BLUEPRINTS_SOLO_V1:
         app.register_blueprint(modulo.bp, url_prefix=PREFIJO_V1)

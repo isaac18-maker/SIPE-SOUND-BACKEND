@@ -2,7 +2,17 @@ from sqlalchemy import CheckConstraint, Integer, PrimaryKeyConstraint, Text, Uni
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import ESTADOS_CONTENIDO
-from app.models.base import NIVELES, Base, CreadoEnMixin, EstadoMixin, en_lista, existente
+from app.core.longitudes import DESCRIPCION_MAX, TITULO_MAX, TITULO_MIN
+from app.models.base import (
+    NIVELES,
+    Base,
+    CreadoEnMixin,
+    EstadoMixin,
+    en_lista,
+    existente,
+    largo_entre,
+    largo_maximo,
+)
 
 
 class Bloque(CreadoEnMixin, EstadoMixin, Base):
@@ -12,6 +22,8 @@ class Bloque(CreadoEnMixin, EstadoMixin, Base):
         UniqueConstraint("orden_index"),
         CheckConstraint(en_lista("nivel", NIVELES), name=existente("bloques_nivel_check")),
         CheckConstraint(en_lista("estado", ESTADOS_CONTENIDO), name="estado"),
+        CheckConstraint(largo_entre("titulo", TITULO_MIN, TITULO_MAX), name="titulo"),
+        CheckConstraint(largo_maximo("descripcion", DESCRIPCION_MAX), name="descripcion"),
     )
 
     id: Mapped[int] = mapped_column(Integer)

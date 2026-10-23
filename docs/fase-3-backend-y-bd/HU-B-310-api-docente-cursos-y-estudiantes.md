@@ -8,6 +8,17 @@
 | Depende de | HU-B-307, HU-B-308 |
 | Rama | `hu/HU-B-310-docente-cursos` |
 
+## Implementación (2026-10-24)
+- `SqlSeguimientoRepository`: el listado de estudiantes es **una** sentencia (CTE de la ruta +
+  subconsultas agregadas + `count(*) over ()` para el total). Medido con 40 estudiantes:
+  3 sentencias por request (rol, curso, listado), ~40 ms en local. Sin índices nuevos: las
+  consultas usan las PK `(estudiante_id, leccion_id)` y los índices existentes.
+- Si el curso no definió su ruta, el avance se calcula sobre la ruta global.
+- Curso archivado: se puede ver y listar, pero editar, regenerar código, cambiar la ruta y
+  comentar responden 422.
+- `GET /docente/cursos?estado=activo|archivado` incluye `estudiantes` y `bloques_en_ruta`.
+- Máscara de correo en `app/core/privacidad.py`; nunca sale el correo completo al docente.
+
 ## Historia
 **Como** docente
 **quiero** ver a los estudiantes de cada curso que tengo a cargo con su avance real

@@ -8,6 +8,19 @@
 | Depende de | HU-B-306, HU-B-304 |
 | Rama | `hu/HU-B-309-docente-contenido` |
 
+## Implementación (2026-10-24)
+- Un servicio (`ContenidoService`) y un repositorio (`SqlContenidoRepository`) genéricos,
+  configurados por tipo en `app/container.py`; los endpoints se registran con
+  `app/api/v1/_crud_contenido.py`. Sin duplicación entre lecciones y ejercicios.
+- Límites del contrato §7 (prevalecen sobre los de esta HU): `bpm_recomendado` 20–300,
+  `compas` con el patrón de §7, `pasos` ≤ 30 de ≤ 300 caracteres, `temas` ≤ 20 de ≤ 60.
+- `DELETE` responde **200** con la estructura estándar (no 204: toda respuesta lleva cuerpo).
+  En uso → 409 con `errors: ["sugerencia: archivar"]`.
+- Incluye el CRUD de bloques del contrato §4.4 (`/admin/bloques`, solo admin), con el mismo código.
+- Red de seguridad: si una restricción de la base rechaza un valor (único, CHECK, FK), la API
+  responde 409/400 con mensaje en español en lugar de 500.
+- `GET /progreso/resumen` cuenta solo lecciones y ejercicios **publicados**.
+
 ## Historia
 **Como** docente
 **quiero** crear, editar, publicar, archivar y eliminar lecciones y ejercicios

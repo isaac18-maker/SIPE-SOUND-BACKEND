@@ -1,12 +1,26 @@
 from flask import Blueprint, request
 
-from app.container import admin_usuarios_service
+from app.api.v1._crud_contenido import registrar_crud
+from app.container import admin_usuarios_service, bloque_contenido_service, docente_service
 from app.core.constants import ROL_ADMIN
-from app.core.responses import ok
-from app.core.security import roles_required
+from app.core.responses import created, ok
+from app.core.security import get_current_user, roles_required
+from app.schemas.contenido import BloqueCrear, BloqueEditar
+from app.schemas.docente import PreautorizacionDocenteIn
 from app.schemas.perfil import CambioRolIn
 
 bp = Blueprint("admin", __name__)
+
+# Catalogo global de bloques de la ruta (contrato 4.4).
+registrar_crud(
+    bp,
+    recurso="admin/bloques",
+    nombre="el bloque",
+    servicio=bloque_contenido_service,
+    crear=BloqueCrear,
+    editar=BloqueEditar,
+    roles=(ROL_ADMIN,),
+)
 
 
 @bp.patch("/admin/usuarios/<uuid:usuario_id>/rol")
@@ -14,3 +28,34 @@ bp = Blueprint("admin", __name__)
 def cambiar_rol(usuario_id):
     entrada = CambioRolIn.model_validate(request.get_json(silent=True) or {})
     return ok(admin_usuarios_service().cambiar_rol(str(usuario_id), entrada.rol))
+
+
+@bp.post("/admin/docentes/preautorizaciones")
+@roles_required(ROL_ADMIN)
+def preautorizar_docente():
+    """Autorizar un correo como docente.
+
+    La persona se registra normalmente y recibe el rol 'docente' al confirmar su correo.
+    Si ya tiene una cuenta confirmada, el rol se asigna de inmediato (estado "aplicada").
+    """
+    datos = PreautorizacionDocenteIn.model_validate(request.get_json(silent=True) or {})
+    fila = docente_service().preautorizar(datos.email, get_current_user().id)
+    if fila["estado"] == "aplicada":
+        return created(fila, mensaje=f"{datos.email} ya tenía cuenta: ahora es docente.")
+    return created(fila, mensaje=f"Listo: {datos.email} será docente cuando confirme su correo.")
+
+
+@bp.get("/admin/docentes/preautorizaciones")
+@roles_required(ROL_ADMIN)
+def listar_preautorizaciones():
+    """Correos autorizados como docente, con su estado (pendiente / aplicada)."""
+    return ok(docente_service().listar())
+
+
+@bp.delete("/admin/docentes/preautorizaciones/<path:email>")
+@roles_required(ROL_ADMIN)
+def revocar_preautorizacion(email: str):
+    """Retirar una preautorizacion que aun no se usa."""
+    datos = PreautorizacionDocenteIn.model_validate({"email": email})
+    docente_service().revocar(datos.email)
+    return ok(None, mensaje="Preautorización retirada.")
