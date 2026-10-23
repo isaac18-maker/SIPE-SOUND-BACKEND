@@ -40,7 +40,9 @@ MENSAJES_HTTP = {
 SQLSTATE_UNICO = "23505"
 # Restricciones unicas con un mensaje que dice que hacer.
 MENSAJES_UNICOS = {
-    "uq_evaluaciones_bloque_global": "Ese bloque ya tiene una evaluación vigente: ciérrala primero.",
+    "uq_evaluaciones_bloque_global": (
+        "Ese bloque ya tiene una evaluación vigente: ciérrala primero."
+    ),
     "uq_bloques_orden_index": "Ya hay un bloque en esa posición (orden_index).",
     "uq_preguntas_evaluacion_evaluacion_id_orden": "Dos preguntas no pueden tener el mismo orden.",
     "acordes_nombre_key": "Ya existe un acorde con ese nombre.",
