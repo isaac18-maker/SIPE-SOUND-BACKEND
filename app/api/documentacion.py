@@ -6,10 +6,69 @@ from flask import Flask, jsonify
 from flask_swagger_ui import get_swaggerui_blueprint
 from werkzeug.routing import Rule
 
+from app.core.config import get_settings
+from app.core.responses import PREFIJO_V1
+
 RUTA_PARAMETRO = re.compile(r"<(?:(?P<convertidor>[^:<>]+):)?(?P<nombre>[^<>]+)>")
 TIPOS_PARAMETRO = {"int": "integer", "uuid": "string"}
 METODOS_ESCRITURA = {"POST", "PUT", "PATCH"}
 METODOS_IGNORADOS = {"HEAD", "OPTIONS"}
+REF_RESPUESTA = {"$ref": "#/components/schemas/RespuestaEstandar"}
+# Rangos de OpenAPI 3: toda respuesta (exito o error) usa la misma estructura (HU-B-317).
+RESPUESTAS = {
+    "2XX": {
+        "description": "Éxito (`success: true`).",
+        "content": {"application/json": {"schema": REF_RESPUESTA}},
+    },
+    "4XX": {
+        "description": (
+            "Error del cliente (`success: false`; código en `status`, detalle en `errors`)."
+        ),
+        "content": {"application/json": {"schema": REF_RESPUESTA}},
+    },
+    "5XX": {
+        "description": "Error interno.",
+        "content": {"application/json": {"schema": REF_RESPUESTA}},
+    },
+}
+ESQUEMA_RESPUESTA = {
+    "type": "object",
+    "required": [
+        "statusCode",
+        "status",
+        "data",
+        "success",
+        "message",
+        "errors",
+        "timestamp",
+        "meta",
+    ],
+    "properties": {
+        "statusCode": {"type": "integer", "example": 200},
+        "status": {
+            "type": "string",
+            "example": "OK",
+            "description": "OK, CREATED o el código de error (VALIDACION, NO_ENCONTRADO…).",
+        },
+        "data": {
+            "nullable": True,
+            "description": "Contenido de la respuesta; null en los errores.",
+        },
+        "success": {"type": "boolean", "example": True},
+        "message": {"type": "string", "example": "Operación exitosa."},
+        "errors": {"type": "array", "items": {"type": "string"}, "example": []},
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-22T06:00:13.562Z",
+        },
+        "meta": {
+            "type": "object",
+            "additionalProperties": True,
+            "description": "Paginación u otros datos.",
+        },
+    },
+}
 
 
 def _convertir_ruta(ruta: str) -> str:
@@ -50,7 +109,7 @@ def _crear_operacion(app: Flask, regla: Rule, metodo: str) -> dict[str, Any]:
         "tags": [regla.endpoint.split(".", maxsplit=1)[0].removesuffix("_legado")],
         "summary": resumen,
         "operationId": f"{regla.endpoint.replace('.', '_')}_{metodo.lower()}",
-        "responses": {"200": {"description": "Respuesta según el contrato de la API."}},
+        "responses": RESPUESTAS,
     }
     if descripcion:
         operacion["description"] = descripcion
@@ -73,7 +132,8 @@ def _crear_operacion(app: Flask, regla: Rule, metodo: str) -> dict[str, Any]:
 def generar_especificacion(app: Flask) -> dict[str, Any]:
     rutas: dict[str, dict[str, Any]] = {}
     for regla in app.url_map.iter_rules():
-        if not regla.rule.startswith("/api/"):
+        # Solo el contrato vigente: /api (sin version) es legado del frontend actual.
+        if not regla.rule.startswith(f"{PREFIJO_V1}/"):
             continue
         ruta = _convertir_ruta(regla.rule)
         operaciones = rutas.setdefault(ruta, {})
@@ -86,13 +146,15 @@ def generar_especificacion(app: Flask) -> dict[str, Any]:
             "title": "SIPE-SOUND API",
             "version": "1.0.0",
             "description": (
-                "Documentación de los endpoints activos. Los endpoints bajo /api/v1 "
-                "siguen el contrato vigente; /api conserva respuestas legadas."
+                "Contrato vigente de la API (/api/v1). Todas las respuestas usan la "
+                "estructura RespuestaEstandar. Las rutas /api sin versión son legadas "
+                "(solo para el frontend actual) y no se documentan."
             ),
         },
         "servers": [{"url": "/"}],
         "paths": rutas,
         "components": {
+            "schemas": {"RespuestaEstandar": ESQUEMA_RESPUESTA},
             "securitySchemes": {
                 "TokenSupabase": {
                     "type": "http",
@@ -100,12 +162,16 @@ def generar_especificacion(app: Flask) -> dict[str, Any]:
                     "bearerFormat": "JWT",
                     "description": "Token de acceso emitido por Supabase Auth.",
                 }
-            }
+            },
         },
     }
 
 
 def registrar_documentacion(app: Flask) -> None:
+    """Swagger en local y staging. En produccion no se publica el mapa de la API."""
+    if get_settings().es_produccion:
+        return
+
     @app.get("/openapi.json")
     def obtener_especificacion():
         return jsonify(generar_especificacion(app))
