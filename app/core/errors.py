@@ -100,6 +100,14 @@ MENSAJES_VALIDACION = {
     "string_too_short": "Debe tener al menos {min_length} caracteres.",
     "string_too_long": "Debe tener como máximo {max_length} caracteres.",
     "too_long": "Debe tener como máximo {max_length} elementos.",
+    "too_short": "Debe tener al menos {min_length} elementos.",
+    "greater_than": "Debe ser mayor que {gt}.",
+    "less_than": "Debe ser menor que {lt}.",
+    "list_type": "Debe ser una lista.",
+    "datetime_parsing": "Debe ser una fecha y hora ISO-8601 (2026-11-30T23:59:00Z).",
+    "datetime_type": "Debe ser una fecha y hora ISO-8601 (2026-11-30T23:59:00Z).",
+    "timezone_aware": "La fecha debe incluir la zona horaria (p. ej. Z o -05:00).",
+    "enum": "Debe ser uno de: {expected}.",
 }
 
 

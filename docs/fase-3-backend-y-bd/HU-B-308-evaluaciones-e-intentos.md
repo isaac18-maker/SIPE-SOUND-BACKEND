@@ -8,6 +8,16 @@
 | Depende de | HU-B-307 |
 | Rama | `hu/HU-B-308-evaluaciones` |
 
+## Implementación (2026-10-24)
+- Revisiones **0015** (esquema) y **0016** (datos); los números 0008/0009 ya estaban usados.
+- Regla de desbloqueo única en `RutaService.estados_de_bloques`: un bloque **sin evaluación**
+  no bloquea al siguiente. "Aprobado" = algún intento aprobado en la evaluación global del bloque
+  (aunque luego se cierre).
+- Una sola evaluación global vigente por bloque (índice único parcial `uq_evaluaciones_bloque_global`).
+- `intentos_max` protegido contra envíos simultáneos con `pg_advisory_xact_lock` por estudiante.
+- Los intentos copiados de `progreso` llevan `respuestas = {}` y `correctas` estimadas con el puntaje.
+- `/quiz/*` delega en la evaluación del bloque y ya no escribe en `progreso`.
+
 ## Historia
 **Como** estudiante
 **quiero** presentar la evaluación de un bloque cuantas veces necesite y ver mi historial
