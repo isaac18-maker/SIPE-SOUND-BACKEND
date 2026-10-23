@@ -25,11 +25,13 @@ CODIGOS_HTTP = {
     405: "METODO_NO_PERMITIDO",
     409: "CONFLICTO",
     422: "REGLA_NEGOCIO",
+    429: "DEMASIADAS_SOLICITUDES",
 }
 
 MENSAJES_HTTP = {
     404: "La ruta solicitada no existe.",
     405: "Este método no está permitido en la ruta solicitada.",
+    429: "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
 }
 
 
