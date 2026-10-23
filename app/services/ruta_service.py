@@ -9,7 +9,12 @@
 # =========================================================
 from typing import Any, Protocol
 
-from app.core.constants import BLOQUE_APROBADO, BLOQUE_BLOQUEADO, BLOQUE_DISPONIBLE
+from app.core.constants import (
+    ACORDES_POR_BLOQUE,
+    BLOQUE_APROBADO,
+    BLOQUE_BLOQUEADO,
+    BLOQUE_DISPONIBLE,
+)
 from app.core.errors import NoAutenticado, NoEncontrado
 from app.repositories.base import AbrirSesion, Fila
 
@@ -45,6 +50,15 @@ def estados_de_bloques(
     return estados
 
 
+def acordes_del_bloque(lecciones: list[Fila]) -> list[str]:
+    """Funcion pura: acordes distintos de las lecciones, en orden de leccion (HU-B-324)."""
+    vistos: dict[str, None] = {}
+    for leccion in lecciones:
+        for acorde in leccion.get("acordes") or []:
+            vistos.setdefault(acorde)
+    return list(vistos)[:ACORDES_POR_BLOQUE]
+
+
 class RutaService:
     def __init__(
         self, abrir_sesion: AbrirSesion, ruta: RepositorioRuta, cursos: VerificadorCurso
@@ -76,6 +90,9 @@ class RutaService:
         lecciones = self._ruta.lecciones(sesion, ids, usuario_id)
         desempeno = self._ruta.desempeno(sesion, ids, usuario_id) if usuario_id else {}
 
+        por_bloque: dict[int, list[Fila]] = {i: [] for i in ids}
+        for leccion in lecciones:
+            por_bloque[leccion["bloque_id"]].append(leccion)
         aprobados = {b for b, d in desempeno.items() if d["aprobado"]}
         estados = (
             estados_de_bloques(ids, set(evaluaciones), aprobados)
@@ -89,10 +106,10 @@ class RutaService:
                 "estado": estados[bloque["id"]],
                 "evaluacion_id": evaluaciones.get(bloque["id"]),
                 "mejor_puntaje": desempeno.get(bloque["id"], {}).get("mejor_puntaje"),
+                "acordes": acordes_del_bloque(por_bloque[bloque["id"]]),
                 "lecciones": [
-                    {k: v for k, v in leccion.items() if k != "bloque_id"}
-                    for leccion in lecciones
-                    if leccion["bloque_id"] == bloque["id"]
+                    {k: v for k, v in leccion.items() if k not in ("bloque_id", "acordes")}
+                    for leccion in por_bloque[bloque["id"]]
                 ],
             }
             for posicion, bloque in enumerate(bloques, start=1)

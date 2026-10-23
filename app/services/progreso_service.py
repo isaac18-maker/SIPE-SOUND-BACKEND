@@ -5,7 +5,7 @@
 # =========================================================
 from typing import Any, Protocol
 
-from app.core.constants import TIPO_EJERCICIO, TIPO_LECCION
+from app.core.constants import ACTIVIDAD_RECIENTES, TIPO_EJERCICIO, TIPO_LECCION
 from app.core.errors import NoEncontrado
 from app.core.security import CurrentUser
 from app.repositories.base import (
@@ -80,6 +80,17 @@ class ProgresoService:
             },
             "bloques_aprobados": len(bloques),
             "ultimo_avance": max(fechas) if fechas else None,
+        }
+
+    def actividad(self, usuario: CurrentUser, dias: int) -> dict[str, Any]:
+        """Inicio del estudiante (HU-B-324): cuenta registros de avance, no minutos tocados."""
+        with self._abrir_sesion() as sesion:
+            datos = self._progreso.actividad(
+                sesion, usuario.id, dias=dias, limite=ACTIVIDAD_RECIENTES
+            )
+        return {
+            **datos,
+            "dias_con_practica": sum(1 for d in datos["por_dia"] if d["registros"] > 0),
         }
 
     # --- Privados -----------------------------------------------------------

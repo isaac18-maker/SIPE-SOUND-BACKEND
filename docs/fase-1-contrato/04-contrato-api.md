@@ -132,13 +132,14 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
 | GET | `/me` | 🎓🧑‍🏫🛡️ | Perfil y rol del usuario actual. |
-| GET | `/ruta?curso_id=` | 🌐🎓 | Bloques con estado (`bloqueado`, `disponible`, `aprobado`) y mejor puntaje. Sin sesión: todos `disponible`, sin puntajes. |
+| GET | `/ruta?curso_id=` | 🌐🎓 | Bloques con estado (`bloqueado`, `disponible`, `aprobado`), mejor puntaje y `acordes` (distintos, en orden de lección, máx. 6; HU-B-324). Sin sesión: todos `disponible`, sin puntajes. |
 | GET | `/evaluaciones/{id}` | 🎓 | Evaluación sin respuestas correctas. |
 | POST | `/evaluaciones/{id}/intentos` | 🎓 | Presentar intento → calificación. |
 | GET | `/evaluaciones/{id}/intentos` | 🎓 | Historial propio de intentos. |
 | PUT | `/progreso/lecciones/{leccion_id}` | 🎓 | Upsert progreso de lección. |
 | PUT | `/progreso/ejercicios/{ejercicio_id}` | 🎓 | Upsert progreso de ejercicio. |
 | GET | `/progreso/resumen` | 🎓 | Totales y último avance. |
+| GET | `/progreso/actividad?dias=` | 🎓 | `dias` 7–90 (28 por defecto). `recientes` (10 eventos de lección, ejercicio o evaluación, del más reciente), `por_dia` (`fecha`, `registros`; días vacíos incluidos, zona America/Bogota) y `dias_con_practica`. Cuenta registros de avance, no minutos (HU-B-324). |
 | POST | `/cursos/unirse` | 🎓 | Body `{ codigo }`. |
 | GET | `/cursos` | 🎓 | Cursos donde está inscrito. |
 | GET | `/cursos/{id}/retroalimentaciones` | 🎓 | Mensajes del docente para él. |

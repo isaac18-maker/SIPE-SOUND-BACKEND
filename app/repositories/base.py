@@ -62,6 +62,9 @@ class RepositorioProgresoContenido(Protocol):
         mejor_bpm: int | None,
     ) -> Fila: ...
     def totales_catalogo(self, sesion: Any) -> dict[str, int]: ...
+    def actividad(
+        self, sesion: Any, estudiante_id: str, *, dias: int, limite: int
+    ) -> dict[str, list[Fila]]: ...
 
 
 class RepositorioCursos(Protocol):
