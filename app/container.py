@@ -12,20 +12,22 @@ from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
 from app.repositories.sqlalchemy.curso_repository import SqlCursoRepository
 from app.repositories.sqlalchemy.docente_repository import SqlDocenteRepository
 from app.repositories.sqlalchemy.ejercicio_repository import SqlEjercicioRepository
+from app.repositories.sqlalchemy.evaluacion_repository import SqlEvaluacionRepository
 from app.repositories.sqlalchemy.leccion_repository import SqlLeccionRepository
 from app.repositories.sqlalchemy.perfil_repository import SqlPerfilRepository
-from app.repositories.sqlalchemy.progreso_bloques_repository import SqlProgresoBloquesRepository
 from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
-from app.repositories.sqlalchemy.quiz_repository import SqlQuizRepository
+from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.services.acorde_service import AcordeService
 from app.services.bloque_service import BloqueService
 from app.services.curso_service import CursoService
 from app.services.docente_service import DocenteService
 from app.services.ejercicio_service import EjercicioService
+from app.services.evaluacion_service import EvaluacionService
 from app.services.leccion_service import LeccionService
 from app.services.perfil_service import AdminUsuariosService, PerfilService
 from app.services.progreso_service import ProgresoService
 from app.services.quiz_service import QuizService
+from app.services.ruta_service import RutaService
 
 
 @lru_cache
@@ -53,7 +55,7 @@ def progreso_service() -> ProgresoService:
     return ProgresoService(
         session_scope,
         SqlProgresoRepository(),
-        progreso_bloques=SqlProgresoBloquesRepository(session_scope),
+        evaluaciones=SqlEvaluacionRepository(),
         lecciones=SqlLeccionRepository(session_scope),
         ejercicios=SqlEjercicioRepository(session_scope),
     )
@@ -61,8 +63,18 @@ def progreso_service() -> ProgresoService:
 
 @lru_cache
 def quiz_service() -> QuizService:
-    return QuizService(
-        SqlQuizRepository(session_scope), SqlProgresoBloquesRepository(session_scope)
+    return QuizService(evaluacion_service())
+
+
+@lru_cache
+def ruta_service() -> RutaService:
+    return RutaService(session_scope, SqlRutaRepository(), SqlCursoRepository())
+
+
+@lru_cache
+def evaluacion_service() -> EvaluacionService:
+    return EvaluacionService(
+        session_scope, SqlEvaluacionRepository(), SqlCursoRepository(), ruta_service()
     )
 
 

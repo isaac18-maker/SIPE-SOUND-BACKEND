@@ -49,6 +49,20 @@ class SqlCursoRepository:
         ).one()
         return a_fila(curso)
 
+    def puede_ver(self, sesion: Session, curso_id: int, usuario_id: str) -> bool:
+        """Curso activo donde el usuario esta inscrito o es el docente."""
+        inscrito = (
+            select(Inscripcion.id)
+            .where(Inscripcion.curso_id == Curso.id, Inscripcion.estudiante_id == usuario_id)
+            .exists()
+        )
+        consulta = select(Curso.id).where(
+            Curso.id == curso_id,
+            Curso.archivado_en.is_(None),
+            (Curso.docente_id == usuario_id) | inscrito,
+        )
+        return sesion.scalar(consulta) is not None
+
     def bloques_publicados(self, sesion: Session, bloque_ids: set[int]) -> set[int]:
         consulta = select(Bloque.id).where(
             Bloque.id.in_(bloque_ids), Bloque.estado == ESTADO_PUBLICADO

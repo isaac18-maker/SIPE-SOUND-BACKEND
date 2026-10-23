@@ -52,7 +52,7 @@ Los números de migración de las HU 307 en adelante se recalculan al implementa
 | 5 | [HU-B-305 Progreso con integridad](fase-3-backend-y-bd/HU-B-305-progreso-con-integridad.md) | 5 | 304 | 0003, 0004 |
 | 6 | [HU-B-306 Contenido editable](fase-3-backend-y-bd/HU-B-306-contenido-editable.md) | 5 | 305 | 0006, 0007 |
 | 7 | [HU-B-307 Cursos e inscripciones](fase-3-backend-y-bd/HU-B-307-cursos-e-inscripciones.md) | 3 | 306 | 0011 |
-| 8 | [HU-B-308 Evaluaciones e intentos](fase-3-backend-y-bd/HU-B-308-evaluaciones-e-intentos.md) | 8 | 307 | 0008, 0009 |
+| 8 | [HU-B-308 Evaluaciones e intentos](fase-3-backend-y-bd/HU-B-308-evaluaciones-e-intentos.md) | 8 | 307 | 0015, 0016 |
 | 9 | [HU-B-309 API docente: contenido](fase-3-backend-y-bd/HU-B-309-api-docente-contenido.md) | 5 | 306, 304 | — |
 | 10 | [HU-B-310 API docente: cursos y estudiantes](fase-3-backend-y-bd/HU-B-310-api-docente-cursos-y-estudiantes.md) | 8 | 307, 308 | — |
 | 11 | [HU-B-311 API docente: evaluaciones](fase-3-backend-y-bd/HU-B-311-api-docente-evaluaciones.md) | 5 | 308, 310 | — |

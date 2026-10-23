@@ -52,6 +52,18 @@ def auth_required(f: Callable) -> Callable:
     return decorador
 
 
+def usuario_opcional() -> CurrentUser | None:
+    """Para rutas publicas que se enriquecen con sesion (p. ej. /ruta).
+    Sin cabecera: None. Con cabecera invalida: 401 (no se ignora un token malo)."""
+    cabecera = request.headers.get("Authorization")
+    if not cabecera:
+        return None
+    token = _extraer_token(cabecera)
+    reclamos = _decodificar(token)
+    g.current_user = CurrentUser(id=reclamos["sub"], email=reclamos.get("email"), token=token)
+    return g.current_user
+
+
 def configurar_proveedor_rol(app: Flask, proveedor: ProveedorRol) -> None:
     """Se llama en create_app: core no conoce los servicios (regla de capas)."""
     app.extensions[CLAVE_PROVEEDOR_ROL] = proveedor

@@ -1,9 +1,9 @@
 # =========================================================
 # Progreso del estudiante.
 # - Lecciones y ejercicios: tablas con FK (progreso_lecciones / _ejercicios) por SQL.
-# - Bloques (resultado de quizzes): siguen en la tabla `progreso` hasta HU-B-308.
+# - Bloques: aprobados si hay un intento aprobado en su evaluacion (HU-B-308).
 # =========================================================
-from typing import Any
+from typing import Any, Protocol
 
 from app.core.constants import TIPO_EJERCICIO, TIPO_LECCION
 from app.core.errors import NoEncontrado
@@ -11,11 +11,14 @@ from app.core.security import CurrentUser
 from app.repositories.base import (
     AbrirSesion,
     Fila,
-    RepositorioProgresoBloques,
     RepositorioProgresoContenido,
     VerificadorExistencia,
 )
 from app.schemas.progreso import AvanceEjercicioIn, AvanceIn
+
+
+class LectorBloquesAprobados(Protocol):
+    def bloques_aprobados(self, sesion: Any, estudiante_id: str) -> list[Fila]: ...
 
 
 class ProgresoService:
@@ -23,13 +26,13 @@ class ProgresoService:
         self,
         abrir_sesion: AbrirSesion,
         progreso: RepositorioProgresoContenido,
-        progreso_bloques: RepositorioProgresoBloques,
+        evaluaciones: LectorBloquesAprobados,
         lecciones: VerificadorExistencia,
         ejercicios: VerificadorExistencia,
     ) -> None:
         self._abrir_sesion = abrir_sesion
         self._progreso = progreso
-        self._progreso_bloques = progreso_bloques
+        self._evaluaciones = evaluaciones
         self._existe = {TIPO_LECCION: lecciones, TIPO_EJERCICIO: ejercicios}
 
     def registrar_leccion(self, usuario_id: str, leccion_id: int, avance: AvanceIn) -> Fila:
@@ -64,7 +67,7 @@ class ProgresoService:
             lecciones = self._progreso.listar_lecciones(sesion, usuario.id)
             ejercicios = self._progreso.listar_ejercicios(sesion, usuario.id)
             totales = self._progreso.totales_catalogo(sesion)
-        bloques = self._bloques(usuario)
+            bloques = self._evaluaciones.bloques_aprobados(sesion, usuario.id)
         fechas = [f["actualizado_en"] for f in (*lecciones, *ejercicios, *bloques)]
         return {
             "lecciones": {
@@ -75,7 +78,7 @@ class ProgresoService:
                 "completados": sum(f["completado"] for f in ejercicios),
                 "total": totales["ejercicios"],
             },
-            "bloques_aprobados": sum(bool(f.get("completado")) for f in bloques),
+            "bloques_aprobados": len(bloques),
             "ultimo_avance": max(fechas) if fechas else None,
         }
 
@@ -83,6 +86,3 @@ class ProgresoService:
     def _exigir(self, tipo: str, contenido_id: int) -> None:
         if not self._existe[tipo].existe(contenido_id):
             raise NoEncontrado(f"No existe {tipo} con id {contenido_id}")
-
-    def _bloques(self, usuario: CurrentUser) -> list[Fila]:
-        return self._progreso_bloques.listar(usuario.id)
