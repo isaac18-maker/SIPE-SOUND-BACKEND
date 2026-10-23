@@ -24,6 +24,9 @@ from app.repositories.sqlalchemy.curso_repository import SqlCursoRepository
 from app.repositories.sqlalchemy.docente_repository import SqlDocenteRepository
 from app.repositories.sqlalchemy.ejercicio_repository import SqlEjercicioRepository
 from app.repositories.sqlalchemy.evaluacion_repository import SqlEvaluacionRepository
+from app.repositories.sqlalchemy.gestion_evaluacion_repository import (
+    SqlGestionEvaluacionRepository,
+)
 from app.repositories.sqlalchemy.leccion_repository import SqlLeccionRepository
 from app.repositories.sqlalchemy.perfil_repository import SqlPerfilRepository
 from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
@@ -36,6 +39,7 @@ from app.services.curso_service import CursoService
 from app.services.docente_service import DocenteService
 from app.services.ejercicio_service import EjercicioService
 from app.services.evaluacion_service import EvaluacionService
+from app.services.gestion_evaluacion_service import GestionEvaluacionService
 from app.services.leccion_service import LeccionService
 from app.services.perfil_service import AdminUsuariosService, PerfilService
 from app.services.progreso_service import ProgresoService
@@ -174,4 +178,11 @@ def bloque_contenido_service() -> ContenidoService:
         con_autor=False,
         referencias={},
         en_uso="El bloque tiene lecciones o evaluaciones. Archívalo en lugar de borrarlo.",
+    )
+
+
+@lru_cache
+def gestion_evaluacion_service() -> GestionEvaluacionService:
+    return GestionEvaluacionService(
+        session_scope, SqlGestionEvaluacionRepository(), curso_service()
     )

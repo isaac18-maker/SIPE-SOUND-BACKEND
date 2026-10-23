@@ -218,6 +218,12 @@ class CursoService:
         with self._abrir_sesion() as sesion:
             return self._cursos.cursos_de_estudiante(sesion, estudiante_id)
 
+    def curso_propio(
+        self, sesion: Any, usuario: CurrentUser, curso_id: int, *, activo: bool = False
+    ) -> Fila:
+        """Para otros servicios (evaluaciones del docente) dentro de su transaccion."""
+        return self._curso_propio(sesion, usuario, curso_id, activo=activo)
+
     # --- Privados ---------------------------------------------------------------
     def _curso_propio(
         self,

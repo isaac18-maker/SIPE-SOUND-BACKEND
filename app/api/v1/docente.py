@@ -1,7 +1,12 @@
 from flask import Blueprint, request
 
 from app.api.v1._crud_contenido import registrar_crud
-from app.container import curso_service, ejercicio_contenido_service, leccion_contenido_service
+from app.container import (
+    curso_service,
+    ejercicio_contenido_service,
+    gestion_evaluacion_service,
+    leccion_contenido_service,
+)
 from app.core.constants import ROL_ADMIN, ROL_DOCENTE
 from app.core.responses import created, ok, paginated
 from app.core.security import get_current_user, roles_required
@@ -13,6 +18,13 @@ from app.schemas.curso import (
     EstudiantesQuery,
     RetroalimentacionIn,
     RutaCursoIn,
+)
+from app.schemas.evaluacion import (
+    EstadoEvaluacionIn,
+    EvaluacionCrear,
+    EvaluacionEditar,
+    FiltrosEvaluaciones,
+    PreguntasIn,
 )
 
 bp = Blueprint("docente", __name__)
@@ -137,3 +149,75 @@ def comentar(curso_id: int, estudiante_id):
         get_current_user(), curso_id, str(estudiante_id), entrada.mensaje
     )
     return created(fila, mensaje="Comentario enviado.")
+
+
+# --- Evaluaciones (HU-B-311) --------------------------------------------------
+@bp.get("/docente/evaluaciones")
+@roles_required(*PANEL)
+def listar_evaluaciones():
+    """Evaluaciones de mis cursos (admin: todas). ?curso_id=&estado=."""
+    filtros = FiltrosEvaluaciones.model_validate(request.args.to_dict())
+    return ok(gestion_evaluacion_service().listar(get_current_user(), filtros.model_dump()))
+
+
+@bp.post("/docente/evaluaciones")
+@roles_required(*PANEL)
+def crear_evaluacion():
+    """Crear en borrador. De curso: el docente del curso. De bloque (global): solo admin."""
+    datos = EvaluacionCrear.model_validate(request.get_json(silent=True) or {})
+    fila = gestion_evaluacion_service().crear(get_current_user(), datos.model_dump())
+    return created(fila, mensaje="Evaluación creada como borrador. Agrega sus preguntas.")
+
+
+@bp.get("/docente/evaluaciones/<int:evaluacion_id>")
+@roles_required(*PANEL)
+def detalle_evaluacion(evaluacion_id: int):
+    """Incluye las preguntas con su respuesta correcta."""
+    return ok(gestion_evaluacion_service().obtener(get_current_user(), evaluacion_id))
+
+
+@bp.patch("/docente/evaluaciones/<int:evaluacion_id>")
+@roles_required(*PANEL)
+def editar_evaluacion(evaluacion_id: int):
+    datos = EvaluacionEditar.model_validate(request.get_json(silent=True) or {})
+    fila = gestion_evaluacion_service().actualizar(
+        get_current_user(), evaluacion_id, datos.cambios()
+    )
+    return ok(fila, mensaje="Cambios guardados.")
+
+
+@bp.delete("/docente/evaluaciones/<int:evaluacion_id>")
+@roles_required(*PANEL)
+def eliminar_evaluacion(evaluacion_id: int):
+    """Con intentos responde 409: cierrala en su lugar."""
+    gestion_evaluacion_service().eliminar(get_current_user(), evaluacion_id)
+    return ok(None, mensaje="Evaluación eliminada.")
+
+
+@bp.put("/docente/evaluaciones/<int:evaluacion_id>/preguntas")
+@roles_required(*PANEL)
+def reemplazar_preguntas(evaluacion_id: int):
+    """Reemplaza el conjunto completo (1-50). 422 si ya hay intentos."""
+    entrada = PreguntasIn.model_validate(request.get_json(silent=True) or {})
+    preguntas = gestion_evaluacion_service().reemplazar_preguntas(
+        get_current_user(), evaluacion_id, [p.model_dump() for p in entrada.preguntas]
+    )
+    return ok(preguntas, mensaje=f"{len(preguntas)} preguntas guardadas.")
+
+
+@bp.patch("/docente/evaluaciones/<int:evaluacion_id>/estado")
+@roles_required(*PANEL)
+def estado_evaluacion(evaluacion_id: int):
+    """borrador -> publicada -> cerrada. No se publica sin preguntas."""
+    entrada = EstadoEvaluacionIn.model_validate(request.get_json(silent=True) or {})
+    fila = gestion_evaluacion_service().cambiar_estado(
+        get_current_user(), evaluacion_id, entrada.estado
+    )
+    return ok(fila, mensaje=f"Estado: {fila['estado']}.")
+
+
+@bp.get("/docente/evaluaciones/<int:evaluacion_id>/resultados")
+@roles_required(*PANEL)
+def resultados(evaluacion_id: int):
+    """Cifras, preguntas de la mas dificil a la mas facil, estudiantes y quienes faltan."""
+    return ok(gestion_evaluacion_service().resultados(get_current_user(), evaluacion_id))
