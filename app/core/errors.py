@@ -38,6 +38,13 @@ MENSAJES_HTTP = {
 
 # Codigos SQLSTATE de PostgreSQL para las restricciones de integridad.
 SQLSTATE_UNICO = "23505"
+# Restricciones unicas con un mensaje que dice que hacer.
+MENSAJES_UNICOS = {
+    "uq_evaluaciones_bloque_global": "Ese bloque ya tiene una evaluación vigente: ciérrala primero.",
+    "uq_bloques_orden_index": "Ya hay un bloque en esa posición (orden_index).",
+    "uq_preguntas_evaluacion_evaluacion_id_orden": "Dos preguntas no pueden tener el mismo orden.",
+    "acordes_nombre_key": "Ya existe un acorde con ese nombre.",
+}
 MENSAJES_INTEGRIDAD = {
     "23514": "Un valor está fuera de los límites permitidos.",
     "23503": "Una referencia no existe o todavía está en uso.",
@@ -163,7 +170,8 @@ def register_error_handlers(app: Flask) -> None:
         restriccion = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
         logger.warning("Restriccion de la base: %s (%s)", restriccion, sqlstate)
         if sqlstate == SQLSTATE_UNICO:
-            return _respuesta(409, Conflicto.code, "Ya existe un registro con ese valor.")
+            mensaje = MENSAJES_UNICOS.get(restriccion, "Ya existe un registro con ese valor.")
+            return _respuesta(409, Conflicto.code, mensaje)
         mensaje = MENSAJES_INTEGRIDAD.get(sqlstate)
         if mensaje is None:
             logger.exception("Error de integridad no clasificado", exc_info=error)
