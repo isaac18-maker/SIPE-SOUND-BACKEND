@@ -71,10 +71,11 @@
 | 401 | `NO_AUTENTICADO` | Falta token o es inválido/expirado. |
 | 403 | `SIN_PERMISO` | Rol insuficiente o recurso ajeno. |
 | 404 | `NO_ENCONTRADO` | El recurso no existe **o** el usuario no tiene derecho a saber que existe. |
-| 409 | `CONFLICTO` | Duplicados, o borrar contenido con progreso registrado (`details.sugerencia = "archivar"`). |
+| 409 | `CONFLICTO` | Duplicados, o borrar contenido con progreso registrado (el `message` sugiere archivar). |
 | 422 | `REGLA_NEGOCIO` | Ej. presentar evaluación de un bloque bloqueado. |
 | 429 | `DEMASIADAS_SOLICITUDES` | Límite de intentos superado (p. ej. unirse a un curso). |
 | 500 | `ERROR_INTERNO` | Cualquier otro. El mensaje **nunca** expone detalles internos. |
+| 503 | `SERVICIO_NO_DISPONIBLE` | Un servicio externo (Supabase Auth) no responde o no está configurado. |
 
 ## 4. Catálogo de endpoints
 
@@ -190,3 +191,50 @@ No hay modo de compatibilidad (retirado en HU-B-319):
   El progreso se registra con `PUT /progreso/lecciones/{id}` y
   `PUT /progreso/ejercicios/{id}`, y se consulta con `GET /progreso/resumen`.
 - `duracion` (texto) ya no existe en lecciones ni ejercicios: usar `duracion_min` (entero).
+
+## 7. Límites de los campos (HU-B-320)
+
+Cada límite se aplica **tres veces**: en el formulario del frontend, en la API
+(`app/core/longitudes.py` → esquemas Pydantic, error `400 VALIDACION`) y en la
+base (CHECK, revisión `0013`). Cambiar uno exige cambiar los tres en PRs enlazados.
+Los textos se recortan (`trim`) antes de medir; "   " no es un valor válido.
+
+### 7.1 Vigentes
+
+| Campo | Tipo | Regla | Base |
+|---|---|---|---|
+| `nombre` (persona: registro, invitación, perfil) | texto | 2–80; solo letras (con tildes y ñ), espacios, `'`, `.` y `-`; espacios repetidos se colapsan | 2–80, sin caracteres de control |
+| `email` | correo | máx. 254; formato `usuario@dominio.tld`; se guarda en minúsculas | Supabase Auth |
+| `password` | contraseña | 8–72; al menos una letra y un número; **no** se recorta | Supabase Auth (configurar mínimo 8) |
+| `acepta_terminos` | booleano | debe ser `true` | — |
+| `codigo` (unirse a curso) | código | exactamente 8; `A–Z` y `2–9` sin `0 O 1 I L`; se acepta en minúsculas y con espacios a los lados | `^[A-HJKMNP-Z2-9]{8}$` |
+| `cursos.nombre` | texto | 3–120 | 3–120 |
+| `cursos.descripcion` | texto largo | máx. 2000 (opcional) | máx. 2000 |
+| `bloques.titulo`, `lecciones.titulo`, `ejercicios.nombre` | texto | 3–120 | 3–120 |
+| `bloques/lecciones/ejercicios.descripcion` | texto largo | máx. 2000 (opcional) | máx. 2000 |
+| `lecciones.contenido` | texto largo | máx. 20000 | máx. 20000 |
+| `lecciones.acordes`, `ejercicios.acordes` | lista | máx. 24 elementos de 1–20 caracteres | igual |
+| `lecciones.temas` | lista | máx. 20 elementos de 1–60 caracteres | igual |
+| `ejercicios.pasos` | lista | máx. 30 elementos de 1–300 caracteres | igual |
+| `duracion_min` | entero | 1–600 (opcional) | 1–600 |
+| `ejercicios.bpm_recomendado`, `mejor_bpm` | entero | 20–300 | 20–300 |
+| `ejercicios.compas` | texto | `N/D` con N ∈ {2,3,4,5,6,7,9,12} y D ∈ {2,4,8} (p. ej. `4/4`, `6/8`) | mismo patrón |
+| `acordes.nombre` | texto | 1–20 | 1–20 |
+| `acordes.descripcion` | texto | máx. 500 | máx. 500 |
+| `porcentaje` | entero | 0–100 | 0–100 |
+| `retroalimentaciones.mensaje` | texto largo | 1–1000 | 1–1000 |
+| `nivel` | opción | `principiante`, `intermedio`, `avanzado` | mismo conjunto |
+
+### 7.2 Para las HU pendientes (se aplican al crearlas)
+
+| Campo | HU | Regla |
+|---|---|---|
+| `evaluaciones.titulo` | HU-B-308 | 3–120 |
+| `preguntas.enunciado` | HU-B-308 | 3–300 |
+| `preguntas.opciones` | HU-B-308 | 2–6 opciones de 1–120 caracteres, sin repetidas |
+| `evaluaciones.descripcion` | HU-B-308 | máx. 2000 |
+| `evaluaciones.porcentaje_aprobacion` | HU-B-308 | entero 50–100 |
+| `evaluaciones.intentos_maximos` | HU-B-308 | entero 1–10 o vacío |
+| `evaluaciones.fecha_limite` | HU-B-308 | futura o vacía |
+| `?q=` (búsqueda) | HU-B-310 | máx. 80 |
+| `?pagina`, `?por_pagina` | todas | `pagina ≥ 1`; `por_pagina` 1–100 |

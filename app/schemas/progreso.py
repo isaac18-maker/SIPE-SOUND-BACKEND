@@ -4,9 +4,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.constants import PORCENTAJE_MAXIMO, PORCENTAJE_MINIMO
-
-BPM_MINIMO = 20
-BPM_MAXIMO = 300
+from app.core.longitudes import BPM_MAXIMO, BPM_MINIMO
 
 
 class AvanceIn(BaseModel):

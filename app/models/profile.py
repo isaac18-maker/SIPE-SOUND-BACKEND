@@ -12,7 +12,8 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import ROLES
-from app.models.base import NIVELES, Base, CreadoEnMixin, en_lista, existente
+from app.core.longitudes import NOMBRE_PERSONA_MAX, NOMBRE_PERSONA_MIN
+from app.models.base import NIVELES, Base, CreadoEnMixin, en_lista, existente, largo_entre
 
 
 class Profile(CreadoEnMixin, Base):
@@ -26,6 +27,11 @@ class Profile(CreadoEnMixin, Base):
         ),
         CheckConstraint(en_lista("nivel", NIVELES), name=existente("profiles_nivel_check")),
         CheckConstraint(en_lista("rol", ROLES), name="rol"),
+        CheckConstraint(
+            largo_entre("nombre", NOMBRE_PERSONA_MIN, NOMBRE_PERSONA_MAX), name="nombre"
+        ),
+        # Sin caracteres de control (saltos de linea, tabuladores, NUL...).
+        CheckConstraint("nombre !~ '[[:cntrl:]]'", name="nombre_sin_control"),
     )
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False))

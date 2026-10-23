@@ -35,6 +35,29 @@ def en_lista(columna: str, valores: tuple[str, ...]) -> str:
     return f"{columna} in ({', '.join(repr(v) for v in valores)})"
 
 
+# Limites de campos (HU-B-320): mismas expresiones que la revision 0013.
+def largo_entre(columna: str, minimo: int, maximo: int) -> str:
+    """Sin contar espacios de los extremos: "   " no es un titulo."""
+    return f"char_length(btrim({columna})) BETWEEN {minimo} AND {maximo}"
+
+
+def largo_maximo(columna: str, maximo: int) -> str:
+    return f"char_length({columna}) <= {maximo}"
+
+
+def entero_entre(columna: str, minimo: int, maximo: int) -> str:
+    return f"{columna} IS NULL OR ({columna} >= {minimo} AND {columna} <= {maximo})"
+
+
+def elementos_maximo(columna: str, maximo: int) -> str:
+    return f"cardinality({columna}) <= {maximo}"
+
+
+def elementos_caben(columna: str, maximo: int) -> str:
+    """Cada elemento de la lista con 1..maximo caracteres (funcion de la revision 0013)."""
+    return f"public.elementos_caben({columna}, {maximo})"
+
+
 class CreadoEnMixin:
     creado_en: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
