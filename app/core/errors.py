@@ -11,7 +11,7 @@ from flask import Flask, jsonify
 from pydantic import ValidationError
 from werkzeug.exceptions import HTTPException
 
-from app.core.responses import es_ruta_legada
+from app.core.responses import es_ruta_legada, respuesta
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +77,11 @@ class ReglaNegocio(AppError):
 def _respuesta(status: int, code: str, mensaje: str, details: list[dict] | None = None):
     if es_ruta_legada():
         return jsonify({"error": mensaje}), status
-    cuerpo: dict[str, Any] = {"code": code, "message": mensaje, "details": details or []}
-    return jsonify({"error": cuerpo}), status
+    # Estructura estandar (HU-B-317): el codigo de error va en "status".
+    errores = [
+        f"{d['campo']}: {d['mensaje']}" if d.get("campo") else d["mensaje"] for d in details or []
+    ]
+    return respuesta(status, status=code, message=mensaje, errors=errores)
 
 
 # Pydantic redacta sus mensajes en ingles; el contrato exige espanol para el usuario.
@@ -96,13 +99,16 @@ MENSAJES_VALIDACION = {
     "less_than_equal": "Debe ser menor o igual a {le}.",
     "greater_than_equal": "Debe ser mayor o igual a {ge}.",
     "literal_error": "Debe ser uno de: {expected}.",
+    "string_too_short": "Debe tener al menos {min_length} caracteres.",
+    "string_too_long": "Debe tener como máximo {max_length} caracteres.",
+    "too_long": "Debe tener como máximo {max_length} elementos.",
 }
 
 
 def _mensaje_validacion(error: dict[str, Any]) -> str:
     plantilla = MENSAJES_VALIDACION.get(error["type"])
     if plantilla is None:
-        return error["msg"]
+        return error["msg"].removeprefix("Value error, ")
     contexto = {k: str(v).replace(" or ", " o ") for k, v in error.get("ctx", {}).items()}
     return plantilla.format(**contexto)
 

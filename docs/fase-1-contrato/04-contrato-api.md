@@ -17,34 +17,51 @@
 | Idempotencia | `PUT` y `DELETE` idempotentes. `POST` crea. `PATCH` actualiza parcialmente. |
 | CORS | Solo orígenes de `CORS_ORIGINS`. |
 
-## 2. Respuestas exitosas
+## 2. Estructura única de respuesta (HU-B-317)
+
+**Todas** las respuestas de `/api/v1`, de éxito y de error, tienen la misma forma:
 
 ```json
-// 200 / 201 — un recurso
-{ "data": { "id": 3, "titulo": "Acordes mayores C y G" } }
-
-// 200 — colección paginada
 {
-  "data": [ { "id": 1 }, { "id": 2 } ],
-  "meta": { "pagina": 1, "por_pagina": 20, "total": 42 }
+  "statusCode": 200,
+  "status": "OK",
+  "data": { "id": 3, "titulo": "Acordes mayores C y G" },
+  "success": true,
+  "message": "Operación exitosa.",
+  "errors": [],
+  "timestamp": "2026-10-22T06:00:13.562Z",
+  "meta": {}
 }
-
-// 204 — sin cuerpo (DELETE)
 ```
+
+| Campo | Contenido |
+|---|---|
+| `statusCode` | Código HTTP (igual al de la respuesta). |
+| `status` | Éxito: nombre HTTP (`OK`, `CREATED`). Error: código de la tabla de la sección 3. |
+| `data` | El recurso o la lista; `null` en los errores. |
+| `success` | `true` si `statusCode` < 400. |
+| `message` | Texto en español para mostrar al usuario. |
+| `errors` | Lista de textos con el detalle (p. ej. `"porcentaje: Debe ser menor o igual a 100."`); vacía si no hay. |
+| `timestamp` | Momento de la respuesta, ISO-8601 UTC con milisegundos. |
+| `meta` | Datos adicionales, p. ej. paginación `{ "pagina": 1, "por_pagina": 20, "total": 42 }`. |
 
 - Paginación por query: `?pagina=1&por_pagina=20` (máx. 100).
 - Filtros por query con nombre de campo: `?nivel=principiante&bloque_id=2`.
 - Orden: `?orden=numero` / `?orden=-creado_en`.
+- Swagger (`/docs`, solo `local` y `staging`) documenta esta estructura como `RespuestaEstandar`.
 
 ## 3. Errores
 
 ```json
 {
-  "error": {
-    "code": "VALIDACION",
-    "message": "Hay campos con errores.",
-    "details": [ { "campo": "porcentaje", "mensaje": "Debe estar entre 0 y 100" } ]
-  }
+  "statusCode": 400,
+  "status": "VALIDACION",
+  "data": null,
+  "success": false,
+  "message": "Hay campos con errores.",
+  "errors": ["porcentaje: Debe ser menor o igual a 100."],
+  "timestamp": "2026-10-22T06:00:13.562Z",
+  "meta": {}
 }
 ```
 
@@ -56,6 +73,7 @@
 | 404 | `NO_ENCONTRADO` | El recurso no existe **o** el usuario no tiene derecho a saber que existe. |
 | 409 | `CONFLICTO` | Duplicados, o borrar contenido con progreso registrado (`details.sugerencia = "archivar"`). |
 | 422 | `REGLA_NEGOCIO` | Ej. presentar evaluación de un bloque bloqueado. |
+| 429 | `DEMASIADAS_SOLICITUDES` | Límite de intentos superado (p. ej. unirse a un curso). |
 | 500 | `ERROR_INTERNO` | Cualquier otro. El mensaje **nunca** expone detalles internos. |
 
 ## 4. Catálogo de endpoints
