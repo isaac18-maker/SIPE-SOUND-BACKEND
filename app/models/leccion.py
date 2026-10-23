@@ -37,8 +37,6 @@ class Leccion(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
     titulo: Mapped[str] = mapped_column(Text)
     descripcion: Mapped[str | None] = mapped_column(Text)
     nivel: Mapped[str] = mapped_column(Text, server_default="principiante")
-    # TODO(HU-B-312): retirar `duracion` (texto) cuando el frontend use duracion_min.
-    duracion: Mapped[str | None] = mapped_column(Text)
     acordes: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
     temas: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
     contenido: Mapped[str | None] = mapped_column(Text)

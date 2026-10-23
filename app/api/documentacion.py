@@ -106,7 +106,7 @@ def _resumen_operacion(app: Flask, endpoint: str) -> tuple[str, str | None]:
 def _crear_operacion(app: Flask, regla: Rule, metodo: str) -> dict[str, Any]:
     resumen, descripcion = _resumen_operacion(app, regla.endpoint)
     operacion: dict[str, Any] = {
-        "tags": [regla.endpoint.split(".", maxsplit=1)[0].removesuffix("_legado")],
+        "tags": [regla.endpoint.split(".", maxsplit=1)[0]],
         "summary": resumen,
         "operationId": f"{regla.endpoint.replace('.', '_')}_{metodo.lower()}",
         "responses": RESPUESTAS,
@@ -132,7 +132,7 @@ def _crear_operacion(app: Flask, regla: Rule, metodo: str) -> dict[str, Any]:
 def generar_especificacion(app: Flask) -> dict[str, Any]:
     rutas: dict[str, dict[str, Any]] = {}
     for regla in app.url_map.iter_rules():
-        # Solo el contrato vigente: /api (sin version) es legado del frontend actual.
+        # Solo la API: se omiten /docs, /openapi.json y los archivos estaticos.
         if not regla.rule.startswith(f"{PREFIJO_V1}/"):
             continue
         ruta = _convertir_ruta(regla.rule)
@@ -147,8 +147,7 @@ def generar_especificacion(app: Flask) -> dict[str, Any]:
             "version": "1.0.0",
             "description": (
                 "Contrato vigente de la API (/api/v1). Todas las respuestas usan la "
-                "estructura RespuestaEstandar. Las rutas /api sin versión son legadas "
-                "(solo para el frontend actual) y no se documentan."
+                "estructura RespuestaEstandar."
             ),
         },
         "servers": [{"url": "/"}],

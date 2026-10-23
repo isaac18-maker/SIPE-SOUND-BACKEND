@@ -20,10 +20,10 @@
 ## Alcance
 **Incluye**
 1. `GET /api/v1/cursos/{id}/retroalimentaciones` (marca `leida_en`).
-2. Retiro del prefijo `/api/*` sin versión.
-3. Revisión `0010` **destructiva aprobada**:
-   - `drop table quiz_preguntas` y `drop table progreso` (previo respaldo).
-   - `drop column duracion` en `lecciones` y `ejercicios`.
+2. ~~Retiro del prefijo `/api/*` sin versión.~~ **Hecho en HU-B-319.**
+3. Revisión **destructiva aprobada**:
+   - `drop table quiz_preguntas` y `drop table progreso` (previo respaldo), cuando HU-B-308 los reemplace.
+   - ~~`drop column duracion` en `lecciones` y `ejercicios`.~~ **Hecho en HU-B-319 (0012).**
    - Cabecera `Destructiva: si` y `# destructivo-aprobado: HU-B-312` en cada operación.
    - `downgrade()` recrea las estructuras (vacías) y documenta que los datos se restauran desde el respaldo.
 4. ~~Eliminar `app/infrastructure/supabase_rest.py`, repositorios `supabase/` y `DATA_BACKEND`.~~ **Hecho en HU-B-315.**

@@ -2,23 +2,17 @@
 # Estructura UNICA de respuesta de la API v1 (HU-B-317), igual para
 # exito y error:
 #   statusCode, status, data, success, message, errors, timestamp, meta
-# Las rutas legadas /api/* (sin version) conservan su forma anterior
-# para no romper el frontend actual.
-# TODO(HU-B-312): retirar el modo legado.
+# La API solo existe bajo /api/v1 (el prefijo /api sin version se retiro en HU-B-319).
 # =========================================================
 from datetime import UTC, datetime
 from http import HTTPStatus
 from typing import Any
 
-from flask import Response, jsonify, request
+from flask import Response, jsonify
 
 PREFIJO_V1 = "/api/v1"
 MENSAJE_EXITO = "Operación exitosa."
 MENSAJE_CREADO = "Recurso creado."
-
-
-def es_ruta_legada() -> bool:
-    return not request.path.startswith(PREFIJO_V1)
 
 
 def marca_de_tiempo() -> str:
@@ -51,8 +45,6 @@ def respuesta(
 def ok(
     data: Any, status: int = 200, *, mensaje: str = MENSAJE_EXITO, meta: dict | None = None
 ) -> tuple[Response, int]:
-    if es_ruta_legada():
-        return jsonify(data), status
     return respuesta(status, data=data, message=mensaje, meta=meta)
 
 

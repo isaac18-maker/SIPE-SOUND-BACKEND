@@ -14,6 +14,8 @@ Qué valor poner en cada variable del backend, en **local** (tu computador) y en
 | `CORS_ORIGINS` | `http://localhost:5173` | URL pública del frontend, p. ej. `https://app.sipesound.co` | No |
 | `SUPABASE_URL` | URL del proyecto de Supabase | La misma (o la del proyecto de producción si tienen dos) | No |
 | `DATABASE_URL` | Session pooler del proyecto que uses | Session pooler del proyecto de producción | **Sí** |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave `service_role` del proyecto | La del proyecto de producción | **Sí** |
+| `FRONTEND_URL` | `http://localhost:5173` | `https://<dominio-del-frontend>` | No |
 | `SQLALCHEMY_ECHO` | `0` (o `1` solo para depurar) | `0` | No |
 
 Plantillas listas para copiar:
@@ -110,6 +112,21 @@ inicio de sesión: comprueba el emisor y descarga las claves públicas de
 - **Puerto 5432** (Session pooler). **Nunca el 6543** (Transaction pooler): rompe las migraciones y Alembic lo rechaza.
 - Si la contraseña tiene `@ # / : %`, genera una nueva solo con letras y números (Project Settings → Database → Reset database password).
 - **Es secreta:** da control total de la base. Solo en el `.env` o en los secretos del servidor; nunca en el frontend, en git ni en el chat. Si se filtra, cambia la contraseña de la base.
+
+### `SUPABASE_SERVICE_ROLE_KEY` 🔒
+Clave secreta para crear cuentas: registro de estudiantes (`POST /api/v1/auth/registro`)
+e invitación de docentes. Sin ella, esos endpoints responden **503** y el resto funciona.
+- **Dónde está:** Supabase → Project Settings → API Keys → `service_role` (o `sb_secret_…`).
+- **Es secreta y poderosa:** ignora RLS. Solo en el servidor; nunca en el frontend ni en git.
+
+### `FRONTEND_URL`
+Página a la que vuelve el usuario desde los correos de Supabase (`/login` tras confirmar,
+`/activar-cuenta` tras una invitación). Debe estar autorizada en Supabase →
+Authentication → URL Configuration → *Redirect URLs*.
+
+> ⚠️ El servidor de correo incluido en Supabase envía **muy pocos correos por hora**
+> (pensado para pruebas). Para registrar un salón completo, configura un SMTP propio
+> en Supabase → Authentication → Emails → SMTP Settings.
 
 ### `SQLALCHEMY_ECHO`
 Si es `1`, escribe en el log **cada sentencia SQL con sus valores**.
