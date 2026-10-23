@@ -16,14 +16,13 @@
 
 ## Alcance
 1. `app/core/longitudes.py`: fuente única de límites para los esquemas Pydantic.
-2. Registro e invitación: nombre de persona solo con letras, espacios, `'`, `.` y `-`.
+2. ~~Nombre de persona en registro e invitación~~ (endpoints retirados en HU-B-321; el nombre lo protegen el formulario y la base).
 3. Unirse a curso: el código se valida contra el alfabeto (sin `0 O 1 I L`).
 4. Revisión `0013`: CHECK de longitud, rango, patrón y número de elementos en
    `profiles`, `bloques`, `lecciones`, `ejercicios`, `acordes` y `cursos`
    (tabla completa en [04-contrato-api §7](../fase-1-contrato/04-contrato-api.md#7-límites-de-los-campos-hu-b-320)).
 5. `handle_new_user()` normaliza el nombre (espacios, máximo 80, respaldo con la
    parte local del correo o `Usuario`) y fija `search_path = ''`.
-6. Una `SUPABASE_SERVICE_ROLE_KEY` vacía cuenta como no configurada (503 sin llamar a Supabase).
 
 ## Criterios de aceptación
 ```gherkin

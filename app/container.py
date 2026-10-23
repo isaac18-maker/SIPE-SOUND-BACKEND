@@ -7,10 +7,10 @@
 from functools import lru_cache
 
 from app.infrastructure.database import session_scope
-from app.infrastructure.supabase_auth import ClienteSupabaseAuth
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
 from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
 from app.repositories.sqlalchemy.curso_repository import SqlCursoRepository
+from app.repositories.sqlalchemy.docente_repository import SqlDocenteRepository
 from app.repositories.sqlalchemy.ejercicio_repository import SqlEjercicioRepository
 from app.repositories.sqlalchemy.leccion_repository import SqlLeccionRepository
 from app.repositories.sqlalchemy.perfil_repository import SqlPerfilRepository
@@ -20,12 +20,12 @@ from app.repositories.sqlalchemy.quiz_repository import SqlQuizRepository
 from app.services.acorde_service import AcordeService
 from app.services.bloque_service import BloqueService
 from app.services.curso_service import CursoService
+from app.services.docente_service import DocenteService
 from app.services.ejercicio_service import EjercicioService
 from app.services.leccion_service import LeccionService
 from app.services.perfil_service import AdminUsuariosService, PerfilService
 from app.services.progreso_service import ProgresoService
 from app.services.quiz_service import QuizService
-from app.services.registro_service import RegistroService
 
 
 @lru_cache
@@ -82,8 +82,8 @@ def curso_service() -> CursoService:
 
 
 @lru_cache
-def registro_service() -> RegistroService:
-    return RegistroService(ClienteSupabaseAuth(), session_scope, SqlPerfilRepository())
+def docente_service() -> DocenteService:
+    return DocenteService(session_scope, SqlDocenteRepository())
 
 
 def rol_de_usuario(usuario_id: str) -> str | None:

@@ -5,6 +5,7 @@ from app.models.base import Base, auth_users
 from app.models.bloque import Bloque
 from app.models.curso import Curso
 from app.models.curso_bloque import CursoBloque
+from app.models.docente_preautorizado import DocentePreautorizado
 from app.models.ejercicio import Ejercicio
 from app.models.inscripcion import Inscripcion
 from app.models.leccion import Leccion
@@ -20,6 +21,7 @@ __all__ = [
     "Bloque",
     "Curso",
     "CursoBloque",
+    "DocentePreautorizado",
     "Ejercicio",
     "Inscripcion",
     "Leccion",

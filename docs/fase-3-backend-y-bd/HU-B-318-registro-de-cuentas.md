@@ -1,3 +1,6 @@
+> **Reemplazada por [HU-B-321](HU-B-321-registro-sin-service-role.md)**: se retiró la clave
+> `SUPABASE_SERVICE_ROLE_KEY`, `POST /auth/registro` y la invitación por Supabase.
+
 # HU-B-318 · Registro de estudiantes e invitación de docentes
 
 | Campo | Valor |
