@@ -4,7 +4,6 @@ PORCENTAJE_MAXIMO = 100
 
 TIPO_LECCION = "leccion"
 TIPO_EJERCICIO = "ejercicio"
-TIPO_BLOQUE = "bloque"
 
 ROL_ESTUDIANTE = "estudiante"
 ROL_DOCENTE = "docente"

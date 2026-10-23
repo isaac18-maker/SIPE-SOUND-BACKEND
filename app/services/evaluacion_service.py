@@ -18,7 +18,6 @@ VISIBLES_PARA_ESTUDIANTE = (EVALUACION_PUBLICADA, EVALUACION_CERRADA)
 
 class RepositorioEvaluaciones(Protocol):
     def obtener(self, sesion: Any, evaluacion_id: int) -> Fila | None: ...
-    def de_bloque(self, sesion: Any, bloque_id: int) -> Fila | None: ...
     def preguntas(self, sesion: Any, evaluacion_id: int, *, con_respuesta: bool) -> list[Fila]: ...
     def bloquear_intentos(self, sesion: Any, evaluacion_id: int, estudiante_id: str) -> None: ...
     def contar_intentos(self, sesion: Any, evaluacion_id: int, estudiante_id: str) -> int: ...
@@ -107,14 +106,6 @@ class EvaluacionService:
             **resultado,
             "creado_en": intento["creado_en"],
         }
-
-    def evaluacion_de_bloque(self, bloque_id: int) -> Fila | None:
-        with self._abrir_sesion() as sesion:
-            return self._evaluaciones.de_bloque(sesion, bloque_id)
-
-    def preguntas_publicas(self, evaluacion_id: int) -> list[Fila]:
-        with self._abrir_sesion() as sesion:
-            return self._evaluaciones.preguntas(sesion, evaluacion_id, con_respuesta=False)
 
     # --- Privados ---------------------------------------------------------------
     def _visible(self, sesion: Any, evaluacion_id: int, estudiante_id: str) -> Fila:

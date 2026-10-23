@@ -11,9 +11,7 @@ from app.models.evaluacion import Evaluacion, IntentoEvaluacion, PreguntaEvaluac
 from app.models.inscripcion import Inscripcion
 from app.models.leccion import Leccion
 from app.models.profile import Profile
-from app.models.progreso import Progreso
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
-from app.models.quiz_pregunta import QuizPregunta
 from app.models.retroalimentacion import Retroalimentacion
 
 __all__ = [
@@ -30,10 +28,8 @@ __all__ = [
     "Leccion",
     "PreguntaEvaluacion",
     "Profile",
-    "Progreso",
     "ProgresoEjercicio",
     "ProgresoLeccion",
-    "QuizPregunta",
     "Retroalimentacion",
     "auth_users",
 ]

@@ -91,8 +91,6 @@ Leyenda de acceso: 🌐 público · 🎓 estudiante · 🧑‍🏫 docente · �
 | GET | `/lecciones/{id}` | 🌐 | Detalle. |
 | GET | `/ejercicios` | 🌐 | Lista. |
 | GET | `/acordes` | 🌐 | Lista con `diagram` (`frets`, `fingers`, `baseFret`, `barre`). |
-| GET | `/quiz/{bloque_id}` | 🌐 | Preguntas **sin** `respuesta_correcta`. |
-| POST | `/quiz/{bloque_id}/verificar` | 🎓 | Calificación + detalle. |
 
 ### 4.1.1 Cuentas (HU-B-321)
 
@@ -197,7 +195,9 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 ## 6. Compatibilidad
 
 No hay modo de compatibilidad (retirado en HU-B-319):
-- `/api/*` sin versión, `GET /progreso` y `POST /progreso` responden 404.
+- `/api/*` sin versión, `GET /progreso`, `POST /progreso` y `/quiz/*` responden 404.
+  Los quizzes son evaluaciones: `GET /ruta` da el `evaluacion_id` de cada bloque y se usan
+  `GET /evaluaciones/{id}` y `POST /evaluaciones/{id}/intentos` (HU-B-308, HU-B-312).
   El progreso se registra con `PUT /progreso/lecciones/{id}` y
   `PUT /progreso/ejercicios/{id}`, y se consulta con `GET /progreso/resumen`.
 - `duracion` (texto) ya no existe en lecciones ni ejercicios: usar `duracion_min` (entero).
