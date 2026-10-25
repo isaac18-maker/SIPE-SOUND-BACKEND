@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.repositories.base import Fila
-from app.repositories.sqlalchemy._comun import formatear_fecha
+from app.repositories.sqlalchemy._comun import valor_de_fila
 
 # Bloques de la ruta del curso (o la global si el curso no definio la suya).
 CTE_RUTA = """
@@ -75,7 +75,7 @@ def _escapar_like(texto: str) -> str:
 
 def _filas(sesion: Session, sql: str, parametros: dict[str, Any]) -> list[Fila]:
     return [
-        {k: formatear_fecha(v) if hasattr(v, "isoformat") else v for k, v in f._mapping.items()}
+        {k: valor_de_fila(v) for k, v in f._mapping.items()}
         for f in sesion.execute(text(sql), parametros)
     ]
 

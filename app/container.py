@@ -41,6 +41,7 @@ from app.repositories.sqlalchemy.gestion_evaluacion_repository import (
 )
 from app.repositories.sqlalchemy.leccion_repository import SqlLeccionRepository
 from app.repositories.sqlalchemy.perfil_repository import SqlPerfilRepository
+from app.repositories.sqlalchemy.progreso_docente_repository import SqlProgresoDocenteRepository
 from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
 from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRepository
@@ -60,6 +61,7 @@ from app.services.evaluacion_service import EvaluacionService
 from app.services.gestion_evaluacion_service import GestionEvaluacionService
 from app.services.leccion_service import LeccionService
 from app.services.perfil_service import AdminUsuariosService, PerfilService, estado_de_cuenta
+from app.services.progreso_docente_service import ProgresoDocenteService
 from app.services.progreso_service import ProgresoService
 from app.services.recuperacion_service import RecuperacionService
 from app.services.ruta_service import RutaService
@@ -274,6 +276,17 @@ def admin_cursos_service() -> AdminCursosService:
         SqlCursoRepository(),
         SqlSeguimientoRepository(),
         SqlAccionAdminRepository(),
+    )
+
+
+@lru_cache
+def progreso_docente_service() -> ProgresoDocenteService:
+    return ProgresoDocenteService(
+        session_scope,
+        SqlProgresoDocenteRepository(),
+        SqlRutaRepository(),
+        SqlSeguimientoRepository(),
+        curso_service(),
     )
 
 

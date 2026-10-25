@@ -186,6 +186,11 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | PUT | `/docente/evaluaciones/{id}/preguntas` | Reemplaza el set de preguntas (solo si no hay intentos). |
 | PATCH | `/docente/evaluaciones/{id}/estado` | Publicar / cerrar. |
 | GET | `/docente/evaluaciones/{id}/resultados` | Intentos por estudiante, promedio, % aprobación, pregunta más fallada. |
+| GET | `/docente/progreso` | Panel de progreso (HU-B-408). `?curso_id=` opcional (sin él: todos tus cursos **activos**); el admin puede pasar `?docente_id=` (un docente lo ignora). `data.cursos[]`: `id`, `nombre`, `estudiantes`, `avance_promedio`, `estudiantes_al_dia` (último avance ≤ 7 días), `sin_actividad_14_dias` y `bloques[]` de **su** ruta (la del curso o, si no definió la suya, la global) con `aprobados`, `intentos`, `promedio_mejor_puntaje` y `pregunta_mas_fallada` (`{enunciado (≤ 120), fallos}` o `null`). `data.necesitan_apoyo[]` (máx. 20, primero quienes reprobaron): `estudiante_id`, `nombre`, `apellido`, `curso_id`, `curso`, `ultimo_avance`, `motivos` (`"reprobo_bloque"`: 2 o más intentos reprobados en un bloque sin aprobar; `"sin_actividad"`: nada en 14 días) y `bloque_reprobado` (`{bloque_id, titulo, intentos_reprobados}` o `null`). Curso ajeno, archivado o inexistente → 404. |
+| GET | `/docente/progreso/matriz` | Estudiantes × bloques de la ruta de **un** curso (`?curso_id=` obligatorio). `?q=&orden=nombre\|-avance_pct\|-ultimo_avance&pagina=&por_pagina=` (≤ 100). Por estudiante: `estudiante_id`, `nombre`, `apellido`, `avance_pct`, `ultimo_avance` y `bloques: [{bloque_id, estado: bloqueado\|disponible\|aprobado, mejor_puntaje, intentos}]` en el orden de la ruta. El encabezado va en `meta.bloques` (`{bloque_id, numero, titulo, orden}`). El estado usa la misma regla de desbloqueo que la ruta del estudiante. |
+| GET | `/docente/progreso/estudiantes/{estudiante_id}` | Progreso de un estudiante en **todos** tus cursos activos donde está inscrito: `{estudiante_id, nombre, apellido, cursos: [{curso_id, inscrito_en, bloques, intentos_del_curso, retroalimentaciones}]}`. 404 si no es estudiante tuyo. |
+
+Ninguna respuesta de `/docente/progreso*` incluye correos (ni siquiera enmascarados).
 
 ### 4.4 Administración (Fase 3)
 
