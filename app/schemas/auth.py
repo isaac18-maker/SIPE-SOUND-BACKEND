@@ -13,8 +13,15 @@ from app.core.longitudes import (
 
 PATRON_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PATRON_CODIGO = re.compile(r"\d{6}")
+PATRON_TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")  # secrets.token_urlsafe(32)
 # Letras (con tildes y ene), separadas por espacio, apostrofo, punto o guion: "Ana María", "O'Neil".
 PATRON_NOMBRE = re.compile(r"[^\W\d_]+(?:[ '.\-]+[^\W\d_]+)*\.?")
+
+
+def _exigir_letras_y_numeros(valor: str) -> str:
+    if not (re.search(r"[A-Za-z]", valor) and re.search(r"\d", valor)):
+        raise PydanticCustomError("valor_invalido", "La contraseña debe tener letras y números.")
+    return valor
 
 
 def _normalizar_email(valor: object) -> object:
@@ -46,6 +53,34 @@ class ReenvioVerificacionIn(BaseModel):
     email: str = Field(max_length=EMAIL_MAX)
 
     _email = field_validator("email", mode="before")(_normalizar_email)
+
+
+class OlvidoContrasenaIn(ReenvioVerificacionIn):
+    """Pedir el enlace para restablecer la contrasena (HU-B-403)."""
+
+
+class RestablecerContrasenaIn(BaseModel):
+    """Token del enlace + contrasena nueva (mismas reglas que el registro)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str
+    # La contrasena NO se recorta ni se normaliza.
+    password: str = Field(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
+
+    _password = field_validator("password")(_exigir_letras_y_numeros)
+
+    @field_validator("token", mode="before")
+    @classmethod
+    def limpiar_token(cls, valor: object) -> object:
+        return valor.strip() if isinstance(valor, str) else valor
+
+    @field_validator("token")
+    @classmethod
+    def formato_token(cls, valor: str) -> str:
+        if not PATRON_TOKEN.fullmatch(valor):
+            raise PydanticCustomError("valor_invalido", "El enlace no es válido. Pide uno nuevo.")
+        return valor
 
 
 class VerificacionIn(ReenvioVerificacionIn):
@@ -100,11 +135,4 @@ class RegistroIn(BaseModel):
             )
         return valor
 
-    @field_validator("password")
-    @classmethod
-    def contrasena_segura(cls, valor: str) -> str:
-        if not (re.search(r"[A-Za-z]", valor) and re.search(r"\d", valor)):
-            raise PydanticCustomError(
-                "valor_invalido", "La contraseña debe tener letras y números."
-            )
-        return valor
+    _password = field_validator("password")(_exigir_letras_y_numeros)
