@@ -46,7 +46,9 @@
      (lo exige `check_migrations.py` al estar dentro de un `op.execute`).
 2. Estado `suspendida` en el proveedor de estado de `auth_required` (B-402) y en `POST /auth/sesion`
    → 403 "Tu cuenta está suspendida. Habla con el administrador."
-3. `PATCH /usuarios/{id}/rol` (existente) registra `cambiar_rol` en `acciones_admin`.
+3. `PATCH /usuarios/{id}/rol` (existente) registra `cambiar_rol` en `acciones_admin`; los permisos de
+   nombre de HU-B-407 (`PATCH /admin/usuarios/{id}/permisos` y el lote) registran `permiso_nombre`
+   (HU-B-407 solo los escribe en el log porque esta tabla aún no existe).
 4. `AdminUsuariosService` + `SqlAdminUsuariosRepository` (una consulta para el listado, con
    `count(*) over ()`, como `SqlSeguimientoRepository`).
 5. Contrato 04 §4.4 y §7; contrato 05 (tabla ON DELETE y regla de borrado de cuentas).

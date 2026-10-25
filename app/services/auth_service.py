@@ -31,7 +31,9 @@ class EmisorDeCodigos(Protocol):
 
 
 class ProveedorIdentidad(Protocol):
-    def registrar(self, *, email: str, password: str, nombre: str) -> dict[str, Any]: ...
+    def registrar(
+        self, *, email: str, password: str, nombre: str, apellido: str | None = None
+    ) -> dict[str, Any]: ...
     def iniciar_sesion(self, *, email: str, password: str) -> dict[str, Any]: ...
     def refrescar(self, refresh_token: str) -> dict[str, Any]: ...
     def cerrar_sesion(self, access_token: str) -> None: ...
@@ -63,7 +65,10 @@ class AuthService:
         """
         try:
             respuesta = self._proveedor.registrar(
-                email=datos.email, password=datos.password, nombre=datos.nombre
+                email=datos.email,
+                password=datos.password,
+                nombre=datos.nombre,
+                apellido=datos.apellido,
             )
         except CuentaExistente:
             respuesta = {}

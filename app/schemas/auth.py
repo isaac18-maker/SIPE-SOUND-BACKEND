@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 from pydantic_core import PydanticCustomError
 
 from app.core.longitudes import (
+    APELLIDO_PERSONA_MAX,
+    APELLIDO_PERSONA_MIN,
     EMAIL_MAX,
     NOMBRE_PERSONA_MAX,
     NOMBRE_PERSONA_MIN,
@@ -21,6 +23,21 @@ PATRON_NOMBRE = re.compile(r"[^\W\d_]+(?:[ '.\-]+[^\W\d_]+)*\.?")
 def exigir_letras_y_numeros(valor: str) -> str:
     if not (re.search(r"[A-Za-z]", valor) and re.search(r"\d", valor)):
         raise PydanticCustomError("valor_invalido", "La contraseña debe tener letras y números.")
+    return valor
+
+
+def limpiar_nombre(valor: object) -> object:
+    """Colapsa espacios repetidos: "Ana   Maria " -> "Ana Maria"."""
+    return " ".join(valor.split()) if isinstance(valor, str) else valor
+
+
+def validar_nombre(valor: str | None) -> str | None:
+    """Solo letras (con tildes y ene), espacios, apostrofo, punto y guion. Sirve para nombre y
+    apellido; None pasa (el campo es opcional)."""
+    if valor is not None and not PATRON_NOMBRE.fullmatch(valor):
+        raise PydanticCustomError(
+            "valor_invalido", "Usa solo letras, espacios, apóstrofo, punto o guion."
+        )
     return valor
 
 
@@ -119,6 +136,11 @@ class RegistroIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nombre: str = Field(min_length=NOMBRE_PERSONA_MIN, max_length=NOMBRE_PERSONA_MAX)
+    # Opcional MIENTRAS el formulario del frontend no lo envie (contrato 07: el backend se
+    # despliega primero y no rompe al frontend vigente). Se vuelve obligatorio con HU-F-403.
+    apellido: str | None = Field(
+        default=None, min_length=APELLIDO_PERSONA_MIN, max_length=APELLIDO_PERSONA_MAX
+    )
     email: str = Field(max_length=EMAIL_MAX)
     password: str = Field(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
     # Consentimiento (Ley 1581 de 2012): la API no crea cuentas sin él (HU-B-323).
@@ -133,18 +155,7 @@ class RegistroIn(BaseModel):
             raise PydanticCustomError("valor_invalido", "Debes aceptar los términos y condiciones.")
         return valor
 
-    @field_validator("nombre", mode="before")
-    @classmethod
-    def limpiar_nombre(cls, valor: object) -> object:
-        return " ".join(valor.split()) if isinstance(valor, str) else valor
-
-    @field_validator("nombre")
-    @classmethod
-    def validar_nombre(cls, valor: str) -> str:
-        if not PATRON_NOMBRE.fullmatch(valor):
-            raise PydanticCustomError(
-                "valor_invalido", "Usa solo letras, espacios, apóstrofo, punto o guion."
-            )
-        return valor
+    _limpiar_nombre = field_validator("nombre", "apellido", mode="before")(limpiar_nombre)
+    _validar_nombre = field_validator("nombre", "apellido")(validar_nombre)
 
     _password = field_validator("password")(exigir_letras_y_numeros)

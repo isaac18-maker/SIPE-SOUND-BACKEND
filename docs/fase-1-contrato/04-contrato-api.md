@@ -99,7 +99,7 @@ nunca la *service_role*). El frontend no usa `@supabase/supabase-js`.
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| POST | `/auth/registro` | 🌐 (20/h por IP) | `{nombre, email, password, acepta_terminos: true}` → 201 `{email, requiere_confirmacion: true}` y envía por correo un código de 6 dígitos (HU-B-402). Misma respuesta exista o no el correo. |
+| POST | `/auth/registro` | 🌐 (20/h por IP) | `{nombre, apellido?, email, password, acepta_terminos: true}` (el `apellido` es opcional mientras el formulario del frontend no lo envíe; pasa a obligatorio con HU-F-403) → 201 `{email, requiere_confirmacion: true}` y envía por correo un código de 6 dígitos (HU-B-402). Misma respuesta exista o no el correo. |
 | POST | `/auth/verificacion` | 🌐 (10/min por IP) | `{email, codigo}` → 200 `{email, verificado: true}`. El código (6 dígitos, se aceptan espacios) vence a los 15 min, sirve una vez y se invalida tras 5 intentos fallidos. Código errado, vencido, usado o correo sin cuenta → **el mismo** 422 `REGLA_NEGOCIO` "El código no es válido o ya venció. Pide uno nuevo." |
 | POST | `/auth/verificacion/reenviar` | 🌐 (5/h por IP; 1/min por cuenta) | `{email}` → siempre 200 "Si el correo tiene una cuenta pendiente, te enviamos un código nuevo." El código anterior deja de servir. |
 | POST | `/auth/contrasena/olvido` | 🌐 (5/h por IP; 1 cada 2 min por cuenta) | `{email}` → siempre 200 "Si el correo tiene una cuenta, te enviamos un enlace para crear una contraseña nueva. Vence en 15 minutos." Solo envía a cuentas con el correo verificado. El enlace es `{URL_FRONTEND}/restablecer#token=…` (el token va en el **fragmento**, no en la consulta); un enlace nuevo invalida el anterior. |
@@ -138,7 +138,8 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/me` | 🎓🧑‍🏫🛡️ | Perfil y rol del usuario actual: `id`, `nombre`, `rol`, `nivel`, `email` (el vigente en la base, no el del token) y `correo_verificado_en`. |
+| GET | `/me` | 🎓🧑‍🏫🛡️ | Perfil y rol del usuario actual: `id`, `nombre`, `apellido`, `rol`, `nivel`, `puede_editar_nombre`, `email` (el vigente en la base, no el del token) y `correo_verificado_en`. |
+| PATCH | `/me` | 🎓🧑‍🏫🛡️ (10/min) | `{nombre?, apellido?}` (al menos uno) → 200 con el perfil. 403 "El administrador no ha habilitado el cambio de nombre en tu cuenta." si `puede_editar_nombre` es `false` (los admins siempre pueden). Cualquier otro campo (`rol`, `nivel`…) → 400. |
 | POST | `/me/reautenticacion` | 🎓🧑‍🏫🛡️ (5/h por persona) | Paso 1 para cambiar correo o contraseña. `{password_actual}` → 200 `{enviado_a: "a***@colegio.edu.co"}` y envía un código de 6 dígitos (10 min, un solo uso) al correo **actual**. 401 "La contraseña actual no coincide." |
 | POST | `/me/reautenticacion/confirmar` | 🎓🧑‍🏫🛡️ (10/min) | Paso 2. `{codigo}` → 200 `{token_reautenticacion, expira_en}`. El token vive 5 min, sirve **una vez**, está atado a la persona y a la **sesión** del JWT (reclamo `session_id`) y autoriza **un** cambio. Código errado, vencido o usado → 422 "El código no es válido o ya venció. Pide uno nuevo." |
 | PATCH | `/me/contrasena` | 🎓🧑‍🏫🛡️ (10/min) | `{token_reautenticacion, password_nueva}` → 200. Cierra las **demás** sesiones (esta sigue abierta) y avisa por correo. 422 "La contraseña nueva debe ser distinta de la actual." (el token no se gasta). Token inválido, usado, vencido o de otra sesión → 422 "Vuelve a confirmar tu identidad." |
@@ -188,6 +189,8 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | Método | Ruta | Descripción |
 |---|---|---|
 | PATCH | `/admin/usuarios/{id}/rol` | Asignar `docente`/`estudiante`. |
+| PATCH | `/admin/usuarios/{id}/permisos` | `{puede_editar_nombre: bool}` → permite o impide que esa persona cambie su nombre y apellido. 404 si no existe. |
+| POST | `/admin/usuarios/permisos` | `{usuario_ids: [uuid] (1–100), puede_editar_nombre: bool}` → `{actualizados: N}`; los ids que no existen se ignoran y salen en `meta.no_encontrados`. |
 | GET · POST | `/admin/bloques` | Catálogo global de la ruta (todos los estados). |
 | GET · PATCH · DELETE | `/admin/bloques/{id}` | `DELETE` → 409 si tiene lecciones o evaluaciones (archivar). |
 | PATCH | `/admin/bloques/{id}/estado` | Igual que lecciones. |
@@ -216,7 +219,7 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 
 // EstudianteCursoOut (panel docente)
 {
-  "estudiante_id": "uuid", "nombre": "Ana", "email": "a***@colegio.edu.co",
+  "estudiante_id": "uuid", "nombre": "Ana", "apellido": "Gómez", "email": "a***@colegio.edu.co",
   "avance_pct": 46, "bloques_aprobados": 2, "ultimo_avance": "…",
   "inscrito_en": "…"
 }
@@ -249,6 +252,7 @@ así que nombre, correo y contraseña se validan en el formulario, en la API y e
 | Campo | Tipo | Regla | Base |
 |---|---|---|---|
 | `nombre` (persona, `POST /auth/registro`) | texto | 2–80; solo letras (con tildes y ñ), espacios, `'`, `.` y `-`; espacios repetidos se colapsan (formulario y API) | `handle_new_user` lo normaliza a 2–80 y `profiles` lo exige con CHECK |
+| `apellido` (persona, registro y `PATCH /me`) | texto | igual que `nombre`: 2–80, solo letras, espacios, `'`, `.` y `-`; espacios repetidos se colapsan; opcional | CHECK `apellido` 2–80 o nulo y sin caracteres de control (revisión `0023`) |
 | `email` (registro e inicio de sesión) | correo | máx. 254; formato `usuario@dominio.tld`; se pasa a minúsculas (formulario y API) | Supabase Auth |
 | `email` (preautorizar docente) | correo | máx. 254; formato; se guarda en minúsculas (API) | CHECK en `docentes_preautorizados` |
 | `password` (registro) | contraseña | 8–72; al menos una letra y un número; **no** se recorta (formulario y API) | Supabase Auth (configurar mínimo 8, letras y dígitos) |
