@@ -13,6 +13,7 @@ from app.models.envio_correo import EnvioCorreo
 from app.models.evaluacion import Evaluacion, IntentoEvaluacion, PreguntaEvaluacion
 from app.models.inscripcion import Inscripcion
 from app.models.leccion import Leccion
+from app.models.mensaje import Mensaje, MensajeDestinatario
 from app.models.profile import Profile
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
 from app.models.retroalimentacion import Retroalimentacion
@@ -32,6 +33,8 @@ __all__ = [
     "IntentoEvaluacion",
     "Inscripcion",
     "Leccion",
+    "Mensaje",
+    "MensajeDestinatario",
     "PreguntaEvaluacion",
     "Profile",
     "ProgresoEjercicio",

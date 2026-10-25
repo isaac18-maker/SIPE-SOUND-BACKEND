@@ -218,6 +218,33 @@ Toda acción del administrador sobre una cuenta (reenviar, verificar a mano, sus
 | GET · PATCH · DELETE | `/admin/bloques/{id}` | `DELETE` → 409 si tiene lecciones o evaluaciones (archivar). |
 | PATCH | `/admin/bloques/{id}/estado` | Igual que lecciones. |
 
+### 4.5 Mensajería interna (Fase 4, HU-B-409)
+
+Para cualquier persona con sesión (🎓🧑‍🏫🛡️). **No envía correos** y **nunca devuelve correos**: el
+remitente va como `{nombre, apellido, rol}` (o `null` si su cuenta ya no existe).
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/mensajes` | Nuevo: `{alcance, destinatario_id?, curso_id?, asunto, cuerpo}`. Respuesta: `{respuesta_a_id, cuerpo}` (el destino, el hilo y el asunto son los del mensaje original; mandar otro campo es 400). → 201 `{id, hilo_id, destinatarios: N}`. 403 si el destino no está permitido; 422 si nadie lo recibiría (cuentas sin verificar o suspendidas no reciben); 429 al pasar el límite. |
+| GET | `/mensajes` | Bandeja de **hilos**. `?filtro=recibidos\|enviados\|no_leidos\|archivados` (por defecto `recibidos`), `?q=` (asunto), `?pagina=&por_pagina=`. Cada hilo: `hilo_id`, `asunto`, `alcance`, `curso`, `no_leidos`, `archivado` y `ultimo` (`remitente`, `propio`, `extracto` ≤ 140, `creado_en`). |
+| GET | `/mensajes/hilos/{hilo_id}` | `{hilo_id, asunto, puede_responder, responder_a, mensajes[]}`; cada mensaje: `id`, `propio`, `remitente`, `cuerpo`, `alcance`, `curso`, `creado_en`, `nuevo` (no lo había leído antes de abrir el hilo). Los marca como leídos. `responder_a` es el `id` a enviar como `respuesta_a_id`. 404 si no participas. |
+| PATCH | `/mensajes/hilos/{hilo_id}` | `{archivado?: bool, leido?: bool}` (al menos uno). `leido: false` deja sin leer solo el último mensaje **recibido**. Una respuesta nueva desarchiva el hilo. |
+| GET | `/mensajes/no-leidos` | `{total}`: mensajes recibidos sin leer en hilos no archivados (el frontend lo consulta cada 60 s). |
+| GET | `/mensajes/destinatarios` | `?q=` (2–80, opcional). Hasta 20 `{tipo: usuario\|curso\|grupo, id, etiqueta, detalle}`. Estudiante: solo los docentes de sus cursos activos (con el nombre del curso). Docente: sus grupos (`estudiantes_docente`, `rol_docente`, `rol_admin`) y cursos activos; con `q`, también sus estudiantes y los demás docentes y admins. Admin: `rol_estudiante`, `rol_docente`, `rol_admin`, `todos`; con `q`, personas por nombre (nunca por correo). Sin `q` no se lista a las personas. |
+
+**Quién puede escribirle a quién** (una sola implementación, `MensajeriaService`):
+
+| Remitente | `alcance` permitidos |
+|---|---|
+| admin | `usuario` (cualquiera), `rol_estudiante`, `rol_docente`, `rol_admin`, `todos` |
+| docente | `usuario` (un estudiante de un curso **activo** suyo, o cualquier docente o admin), `curso` (suyo y activo), `estudiantes_docente`, `rol_docente`, `rol_admin` |
+| estudiante | `usuario`, solo a un docente de un curso activo donde está inscrito |
+
+- `destinatario_id` solo con `alcance: usuario`; `curso_id` solo con `alcance: curso`.
+- Los destinatarios de un grupo se copian **en el momento del envío**: quien entra después al curso no ve avisos viejos.
+- Un estudiante puede responder a su docente, pero no a un aviso del administrador. Solo se responden mensajes **recibidos**.
+- Límites por hora (los mide la base): estudiante 20, docente 60, admin 120 mensajes; y 10 avisos de grupo (`alcance` ≠ `usuario`) por remitente.
+
 ## 5. Esquemas de referencia
 
 ```json
@@ -304,6 +331,8 @@ así que nombre, correo y contraseña se validan en el formulario, en la API y e
 | `acordes.descripcion` | texto | máx. 500 | máx. 500 |
 | `porcentaje` | entero | 0–100 | 0–100 |
 | `retroalimentaciones.mensaje` | texto largo | 1–1000 | 1–1000 |
+| `mensajes.asunto` | texto | 3–120 (sin contar espacios de los extremos) | 3–120 |
+| `mensajes.cuerpo` | texto largo | 1–4000 | 1–4000 |
 | `nivel` | opción | `principiante`, `intermedio`, `avanzado` | mismo conjunto |
 
 ### 7.2 Para las HU pendientes (se aplican al crearlas)

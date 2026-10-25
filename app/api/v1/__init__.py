@@ -14,6 +14,7 @@ from app.api.v1 import (
     health,
     lecciones,
     me,
+    mensajes,
     progreso_contenido,
 )
 from app.core.limites import configurar_limites
@@ -28,6 +29,7 @@ BLUEPRINTS = (
     ejercicios,
     acordes,
     me,
+    mensajes,
     admin,
     admin_cursos,
     progreso_contenido,
