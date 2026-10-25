@@ -15,6 +15,7 @@ from app.models.base import Base
 from app.models.bloque import Bloque
 from app.models.leccion import Leccion
 from app.repositories.base import Fila
+from app.repositories.sqlalchemy._autoria import con_nombres
 from app.repositories.sqlalchemy._comun import a_fila
 
 # Recibe el id y devuelve la condicion "esta en uso" (progreso o dependientes).
@@ -33,11 +34,15 @@ class SqlContenidoRepository:
         columna_texto: InstrumentedAttribute,
         filtros: tuple[str, ...],
         en_uso: CondicionUso,
+        alcance: Callable[[str], ColumnElement[bool]] | None = None,
     ) -> None:
+        """alcance: dado un docente, la condicion de lo que puede gestionar aunque no sea suyo
+        (contenido de los bloques de sus cursos, HU-B-412). Sin ella, solo lo propio."""
         self._modelo = modelo
         self._texto = columna_texto
         self._filtros = filtros
         self._en_uso = en_uso
+        self._alcance = alcance
         self._con_archivado = hasattr(modelo, "archivado_en")
 
     def listar(
@@ -59,22 +64,33 @@ class SqlContenidoRepository:
                 self._texto.ilike(f"%{_escapar_like(filtros['q'])}%", escape="\\")
             )
         if autor_id is not None:
-            consulta = consulta.where(m.autor_id == autor_id)
+            propio = m.autor_id == autor_id
+            consulta = consulta.where(propio | self._alcance(autor_id) if self._alcance else propio)
         total = sesion.scalar(select(func.count()).select_from(consulta.subquery())) or 0
         pagina_actual = (
             consulta.order_by(m.actualizado_en.desc(), m.id.desc())
             .offset((pagina - 1) * por_pagina)
             .limit(por_pagina)
         )
-        return [a_fila(f) for f in sesion.scalars(pagina_actual)], total
+        filas = [a_fila(f) for f in sesion.scalars(pagina_actual)]
+        return con_nombres(sesion, filas), total
 
     def obtener(self, sesion: Session, contenido_id: int, *, bloquear: bool = False) -> Fila | None:
         fila = sesion.get(self._modelo, contenido_id, with_for_update=bloquear)
-        return a_fila(fila) if fila else None
+        return con_nombres(sesion, [a_fila(fila)])[0] if fila else None
+
+    def en_alcance_de(self, sesion: Session, contenido_id: int, docente_id: str) -> bool:
+        """Esta en la ruta de un curso activo del docente (aunque lo haya creado otra persona)."""
+        if self._alcance is None:
+            return False
+        consulta = select(
+            exists().where(self._modelo.id == contenido_id, self._alcance(docente_id))
+        )
+        return bool(sesion.scalar(consulta))
 
     def crear(self, sesion: Session, datos: Fila) -> Fila:
         fila = sesion.scalars(insert(self._modelo).values(**datos).returning(self._modelo)).one()
-        return a_fila(fila)
+        return con_nombres(sesion, [a_fila(fila)])[0]
 
     def actualizar(self, sesion: Session, contenido_id: int, cambios: Fila) -> Fila:
         fila = sesion.scalars(
@@ -84,7 +100,7 @@ class SqlContenidoRepository:
             .returning(self._modelo),
             execution_options={"populate_existing": True},
         ).one()
-        return a_fila(fila)
+        return con_nombres(sesion, [a_fila(fila)])[0]
 
     def cambiar_estado(self, sesion: Session, contenido_id: int, estado: str) -> Fila:
         cambios: dict[str, Any] = {"estado": estado}

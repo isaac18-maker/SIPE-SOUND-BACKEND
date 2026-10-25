@@ -92,5 +92,12 @@ class AutoriaMixin:
             UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), index=True
         )
 
+    # Quien lo modifico por ultima vez (HU-B-412); nulo = nadie lo ha modificado desde que se creo.
+    @declared_attr
+    def actualizado_por(cls) -> Mapped[str | None]:  # noqa: N805 - declared_attr recibe la clase
+        return mapped_column(
+            UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), index=True
+        )
+
     archivado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     duracion_min: Mapped[int | None] = mapped_column(Integer)
