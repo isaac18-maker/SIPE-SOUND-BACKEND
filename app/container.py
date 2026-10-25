@@ -20,6 +20,7 @@ from app.models.ejercicio import Ejercicio
 from app.models.evaluacion import Evaluacion
 from app.models.leccion import Leccion
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
+from app.repositories.sqlalchemy._autoria import alcance_de_ejercicios, alcance_de_lecciones
 from app.repositories.sqlalchemy.accion_admin_repository import SqlAccionAdminRepository
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
 from app.repositories.sqlalchemy.admin_cuentas_repository import SqlAdminCuentasRepository
@@ -186,6 +187,7 @@ def leccion_contenido_service() -> ContenidoService:
         columna_texto=Leccion.titulo,
         filtros=("estado", "bloque_id"),
         en_uso=lambda i: exists().where(ProgresoLeccion.leccion_id == i),
+        alcance=alcance_de_lecciones,
     )
     return ContenidoService(
         session_scope,
@@ -205,6 +207,7 @@ def ejercicio_contenido_service() -> ContenidoService:
         columna_texto=Ejercicio.nombre,
         filtros=("estado", "leccion_id"),
         en_uso=lambda i: exists().where(ProgresoEjercicio.ejercicio_id == i),
+        alcance=alcance_de_ejercicios,
     )
     return ContenidoService(
         session_scope,

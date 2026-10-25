@@ -177,13 +177,13 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | GET | `/docente/cursos/{id}/estudiantes/{estudiante_id}` | Detalle: progreso por lección/ejercicio e intentos. |
 | DELETE | `/docente/cursos/{id}/estudiantes/{estudiante_id}` | Retirar del curso (borra inscripción). |
 | POST | `/docente/cursos/{id}/estudiantes/{estudiante_id}/retroalimentaciones` | Enviar comentario. |
-| GET · POST | `/docente/lecciones` | Lecciones propias (admin: todas) con `?estado=&bloque_id=&q=&pagina=&por_pagina=` / crear en `borrador`. |
-| GET · PATCH · DELETE | `/docente/lecciones/{id}` | Detalle / editar / borrar (409 si tiene progreso → archivar). |
+| GET · POST | `/docente/lecciones` | Lecciones propias **y las de los bloques de tus cursos activos aunque las haya creado el admin** (HU-B-412; admin: todas) con `?estado=&bloque_id=&q=&pagina=&por_pagina=` / crear en `borrador`. |
+| GET · PATCH · DELETE | `/docente/lecciones/{id}` | Detalle / editar / borrar (409 si tiene progreso → archivar). Cada fila trae `autor` y `modificado_por` (nombre o `null`) y `actualizado_por` (id). Un docente edita y publica lo de sus cursos aunque sea del admin, pero **solo borra lo que creó** (403 en lo ajeno: se archiva). |
 | PATCH | `/docente/lecciones/{id}/estado` | `borrador` · `publicado` · `archivado`. |
 | GET · POST | `/docente/ejercicios` | Igual que lecciones. |
 | GET · PATCH · DELETE | `/docente/ejercicios/{id}` | |
 | PATCH | `/docente/ejercicios/{id}/estado` | |
-| GET · POST | `/docente/evaluaciones` | Por curso (`?curso_id=`). |
+| GET · POST | `/docente/evaluaciones` | Por curso (`?curso_id=`). El docente también ve las evaluaciones globales de los bloques que recorren sus cursos (HU-B-412): puede editarlas, cambiar su estado y ver los resultados de **sus** estudiantes; no puede crearlas ni borrar las que no creó (403: se cierran). Con `autor` y `modificado_por`. |
 | GET · PATCH · DELETE | `/docente/evaluaciones/{id}` | Incluye preguntas **con** respuesta correcta. |
 | PUT | `/docente/evaluaciones/{id}/preguntas` | Reemplaza el set de preguntas (solo si no hay intentos). |
 | PATCH | `/docente/evaluaciones/{id}/estado` | Publicar / cerrar. |

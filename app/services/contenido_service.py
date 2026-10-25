@@ -1,16 +1,22 @@
 # =========================================================
 # Contenido editable desde el panel (HU-B-309). Un solo servicio para
 # lecciones, ejercicios y bloques; cada uno se configura en el container.
-# - Se crea en borrador. Contenido ajeno: 404 (el admin ve todo).
+# - Se crea en borrador. El docente ve, edita y publica lo suyo y el contenido de los bloques de
+#   sus cursos (aunque lo haya creado el admin, HU-B-412); lo demas es 404. Borrar: solo el autor
+#   o un admin (lo ajeno se archiva). El admin ve todo.
 # - Estados: TRANSICIONES es la unica fuente de la maquina de estados.
 # - Borrar algo en uso: 409 con la sugerencia de archivar.
 # =========================================================
 from typing import Any, Protocol
 
 from app.core.constants import ESTADO_ARCHIVADO, ESTADO_BORRADOR, ESTADO_PUBLICADO, ROL_ADMIN
-from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio, ValidacionError
+from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio, SinPermiso, ValidacionError
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila
+
+MENSAJE_BORRAR_AJENO = (
+    "Solo quien creó este contenido puede borrarlo. Puedes archivarlo para ocultarlo."
+)
 
 TRANSICIONES: dict[str, set[str]] = {
     ESTADO_BORRADOR: {ESTADO_PUBLICADO},
@@ -34,6 +40,7 @@ class RepositorioContenido(Protocol):
     def actualizar(self, sesion: Any, contenido_id: int, cambios: Fila) -> Fila: ...
     def cambiar_estado(self, sesion: Any, contenido_id: int, estado: str) -> Fila: ...
     def en_uso(self, sesion: Any, contenido_id: int) -> bool: ...
+    def en_alcance_de(self, sesion: Any, contenido_id: int, docente_id: str) -> bool: ...
     def eliminar(self, sesion: Any, contenido_id: int) -> None: ...
 
 
@@ -90,7 +97,7 @@ class ContenidoService:
         with self._abrir_sesion() as sesion:
             self._propio(sesion, usuario, contenido_id, bloquear=True)
             self._exigir_referencias(sesion, cambios)
-            return self._repo.actualizar(sesion, contenido_id, cambios)
+            return self._repo.actualizar(sesion, contenido_id, self._con_editor(usuario, cambios))
 
     def cambiar_estado(self, usuario: CurrentUser, contenido_id: int, estado: str) -> Fila:
         with self._abrir_sesion() as sesion:
@@ -103,11 +110,20 @@ class ContenidoService:
                     f"No se puede pasar de {actual['estado']} a {estado}. "
                     f"Desde {actual['estado']} solo a: {permitidos}."
                 )
-            return self._repo.cambiar_estado(sesion, contenido_id, estado)
+            cambiado = self._repo.cambiar_estado(sesion, contenido_id, estado)
+            if not self._con_autor:
+                return cambiado
+            return self._repo.actualizar(sesion, contenido_id, self._con_editor(usuario, {}))
 
     def eliminar(self, usuario: CurrentUser, contenido_id: int) -> None:
         with self._abrir_sesion() as sesion:
-            self._propio(sesion, usuario, contenido_id, bloquear=True)
+            fila = self._propio(sesion, usuario, contenido_id, bloquear=True)
+            if (
+                self._con_autor
+                and not self._ve_todo(usuario)
+                and fila.get("autor_id") != usuario.id
+            ):
+                raise SinPermiso(MENSAJE_BORRAR_AJENO)
             if self._repo.en_uso(sesion, contenido_id):
                 raise Conflicto(
                     self._mensaje_en_uso, details=[{"campo": "sugerencia", "mensaje": "archivar"}]
@@ -122,9 +138,17 @@ class ContenidoService:
         self, sesion: Any, usuario: CurrentUser, contenido_id: int, *, bloquear: bool = False
     ) -> Fila:
         fila = self._repo.obtener(sesion, contenido_id, bloquear=bloquear)
-        if fila is None or not (self._ve_todo(usuario) or fila.get("autor_id") == usuario.id):
+        if fila is None or not (
+            self._ve_todo(usuario)
+            or fila.get("autor_id") == usuario.id
+            or self._repo.en_alcance_de(sesion, contenido_id, usuario.id)
+        ):
             raise NoEncontrado(f"No existe {self._nombre} {contenido_id}")
         return fila
+
+    def _con_editor(self, usuario: CurrentUser, cambios: Fila) -> Fila:
+        """Deja constancia de quien modifico el contenido (HU-B-412)."""
+        return {**cambios, "actualizado_por": usuario.id} if self._con_autor else cambios
 
     def _exigir_referencias(self, sesion: Any, datos: Fila) -> None:
         errores = [

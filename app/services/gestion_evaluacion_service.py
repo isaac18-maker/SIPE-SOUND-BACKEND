@@ -1,7 +1,9 @@
 # =========================================================
 # Evaluaciones desde el panel docente (HU-B-311).
 # - De curso: las gestiona el docente del curso (CursoService valida la propiedad).
-# - De bloque (globales, sin curso): solo un administrador.
+# - De bloque (globales, sin curso): las crea y las borra solo un administrador; el docente ve,
+#   edita y publica las de los bloques que recorren sus cursos (HU-B-412).
+# - Borrar: solo quien la creo o un administrador (lo ajeno se cierra).
 # - Preguntas: se reemplazan completas y solo si no hay intentos (consistencia).
 # - Estados: TRANSICIONES es la unica fuente; no se publica sin preguntas.
 # =========================================================
@@ -16,6 +18,10 @@ from app.core.constants import (
 from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio, SinPermiso
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila
+
+MENSAJE_BORRAR_AJENA = (
+    "Solo quien creó esta evaluación puede borrarla. Puedes cerrarla para que no se presente."
+)
 
 TRANSICIONES: dict[str, set[str]] = {
     EVALUACION_BORRADOR: {EVALUACION_PUBLICADA},
@@ -40,7 +46,8 @@ class RepositorioGestionEvaluaciones(Protocol):
         self, sesion: Any, evaluacion_id: int, preguntas: list[Fila]
     ) -> list[Fila]: ...
     def eliminar(self, sesion: Any, evaluacion_id: int) -> None: ...
-    def resultados(self, sesion: Any, evaluacion: Fila) -> Fila: ...
+    def global_en_alcance(self, sesion: Any, evaluacion_id: int, docente_id: str) -> bool: ...
+    def resultados(self, sesion: Any, evaluacion: Fila, docente_id: str | None = None) -> Fila: ...
 
 
 class PropiedadCurso(Protocol):
@@ -97,7 +104,9 @@ class GestionEvaluacionService:
                     "Ya hay intentos: cambiar el porcentaje de aprobación alteraría resultados "
                     "pasados. Duplica la evaluación."
                 )
-            return self._evaluaciones.actualizar(sesion, evaluacion_id, cambios)
+            return self._evaluaciones.actualizar(
+                sesion, evaluacion_id, {**cambios, "actualizado_por": usuario.id}
+            )
 
     def reemplazar_preguntas(
         self, usuario: CurrentUser, evaluacion_id: int, preguntas: list[Fila]
@@ -108,6 +117,7 @@ class GestionEvaluacionService:
                 raise ReglaNegocio(
                     "Ya hay intentos: para cambiar las preguntas, duplica la evaluación."
                 )
+            self._evaluaciones.actualizar(sesion, evaluacion_id, {"actualizado_por": usuario.id})
             return self._evaluaciones.reemplazar_preguntas(sesion, evaluacion_id, preguntas)
 
     def cambiar_estado(self, usuario: CurrentUser, evaluacion_id: int, estado: str) -> Fila:
@@ -121,11 +131,15 @@ class GestionEvaluacionService:
                 sesion, evaluacion_id
             ):
                 raise ReglaNegocio("Agrega al menos una pregunta antes de publicar.")
-            return self._evaluaciones.actualizar(sesion, evaluacion_id, {"estado": estado})
+            return self._evaluaciones.actualizar(
+                sesion, evaluacion_id, {"estado": estado, "actualizado_por": usuario.id}
+            )
 
     def eliminar(self, usuario: CurrentUser, evaluacion_id: int) -> None:
         with self._abrir_sesion() as sesion:
-            self._propia(sesion, usuario, evaluacion_id, bloquear=True)
+            evaluacion = self._propia(sesion, usuario, evaluacion_id, bloquear=True)
+            if not _es_admin(usuario) and evaluacion["autor_id"] != usuario.id:
+                raise SinPermiso(MENSAJE_BORRAR_AJENA)
             if self._evaluaciones.tiene_intentos(sesion, evaluacion_id):
                 raise Conflicto(
                     "La evaluación tiene intentos de estudiantes. Ciérrala en lugar de borrarla.",
@@ -136,7 +150,9 @@ class GestionEvaluacionService:
     def resultados(self, usuario: CurrentUser, evaluacion_id: int) -> Fila:
         with self._abrir_sesion() as sesion:
             evaluacion = self._propia(sesion, usuario, evaluacion_id)
-            datos = self._evaluaciones.resultados(sesion, evaluacion)
+            # Una global reúne a todos los cursos: el docente solo ve a sus propios estudiantes.
+            ajena = evaluacion["curso_id"] is None and not _es_admin(usuario)
+            datos = self._evaluaciones.resultados(sesion, evaluacion, usuario.id if ajena else None)
         cifras = datos["cifras"]
         del_curso = cifras["estudiantes_del_curso"] if evaluacion["curso_id"] else None
         presentaron = cifras["estudiantes_que_presentaron"]
@@ -161,10 +177,13 @@ class GestionEvaluacionService:
     def _propia(
         self, sesion: Any, usuario: CurrentUser, evaluacion_id: int, *, bloquear: bool = False
     ) -> Fila:
-        """De curso: la del docente del curso. Global: solo admin. Si no, 404."""
+        """De curso: la de su docente. Global: el admin o el docente de un curso que la recorre."""
         evaluacion = self._evaluaciones.obtener(sesion, evaluacion_id, bloquear=bloquear)
         if evaluacion is not None:
-            if evaluacion["curso_id"] is None and _es_admin(usuario):
+            if evaluacion["curso_id"] is None and (
+                _es_admin(usuario)
+                or self._evaluaciones.global_en_alcance(sesion, evaluacion_id, usuario.id)
+            ):
                 return evaluacion
             if evaluacion["curso_id"] is not None:
                 try:
