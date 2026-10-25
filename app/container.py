@@ -4,10 +4,13 @@
 # Vive fuera de core/ porque depende de services y repositories.
 # Todo el acceso a datos es por SQL con una sola conexion (HU-B-315).
 # =========================================================
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 
 from sqlalchemy import exists
 
+from app.core.config import get_settings
+from app.infrastructure.correo_smtp import EnviadorArchivo, EnviadorSmtp
 from app.infrastructure.database import session_scope
 from app.infrastructure.supabase_auth import ClienteSupabaseAuth
 from app.models.bloque import Bloque
@@ -24,6 +27,7 @@ from app.repositories.sqlalchemy.contenido_repository import (
 from app.repositories.sqlalchemy.curso_repository import SqlCursoRepository
 from app.repositories.sqlalchemy.docente_repository import SqlDocenteRepository
 from app.repositories.sqlalchemy.ejercicio_repository import SqlEjercicioRepository
+from app.repositories.sqlalchemy.envio_correo_repository import SqlEnvioCorreoRepository
 from app.repositories.sqlalchemy.evaluacion_repository import SqlEvaluacionRepository
 from app.repositories.sqlalchemy.gestion_evaluacion_repository import (
     SqlGestionEvaluacionRepository,
@@ -37,6 +41,7 @@ from app.services.acorde_service import AcordeService
 from app.services.auth_service import AuthService
 from app.services.bloque_service import BloqueService
 from app.services.contenido_service import ContenidoService
+from app.services.correo_service import MARCA, CorreoService, Enviador
 from app.services.curso_service import CursoService
 from app.services.docente_service import DocenteService
 from app.services.ejercicio_service import EjercicioService
@@ -187,3 +192,36 @@ def gestion_evaluacion_service() -> GestionEvaluacionService:
 @lru_cache
 def auth_service() -> AuthService:
     return AuthService(ClienteSupabaseAuth())
+
+
+# --- Correo saliente (HU-B-401) ---
+REMITENTE_LOCAL = "no-responder@sipesound.local"
+
+
+def _crear_enviador() -> Enviador:
+    ajustes = get_settings()
+    if ajustes.modo_correo == "archivo":
+        return EnviadorArchivo()
+    # La configuracion ya garantizo que estos valores existen (Settings._validar_correo).
+    return EnviadorSmtp(
+        host=ajustes.smtp_host,
+        puerto=ajustes.smtp_puerto,
+        usuario=ajustes.smtp_usuario or "",
+        clave=ajustes.smtp_clave_aplicacion.get_secret_value()
+        if ajustes.smtp_clave_aplicacion
+        else "",
+    )
+
+
+@lru_cache
+def correo_service() -> CorreoService:
+    ajustes = get_settings()
+    return CorreoService(
+        session_scope,
+        SqlEnvioCorreoRepository(),
+        _crear_enviador(),
+        # Dos hilos bastan: los correos son transaccionales (codigos, enlaces y avisos).
+        ThreadPoolExecutor(max_workers=2, thread_name_prefix="correo"),
+        remitente=ajustes.remitente_correo or REMITENTE_LOCAL,
+        nombre_remitente=ajustes.correo_nombre_remitente or MARCA,
+    )

@@ -16,6 +16,10 @@ Qué valor poner en cada variable del backend, en **local** (tu computador) y en
 | `SUPABASE_ANON_KEY` | *anon* / *publishable key* del proyecto | La del proyecto de producción | No (pública), pero solo en el backend |
 | `AUTH_COOKIE_SECURE` | vacío (automático = `0`) | `1` (o vacío: automático = `1`) | No |
 | `AUTH_COOKIE_SAMESITE` | `Lax` | `Lax` (mismo sitio) o `None` (dominios distintos) | No |
+| `CORREO_MODO` | vacío (automático = `archivo`) | vacío (automático = `smtp`) | No |
+| `SMTP_USUARIO` | opcional con `archivo`; la cuenta de Gmail con `smtp` | cuenta de Gmail que envía | No |
+| `SMTP_CLAVE_APLICACION` | opcional con `archivo` | contraseña de aplicación de Gmail | **Sí** |
+| `URL_FRONTEND` | `http://localhost:5173` | URL pública del frontend (igual a `CORS_ORIGINS`) | No |
 | `DATABASE_URL` | Session pooler del proyecto que uses | Session pooler del proyecto de producción | **Sí** |
 | `SQLALCHEMY_ECHO` | `0` (o `1` solo para depurar) | `0` | No |
 
@@ -31,6 +35,8 @@ SUPABASE_URL=https://<proyecto>.supabase.co
 SUPABASE_ANON_KEY=<anon-o-publishable-key>
 AUTH_COOKIE_SECURE=
 AUTH_COOKIE_SAMESITE=Lax
+CORREO_MODO=archivo
+URL_FRONTEND=http://localhost:5173
 DATABASE_URL=postgresql://postgres.<proyecto>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
 SQLALCHEMY_ECHO=0
 ```
@@ -45,6 +51,10 @@ SUPABASE_URL=https://<proyecto>.supabase.co
 SUPABASE_ANON_KEY=<anon-o-publishable-key>
 AUTH_COOKIE_SECURE=1
 AUTH_COOKIE_SAMESITE=Lax
+CORREO_MODO=smtp
+SMTP_USUARIO=<cuenta-de-gmail>
+SMTP_CLAVE_APLICACION=<contraseña-de-aplicación>
+URL_FRONTEND=https://<dominio-del-frontend>
 DATABASE_URL=postgresql://postgres.<proyecto>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
 SQLALCHEMY_ECHO=0
 ```
@@ -136,6 +146,33 @@ frontend lo guarda **solo en memoria**.
 
 > Abre el frontend y la API con el **mismo nombre de host** en local (`localhost` en ambos).
 > `localhost` y `127.0.0.1` son sitios distintos para el navegador y la cookie no viajaría.
+
+### Correo saliente: `CORREO_MODO`, `SMTP_*`, `CORREO_*` y `URL_FRONTEND` (HU-B-401)
+El backend envía sus propios correos (código de verificación, enlace para restablecer la
+contraseña y avisos de seguridad) por el SMTP de Gmail, con `smtplib` y STARTTLS.
+
+| Variable | Valores | Efecto |
+|---|---|---|
+| `CORREO_MODO` | vacío · `smtp` · `archivo` | `smtp` envía de verdad. `archivo` deja cada correo como `.eml` en `tmp/correos/` (se abre con cualquier cliente de correo); solo con `APP_ENV=local`. Vacío = `archivo` en local y `smtp` en `staging`/`production`. |
+| `SMTP_HOST`, `SMTP_PUERTO` | `smtp.gmail.com`, `587` | No se cambian con Gmail. |
+| `SMTP_USUARIO` | correo de Gmail | Cuenta que envía. |
+| `SMTP_CLAVE_APLICACION` 🔒 | 16 caracteres | **No** es la contraseña de la cuenta. Se escribe con o sin los espacios que muestra Google. |
+| `CORREO_REMITENTE` | correo | Vacío = `SMTP_USUARIO`. Otro valor debe ser un alias verificado en Gmail (*Enviar como*), o Gmail lo reemplaza. |
+| `CORREO_NOMBRE_REMITENTE` | texto | Nombre visible; por defecto `SIPE-SOUND`. |
+| `URL_FRONTEND` | origen | Base de los enlaces de los correos. Sin `/` final y presente en `CORS_ORIGINS`. |
+
+**Crear la contraseña de aplicación**
+1. En la cuenta de Gmail que enviará: Seguridad → activar la **Verificación en dos pasos**.
+2. Seguridad → *Contraseñas de aplicaciones* → nombre "SIPE-SOUND" → copiar los 16 caracteres.
+3. Pegarlos en `SMTP_CLAVE_APLICACION` (solo en el `.env` o en los secretos del servidor).
+4. Probar: `uv run python -m scripts.probar_correo --para tu@correo.co`.
+
+> ⚠️ Gmail personal permite unos 500 destinatarios por día (Workspace, unos 2000). Los correos
+> son solo transaccionales; la mensajería interna no envía correos. Si la clave se filtra,
+> revócala en la misma pantalla de Google.
+
+Si falta algo con `smtp`, la app no arranca y el error nombra la variable
+(`CORREO_MODO=smtp exige SMTP_USUARIO, SMTP_CLAVE_APLICACION`).
 
 ### `DATABASE_URL` 🔒
 **Única** conexión a PostgreSQL. La usan la app y Alembic (migraciones).

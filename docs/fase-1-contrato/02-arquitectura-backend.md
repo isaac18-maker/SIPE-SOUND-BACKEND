@@ -74,7 +74,8 @@ SIPE-SOUND-BACKEND/
     │   └── <entidad>.py
     └── infrastructure/
         ├── database.py           # engine, SessionLocal, session_scope()
-        └── supabase_client.py    # cliente Supabase (auth)
+        ├── supabase_auth.py      # cliente de Supabase Auth (clave pública)
+        └── correo_smtp.py        # envío de correo: Gmail SMTP o archivo .eml (HU-B-401)
 ```
 
 ## 3. Capas y regla de dependencia
@@ -157,6 +158,10 @@ def obtener_leccion(leccion_id: int):
   - `DATABASE_URL` (secreta): **Session pooler** de Supabase, la única conexión a PostgreSQL, compartida por la app y Alembic.
 - Autenticación (HU-B-322): `SUPABASE_ANON_KEY` (pública, opcional: sin ella `/auth/*` → 503),
   `AUTH_COOKIE_SECURE` y `AUTH_COOKIE_SAMESITE` (cookie del refresh token).
+- Correo (HU-B-401): `CORREO_MODO` (`smtp` | `archivo`), `SMTP_HOST`, `SMTP_PUERTO`, `SMTP_USUARIO`,
+  `SMTP_CLAVE_APLICACION` (secreta), `CORREO_REMITENTE`, `CORREO_NOMBRE_REMITENTE` y `URL_FRONTEND`
+  (debe estar en `CORS_ORIGINS`). `CorreoService` arma el mensaje con las plantillas de
+  `app/templates/correo/` y lo envía en segundo plano; el resultado queda en `envios_correo`.
 - El backend **no usa la API REST de Supabase**: todo el acceso a datos es por SQL. La *anon key*
   solo se usa contra Supabase Auth (`app/infrastructure/supabase_auth.py`).
 - Si falta una variable obligatoria, la app **no arranca** y dice cuál falta.

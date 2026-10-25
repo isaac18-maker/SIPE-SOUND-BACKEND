@@ -54,6 +54,15 @@ MENSAJES_INTEGRIDAD = {
 }
 
 
+class EnvioCorreoFallido(Exception):
+    """El correo no salio. `codigo` es una etiqueta corta (p. ej. "smtp_auth"): nunca incluye
+    el texto del servidor SMTP, la direccion ni el contenido."""
+
+    def __init__(self, codigo: str) -> None:
+        super().__init__(codigo)
+        self.codigo = codigo
+
+
 class AppError(Exception):
     status = 500
     code = "ERROR_INTERNO"
