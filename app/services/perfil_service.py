@@ -1,7 +1,14 @@
 import logging
 from typing import Any
 
-from app.core.constants import CUENTA_ACTIVA, CUENTA_PENDIENTE, CUENTA_SUSPENDIDA, ROL_ADMIN
+from app.core.constants import (
+    CUENTA_ACTIVA,
+    CUENTA_PENDIENTE,
+    CUENTA_SUSPENDIDA,
+    ROL_ADMIN,
+    ROL_DOCENTE,
+    ROL_ESTUDIANTE,
+)
 from app.core.errors import Conflicto, NoEncontrado, SinPermiso
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, RepositorioAcciones, RepositorioPerfiles
@@ -73,6 +80,19 @@ class AdminUsuariosService:
         self._perfiles = perfiles
         self._auditoria = auditoria
 
+    def _exigir_sin_cursos_a_cargo(
+        self, sesion: Any, usuario_id: str, rol_actual: str, rol_nuevo: str
+    ) -> None:
+        """Un docente con cursos activos no pasa a estudiante: sus cursos quedarian a cargo de
+        alguien que ya no puede gestionarlos (HU-B-406). Primero se reasignan."""
+        if rol_actual != ROL_DOCENTE or rol_nuevo != ROL_ESTUDIANTE:
+            return
+        a_cargo = self._perfiles.contar_cursos_activos_a_cargo(sesion, usuario_id)
+        if a_cargo:
+            raise Conflicto(
+                f"Reasigna sus cursos activos ({a_cargo}) antes de quitarle el rol de docente."
+            )
+
     def permiso_de_nombre(
         self, admin_id: str, usuario_ids: list[str], permitido: bool
     ) -> tuple[list[str], list[str]]:
@@ -110,6 +130,7 @@ class AdminUsuariosService:
                     "No se puede quitar el rol al único administrador. "
                     "Asigna primero otro administrador."
                 )
+            self._exigir_sin_cursos_a_cargo(sesion, usuario_id, perfil["rol"], rol)
             actualizado = self._perfiles.actualizar_rol(sesion, usuario_id, rol)
             self._auditoria.registrar(
                 sesion,

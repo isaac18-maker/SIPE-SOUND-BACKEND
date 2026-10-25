@@ -3,6 +3,7 @@ from flask import Flask
 from app.api.v1 import (
     acordes,
     admin,
+    admin_cursos,
     auth,
     bloques,
     cursos,
@@ -27,6 +28,7 @@ BLUEPRINTS = (
     acordes,
     me,
     admin,
+    admin_cursos,
     progreso_contenido,
     cursos,
     evaluaciones,
