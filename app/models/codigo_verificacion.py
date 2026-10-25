@@ -32,6 +32,12 @@ class CodigoVerificacion(Base):
             unique=True,
             postgresql_where=text("usado_en IS NULL AND invalidado_en IS NULL"),
         ),
+        # Los enlaces se buscan por su hash (HU-B-403); solo importan los abiertos.
+        Index(
+            "ix_codigos_verificacion_hash_abierto",
+            "codigo_hash",
+            postgresql_where=text("usado_en IS NULL AND invalidado_en IS NULL"),
+        ),
     )
 
     id: Mapped[str] = mapped_column(
