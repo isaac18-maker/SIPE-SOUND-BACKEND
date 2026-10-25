@@ -8,6 +8,7 @@ from app.api.v1 import (
     bloques,
     cursos,
     docente,
+    docente_progreso,
     ejercicios,
     evaluaciones,
     health,
@@ -33,6 +34,7 @@ BLUEPRINTS = (
     cursos,
     evaluaciones,
     docente,
+    docente_progreso,
 )
 
 
