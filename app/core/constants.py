@@ -38,3 +38,51 @@ ACTIVIDAD_DIAS_MAX = 90
 ACTIVIDAD_DIAS_DEFECTO = 28
 ACTIVIDAD_RECIENTES = 10
 ACORDES_POR_BLOQUE = 6
+
+# Correos transaccionales (HU-B-401): un tipo por plantilla en app/templates/correo/.
+CORREO_VERIFICAR = "verificar_correo"
+CORREO_REAUTENTICACION = "reautenticacion"
+CORREO_RESTABLECER = "restablecer_contrasena"
+CORREO_CONTRASENA_CAMBIADA = "contrasena_cambiada"
+CORREO_CAMBIAR_CORREO = "cambiar_correo"
+CORREO_CORREO_CAMBIADO = "correo_cambiado"
+TIPOS_CORREO = (
+    CORREO_VERIFICAR,
+    CORREO_REAUTENTICACION,
+    CORREO_RESTABLECER,
+    CORREO_CONTRASENA_CAMBIADA,
+    CORREO_CAMBIAR_CORREO,
+    CORREO_CORREO_CAMBIADO,
+)
+# Codigos de verificacion (HU-B-402): proposito -> minutos de vigencia. Nunca mas de 15.
+PROPOSITO_VERIFICAR_CORREO = "verificar_correo"
+PROPOSITO_RESTABLECER = "restablecer_contrasena"
+PROPOSITO_REAUTENTICAR = "reautenticar"
+PROPOSITO_REAUTENTICADO = "reautenticado"
+PROPOSITO_CAMBIAR_CORREO = "cambiar_correo"
+VIGENCIA_CODIGO_MIN = {
+    PROPOSITO_VERIFICAR_CORREO: 15,
+    PROPOSITO_RESTABLECER: 15,
+    PROPOSITO_REAUTENTICAR: 10,
+    PROPOSITO_REAUTENTICADO: 5,
+    PROPOSITO_CAMBIAR_CORREO: 15,
+}
+PROPOSITOS_CODIGO = tuple(VIGENCIA_CODIGO_MIN)
+CODIGO_DIGITOS = 6
+CODIGO_INTENTOS_MAX = 5
+# Entre un codigo y el siguiente para la misma cuenta (evita llenar la bandeja de alguien).
+CODIGO_ESPERA_SEGUNDOS = 60
+# Entre un enlace de restablecimiento y el siguiente para la misma cuenta (HU-B-403).
+RECUPERACION_ESPERA_SEGUNDOS = 120
+
+MENSAJE_SIN_CONFIRMAR = (
+    "Aún no confirmas tu correo. Escribe el código de 6 dígitos que te enviamos o pide uno nuevo."
+)
+
+# Estado de una cuenta (se calcula, no se guarda).
+CUENTA_PENDIENTE = "pendiente_verificacion"
+CUENTA_ACTIVA = "activa"
+
+ENVIO_ENVIADO = "enviado"
+ENVIO_FALLIDO = "fallido"
+ESTADOS_ENVIO = (ENVIO_ENVIADO, ENVIO_FALLIDO)

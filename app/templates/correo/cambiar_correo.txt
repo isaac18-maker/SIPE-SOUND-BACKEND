@@ -1,0 +1,10 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+Hola, {{ nombre }}.
+
+Pediste usar este correo en tu cuenta de {{ marca }}. Para confirmarlo, escribe este código:
+
+    {{ codigo }}
+
+Vence en {{ minutos }} minutos y solo sirve una vez. Si no lo pediste, ignora este mensaje: tu cuenta no cambia.
+{% endblock %}

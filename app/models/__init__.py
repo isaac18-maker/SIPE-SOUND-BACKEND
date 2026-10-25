@@ -3,10 +3,12 @@
 from app.models.acorde import Acorde
 from app.models.base import Base, auth_users
 from app.models.bloque import Bloque
+from app.models.codigo_verificacion import CodigoVerificacion
 from app.models.curso import Curso
 from app.models.curso_bloque import CursoBloque
 from app.models.docente_preautorizado import DocentePreautorizado
 from app.models.ejercicio import Ejercicio
+from app.models.envio_correo import EnvioCorreo
 from app.models.evaluacion import Evaluacion, IntentoEvaluacion, PreguntaEvaluacion
 from app.models.inscripcion import Inscripcion
 from app.models.leccion import Leccion
@@ -18,10 +20,12 @@ __all__ = [
     "Acorde",
     "Base",
     "Bloque",
+    "CodigoVerificacion",
     "Curso",
     "CursoBloque",
     "DocentePreautorizado",
     "Ejercicio",
+    "EnvioCorreo",
     "Evaluacion",
     "IntentoEvaluacion",
     "Inscripcion",

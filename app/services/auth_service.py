@@ -5,17 +5,35 @@
 #   - refresh token: solo en una cookie httpOnly (la pone la ruta, no el servicio).
 # El rol nunca sale del token: lo sigue leyendo /me desde profiles (HU-B-304).
 # =========================================================
+from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from app.core.errors import NoAutenticado, ServicioNoDisponible
+from app.core.constants import CUENTA_PENDIENTE, MENSAJE_SIN_CONFIRMAR
+from app.core.errors import (
+    AppError,
+    CuentaExistente,
+    NoAutenticado,
+    ReglaNegocio,
+    ServicioNoDisponible,
+)
 from app.schemas.auth import InicioSesionIn, RegistroIn
 
 MENSAJE_SIN_SESION = "Necesitas iniciar sesión."
+MENSAJE_SESION_VENCIDA = "Tu sesión terminó. Inicia sesión de nuevo."
+
+
+class EmisorDeCodigos(Protocol):
+    """Lo cumple VerificacionService."""
+
+    def enviar_codigo(self, email: str) -> None: ...
 
 
 class ProveedorIdentidad(Protocol):
-    def registrar(self, *, email: str, password: str, nombre: str) -> dict[str, Any]: ...
+    def registrar(
+        self, *, email: str, password: str, nombre: str, apellido: str | None = None
+    ) -> dict[str, Any]: ...
     def iniciar_sesion(self, *, email: str, password: str) -> dict[str, Any]: ...
     def refrescar(self, refresh_token: str) -> dict[str, Any]: ...
     def cerrar_sesion(self, access_token: str) -> None: ...
@@ -30,21 +48,56 @@ class SesionEmitida:
 
 
 class AuthService:
-    def __init__(self, proveedor: ProveedorIdentidad) -> None:
+    def __init__(
+        self,
+        proveedor: ProveedorIdentidad,
+        verificacion: EmisorDeCodigos,
+        estado_de: Callable[[str], str | None],
+    ) -> None:
         self._proveedor = proveedor
+        self._verificacion = verificacion
+        self._estado_de = estado_de
 
     def registrar(self, datos: RegistroIn) -> dict[str, Any]:
-        """La respuesta es la misma exista o no el correo: no revela que cuentas existen."""
-        self._proveedor.registrar(email=datos.email, password=datos.password, nombre=datos.nombre)
+        """La respuesta es la misma exista o no el correo: no revela que cuentas existen.
+
+        El codigo de verificacion lo envia el backend (HU-B-402), no Supabase.
+        """
+        try:
+            respuesta = self._proveedor.registrar(
+                email=datos.email,
+                password=datos.password,
+                nombre=datos.nombre,
+                apellido=datos.apellido,
+            )
+        except CuentaExistente:
+            respuesta = {}
+        # Con "Confirm email" desactivado Supabase devuelve una sesion al registrar: no se
+        # entrega ni se deja viva (la cuenta aun no esta verificada).
+        if token := respuesta.get("access_token"):
+            self._revocar(token)
+        self._verificacion.enviar_codigo(datos.email)
         return {"email": datos.email, "requiere_confirmacion": True}
 
     def iniciar_sesion(self, datos: InicioSesionIn) -> SesionEmitida:
-        return _sesion(self._proveedor.iniciar_sesion(email=datos.email, password=datos.password))
+        sesion = _sesion(self._proveedor.iniciar_sesion(email=datos.email, password=datos.password))
+        if self._estado_de(sesion.publica["usuario"]["id"]) == CUENTA_PENDIENTE:
+            self._revocar(sesion.publica["access_token"])
+            raise ReglaNegocio(MENSAJE_SIN_CONFIRMAR, meta={"requiere_verificacion": True})
+        return sesion
 
     def refrescar(self, refresh_token: str | None) -> SesionEmitida:
         if not refresh_token:
             raise NoAutenticado(MENSAJE_SIN_SESION)
-        return _sesion(self._proveedor.refrescar(refresh_token))
+        sesion = _sesion(self._proveedor.refrescar(refresh_token))
+        if self._estado_de(sesion.publica["usuario"]["id"]) == CUENTA_PENDIENTE:
+            self._revocar(sesion.publica["access_token"])
+            raise NoAutenticado(MENSAJE_SESION_VENCIDA)
+        return sesion
+
+    def _revocar(self, access_token: str) -> None:
+        with suppress(AppError):
+            self._proveedor.cerrar_sesion(access_token)
 
     def cerrar_sesion(self, access_token: str | None) -> None:
         """Sin token o con uno vencido solo se borra la cookie (la ruta siempre lo hace)."""

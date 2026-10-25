@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% from "_macros.html" import boton, caja_codigo, parrafo %}
+{% block previa %}El correo de tu cuenta cambió el {{ fecha }}.{% endblock %}
+{% block contenido %}
+{% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
+{% call parrafo() %}El correo de tu cuenta de {{ marca }} cambió el {{ fecha }}. Ahora es <strong>{{ correo_nuevo }}</strong>.{% endcall %}
+{% call parrafo() %}Si no fuiste tú, crea una contraseña nueva con «¿Olvidaste tu contraseña?» y avisa al administrador.{% endcall %}
+{% endblock %}

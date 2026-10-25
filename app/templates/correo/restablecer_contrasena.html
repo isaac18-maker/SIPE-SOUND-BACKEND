@@ -1,0 +1,11 @@
+{% extends "_base.html" %}
+{% from "_macros.html" import boton, caja_codigo, parrafo %}
+{% block previa %}Crea una contraseña nueva. El enlace vence en {{ minutos }} minutos.{% endblock %}
+{% block contenido %}
+{% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
+{% call parrafo() %}Pediste crear una contraseña nueva en {{ marca }}. Pulsa el botón para elegirla. El enlace vence en {{ minutos }} minutos y solo sirve una vez.{% endcall %}
+{{ boton(enlace, "Crear contraseña nueva") }}
+<p class="suave" style="margin:0 0 8px 0;font-size:14px;line-height:20px;color:#5A6283;">Si el botón no funciona, copia este enlace en tu navegador:</p>
+<p style="margin:0 0 16px 0;font-size:14px;line-height:20px;word-break:break-all;"><a class="enlace" href="{{ enlace }}" target="_blank" style="color:#4B42D6;text-decoration:underline;">{{ enlace }}</a></p>
+{% call parrafo() %}Si no lo pediste, ignora este mensaje: tu contraseña sigue igual.{% endcall %}
+{% endblock %}

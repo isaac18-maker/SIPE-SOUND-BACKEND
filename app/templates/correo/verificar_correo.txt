@@ -1,0 +1,14 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+{% if prueba is defined and prueba %}
+CORREO DE PRUEBA: este código no sirve para ninguna cuenta.
+
+{% endif %}
+Hola, {{ nombre }}.
+
+Este es tu código para confirmar tu correo en {{ marca }}:
+
+    {{ codigo }}
+
+Vence en {{ minutos }} minutos y solo sirve una vez. Escríbelo en la página donde te registraste.
+{% endblock %}

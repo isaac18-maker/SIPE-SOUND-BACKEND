@@ -40,6 +40,9 @@ def get_engine() -> Engine:
         pool_pre_ping=True,
         connect_args=opciones_conexion(url),
         echo=settings.sqlalchemy_echo,
+        # Los valores de las sentencias no salen en logs ni en errores: viajan contrasenas
+        # (fijar_contrasena) y hashes de codigos. Con SQLALCHEMY_ECHO solo se ve el SQL.
+        hide_parameters=True,
     )
 
 

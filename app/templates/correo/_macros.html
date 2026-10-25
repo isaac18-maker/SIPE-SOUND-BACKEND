@@ -1,0 +1,13 @@
+{# Botón a prueba de balas: en Outlook de escritorio (motor de Word) se dibuja con VML. #}
+{% macro boton(url, texto) %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;"><tr><td align="center" bgcolor="#4B42D6" style="border-radius:6px;background:#4B42D6;">
+<!--[if mso]><v:roundrect href="{{ url }}" style="height:48px;v-text-anchor:middle;width:280px;" arcsize="12%" stroke="f" fillcolor="#4B42D6"><w:anchorlock/><center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">{{ texto }}</center></v:roundrect><![endif]-->
+<!--[if !mso]><!--><a href="{{ url }}" target="_blank" style="display:inline-block;padding:14px 28px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;line-height:20px;color:#FFFFFF;text-decoration:none;border-radius:6px;">{{ texto }}</a><!--<![endif]-->
+</td></tr></table>
+{% endmacro %}
+
+{% macro caja_codigo(valor) %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;"><tr><td class="caja-codigo" style="background:#F2F3F9;border:1px solid #D9DCEC;border-radius:6px;padding:16px 24px;"><span class="codigo" style="font-family:'Courier New',Courier,monospace;font-size:28px;line-height:32px;font-weight:bold;letter-spacing:6px;color:#1B2140;">{{ valor }}</span></td></tr></table>
+{% endmacro %}
+
+{% macro parrafo() %}<p class="texto" style="margin:0 0 16px 0;">{{ caller() }}</p>{% endmacro %}

@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% from "_macros.html" import boton, caja_codigo, parrafo %}
+{% block previa %}Tu contraseña cambió el {{ fecha }}.{% endblock %}
+{% block contenido %}
+{% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
+{% call parrafo() %}Tu contraseña de {{ marca }} cambió el {{ fecha }}. Cerramos tus sesiones abiertas en otros dispositivos.{% endcall %}
+{% call parrafo() %}Si no fuiste tú, usa «¿Olvidaste tu contraseña?» en la página de inicio de sesión para crear una nueva y avisa a tu docente o al administrador.{% endcall %}
+{% endblock %}

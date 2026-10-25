@@ -13,6 +13,7 @@ import jwt
 from flask import Flask, current_app, g, request
 
 from app.core.config import get_settings
+from app.core.constants import CUENTA_PENDIENTE
 from app.core.errors import NoAutenticado, SinPermiso
 
 logger = logging.getLogger(__name__)
@@ -25,9 +26,14 @@ MENSAJE_FALTA_AUTENTICACION = "Falta el token de autenticacion"
 MENSAJE_SESION_INVALIDA = "Token invalido o expirado"
 MENSAJE_SIN_PERMISO = "No tienes permiso para esta sección."
 CLAVE_PROVEEDOR_ROL = "sipe.proveedor_rol"
+CLAVE_PROVEEDOR_ESTADO = "sipe.proveedor_estado"
+MENSAJE_SIN_VERIFICAR = "Confirma tu correo para continuar."
+ESTADO_PENDIENTE = CUENTA_PENDIENTE
 
 # Dado un id de usuario, devuelve su rol (o None si no tiene perfil).
 ProveedorRol = Callable[[str], str | None]
+# Dado un id de usuario, devuelve el estado de su cuenta (o None si no tiene perfil).
+ProveedorEstado = Callable[[str], str | None]
 
 
 @dataclass(frozen=True)
@@ -36,6 +42,9 @@ class CurrentUser:
     email: str | None
     token: str
     rol: str | None = None  # se carga desde profiles solo cuando la ruta exige roles
+    # Sesion de Supabase a la que pertenece el token (reclamo "session_id"). HU-B-404 ata a ella
+    # el permiso de cambiar correo o contrasena.
+    session_id: str | None = None
 
 
 def auth_required(f: Callable) -> Callable:
@@ -45,7 +54,8 @@ def auth_required(f: Callable) -> Callable:
     def decorador(*args, **kwargs):
         token = _extraer_token(request.headers.get("Authorization", ""))
         reclamos = _decodificar(token)
-        g.current_user = CurrentUser(id=reclamos["sub"], email=reclamos.get("email"), token=token)
+        _exigir_cuenta_verificada(reclamos["sub"])
+        g.current_user = _usuario(reclamos, token)
         return f(*args, **kwargs)
 
     decorador.__dict__["requires_authentication"] = True
@@ -60,13 +70,27 @@ def usuario_opcional() -> CurrentUser | None:
         return None
     token = _extraer_token(cabecera)
     reclamos = _decodificar(token)
-    g.current_user = CurrentUser(id=reclamos["sub"], email=reclamos.get("email"), token=token)
+    _exigir_cuenta_verificada(reclamos["sub"])
+    g.current_user = _usuario(reclamos, token)
     return g.current_user
 
 
 def configurar_proveedor_rol(app: Flask, proveedor: ProveedorRol) -> None:
     """Se llama en create_app: core no conoce los servicios (regla de capas)."""
     app.extensions[CLAVE_PROVEEDOR_ROL] = proveedor
+
+
+def configurar_proveedor_estado(app: Flask, proveedor: ProveedorEstado) -> None:
+    """Igual que el del rol: core no conoce los servicios (regla de capas)."""
+    app.extensions[CLAVE_PROVEEDOR_ESTADO] = proveedor
+
+
+def _exigir_cuenta_verificada(usuario_id: str) -> None:
+    """Un token de Supabase es publico: nadie que no haya verificado su correo usa la API,
+    aunque lo pida directo al proveedor de identidad (HU-B-402)."""
+    proveedor = current_app.extensions.get(CLAVE_PROVEEDOR_ESTADO)
+    if proveedor is not None and proveedor(usuario_id) == ESTADO_PENDIENTE:
+        raise SinPermiso(MENSAJE_SIN_VERIFICAR)
 
 
 def roles_required(*roles: str) -> Callable:
@@ -92,6 +116,15 @@ def get_current_user() -> CurrentUser:
     if usuario is None:
         raise NoAutenticado(MENSAJE_FALTA_AUTENTICACION)
     return usuario
+
+
+def _usuario(reclamos: dict[str, Any], token: str) -> CurrentUser:
+    return CurrentUser(
+        id=reclamos["sub"],
+        email=reclamos.get("email"),
+        token=token,
+        session_id=reclamos.get("session_id"),
+    )
 
 
 def _extraer_token(cabecera: str) -> str:

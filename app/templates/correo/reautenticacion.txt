@@ -1,0 +1,10 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+Hola, {{ nombre }}.
+
+Alguien pidió cambiar el correo o la contraseña de tu cuenta. Para confirmar que eres tú, escribe este código:
+
+    {{ codigo }}
+
+Vence en {{ minutos }} minutos y solo sirve una vez. Si no fuiste tú, no lo compartas con nadie y cambia tu contraseña.
+{% endblock %}
