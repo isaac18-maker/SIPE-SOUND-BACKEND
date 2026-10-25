@@ -141,7 +141,9 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/me` | 🎓🧑‍🏫🛡️ | Perfil y rol del usuario actual: `id`, `nombre`, `apellido`, `rol`, `nivel`, `puede_editar_nombre`, `email` (el vigente en la base, no el del token) y `correo_verificado_en`. |
+| GET | `/me` | 🎓🧑‍🏫🛡️ | Perfil y rol del usuario actual: `id`, `nombre`, `apellido`, `rol`, `nivel`, `puede_editar_nombre`, `email` (el vigente en la base, no el del token) `correo_verificado_en`, `terminos_version` (la que aceptó), `terminos_version_vigente` y `terminos_pendientes` (HU-B-411). |
+| GET | `/terminos` | 🌐 | Texto vigente en Markdown: `{version, contenido, actualizado_en}` (HU-B-411). No dice quién lo modificó. |
+| POST | `/me/terminos` | 🎓🧑‍🏫🛡️ (10/min) | `{version}` → 200 `{version}`. Acepta la versión vigente; 409 si ya cambió. Es lo único (junto con `GET /me`) que una cuenta con términos pendientes puede usar. |
 | PATCH | `/me` | 🎓🧑‍🏫🛡️ (10/min) | `{nombre?, apellido?}` (al menos uno) → 200 con el perfil. 403 "El administrador no ha habilitado el cambio de nombre en tu cuenta." si `puede_editar_nombre` es `false` (los admins siempre pueden). Cualquier otro campo (`rol`, `nivel`…) → 400. |
 | POST | `/me/reautenticacion` | 🎓🧑‍🏫🛡️ (5/h por persona) | Paso 1 para cambiar correo o contraseña. `{password_actual}` → 200 `{enviado_a: "a***@colegio.edu.co"}` y envía un código de 6 dígitos (10 min, un solo uso) al correo **actual**. 401 "La contraseña actual no coincide." |
 | POST | `/me/reautenticacion/confirmar` | 🎓🧑‍🏫🛡️ (10/min) | Paso 2. `{codigo}` → 200 `{token_reautenticacion, expira_en}`. El token vive 5 min, sirve **una vez**, está atado a la persona y a la **sesión** del JWT (reclamo `session_id`) y autoriza **un** cambio. Código errado, vencido o usado → 422 "El código no es válido o ya venció. Pide uno nuevo." |
@@ -213,6 +215,8 @@ Ninguna respuesta de `/docente/progreso*` incluye correos (ni siquiera enmascara
 | POST | `/admin/usuarios/{id}/verificacion` | Verificación **manual** `{motivo}` (10–300): marca el correo como verificado sin el código (aplica el rol docente si está preautorizado). 409 si ya está verificada. |
 | PATCH | `/admin/usuarios/{id}/estado` | `{estado: "suspendida", motivo}` (motivo 10–300, obligatorio) o `{estado: "activa"}` → `{id, estado}`. Suspender cierra todas sus sesiones. 403 sobre otro admin o sobre uno mismo. |
 | DELETE | `/admin/usuarios/{id}` | Cuerpo `{confirmacion: "<correo de la cuenta>"}`. Borra la cuenta, su perfil, progreso, intentos e inscripciones; **no se deshace**. 422 si la confirmación no coincide; 409 "Reasigna sus cursos a cargo (N) antes de eliminar la cuenta." (docentes, cuenta cursos activos y archivados); 403 sobre admins o sobre uno mismo. |
+| GET | `/admin/terminos` | Texto vigente con `actualizado_por` (nombre) y `actualizado_en` (HU-B-411). |
+| PUT | `/admin/terminos` | `{contenido (Markdown, ≤ 60000), nueva_version: bool}`. Con `true` la versión sube y **todas** las cuentas deben leerla y aceptarla otra vez: hasta entonces toda ruta protegida responde 403 "Lee y acepta los términos y condiciones actualizados para continuar." (`GET /me` y `POST /me/terminos` siguen disponibles). Con `false` corrige el texto sin pedir nada. |
 
 Toda acción del administrador sobre una cuenta (reenviar, verificar a mano, suspender, reactivar, eliminar, cambiar rol, permiso de nombre, reasignar y revocar cursos) queda en `acciones_admin` con su motivo; nunca con contraseñas, códigos ni el correo completo de una cuenta eliminada.
 | GET · POST | `/admin/bloques` | Catálogo global de la ruta (todos los estados). |

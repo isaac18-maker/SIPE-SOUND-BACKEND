@@ -13,7 +13,12 @@ import jwt
 from flask import Flask, current_app, g, request
 
 from app.core.config import get_settings
-from app.core.constants import CUENTA_PENDIENTE, CUENTA_SUSPENDIDA, MENSAJE_SUSPENDIDA
+from app.core.constants import (
+    CUENTA_PENDIENTE,
+    CUENTA_SUSPENDIDA,
+    MENSAJE_SUSPENDIDA,
+    MENSAJE_TERMINOS_PENDIENTES,
+)
 from app.core.errors import NoAutenticado, SinPermiso
 
 logger = logging.getLogger(__name__)
@@ -27,6 +32,7 @@ MENSAJE_SESION_INVALIDA = "Token invalido o expirado"
 MENSAJE_SIN_PERMISO = "No tienes permiso para esta sección."
 CLAVE_PROVEEDOR_ROL = "sipe.proveedor_rol"
 CLAVE_PROVEEDOR_ESTADO = "sipe.proveedor_estado"
+CLAVE_PROVEEDOR_TERMINOS = "sipe.proveedor_terminos"
 MENSAJE_SIN_VERIFICAR = "Confirma tu correo para continuar."
 ESTADO_PENDIENTE = CUENTA_PENDIENTE
 
@@ -34,6 +40,8 @@ ESTADO_PENDIENTE = CUENTA_PENDIENTE
 ProveedorRol = Callable[[str], str | None]
 # Dado un id de usuario, devuelve el estado de su cuenta (o None si no tiene perfil).
 ProveedorEstado = Callable[[str], str | None]
+# Dado un id de usuario, dice si le falta aceptar la version vigente de los terminos (HU-B-411).
+ProveedorTerminos = Callable[[str], bool]
 
 
 @dataclass(frozen=True)
@@ -85,6 +93,10 @@ def configurar_proveedor_estado(app: Flask, proveedor: ProveedorEstado) -> None:
     app.extensions[CLAVE_PROVEEDOR_ESTADO] = proveedor
 
 
+def configurar_proveedor_terminos(app: Flask, proveedor: ProveedorTerminos) -> None:
+    app.extensions[CLAVE_PROVEEDOR_TERMINOS] = proveedor
+
+
 def _exigir_cuenta_activa(usuario_id: str) -> None:
     """Un token de Supabase es publico: nadie que no haya verificado su correo (HU-B-402) ni
     cuya cuenta este suspendida (HU-B-405) usa la API, aunque pida el token directo al
@@ -108,6 +120,10 @@ def roles_required(*roles: str) -> Callable:
             if rol not in roles:
                 raise SinPermiso(MENSAJE_SIN_PERMISO)
             g.current_user = replace(usuario, rol=rol)
+            # /me, /me/terminos y /terminos solo usan auth_required: se pueden abrir para aceptar.
+            proveedor = current_app.extensions.get(CLAVE_PROVEEDOR_TERMINOS)
+            if proveedor is not None and proveedor(usuario.id):
+                raise SinPermiso(MENSAJE_TERMINOS_PENDIENTES)
             return f(*args, **kwargs)
 
         return auth_required(verificar_rol)

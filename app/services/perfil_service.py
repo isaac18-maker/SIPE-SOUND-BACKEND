@@ -43,6 +43,7 @@ class PerfilService:
             **{campo: perfil[campo] for campo in CAMPOS_PERFIL},
             "email": email or usuario.email,
             "correo_verificado_en": perfil["correo_verificado_en"],
+            "terminos_version": perfil["terminos_version"],
         }
 
     def editar_nombre(self, usuario: CurrentUser, cambios: dict[str, str]) -> dict[str, Any]:
