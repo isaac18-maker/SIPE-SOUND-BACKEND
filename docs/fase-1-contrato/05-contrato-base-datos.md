@@ -67,6 +67,7 @@ Identificadores de revisión **secuenciales legibles**: `alembic revision -m "..
 | `profiles` → `intentos_evaluacion` | CASCADE | Datos del estudiante. |
 | `profiles` → `retroalimentaciones.estudiante_id` | CASCADE | Datos del estudiante. |
 | `profiles` → `codigos_verificacion` | CASCADE | Códigos de un solo uso de esa persona (HU-B-402). |
+| `profiles` → `acciones_admin.admin_id` | SET NULL | La auditoría sobrevive al administrador (HU-B-405). `acciones_admin.usuario_id` **no** tiene FK: sobrevive a la cuenta eliminada. |
 | `profiles` → `envios_correo.usuario_id` | SET NULL | La bitácora de correos sobrevive a la cuenta eliminada (HU-B-401). |
 | `profiles` → `retroalimentaciones.docente_id` | SET NULL | El comentario sigue siendo útil para el estudiante. |
 | `profiles` (docente) → `cursos.docente_id` | **RESTRICT** | Un curso no puede quedar huérfano: primero se reasigna. |
@@ -89,6 +90,7 @@ La cascada protege la **integridad**; la **aplicación** protege los **datos**:
 - `DELETE` de contenido (`bloques`, `lecciones`, `ejercicios`, `evaluaciones`) **sin** progreso ni intentos → borrado físico (cascada).
 - `DELETE` de contenido **con** progreso o intentos → `409 CONFLICTO` con `sugerencia: "archivar"`. El docente archiva (`estado = 'archivado'`, `archivado_en = now()`).
 - `DELETE` de `cursos` desde el panel → siempre *soft delete* (`archivado_en`). El borrado físico solo lo hace un admin.
+- `DELETE` de una **cuenta** (`DELETE /admin/usuarios/{id}`, HU-B-405) → borrado físico por derecho de supresión: `public.eliminar_cuenta` borra `auth.users` y la cascada se lleva perfil, progreso, intentos e inscripciones. Se niega con un admin, y un docente con cursos a cargo (activos **o archivados**, la FK es RESTRICT) debe reasignarlos antes.
 - Toda FK lleva **índice** en la columna hija.
 
 ## 5. Sistema de protección de Alembic

@@ -1,5 +1,6 @@
 """Importar este paquete registra todos los modelos en Base.metadata (lo usa Alembic)."""
 
+from app.models.accion_admin import AccionAdmin
 from app.models.acorde import Acorde
 from app.models.base import Base, auth_users
 from app.models.bloque import Bloque
@@ -17,6 +18,7 @@ from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
 from app.models.retroalimentacion import Retroalimentacion
 
 __all__ = [
+    "AccionAdmin",
     "Acorde",
     "Base",
     "Bloque",

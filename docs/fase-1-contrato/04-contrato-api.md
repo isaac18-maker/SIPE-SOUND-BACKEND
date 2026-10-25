@@ -104,7 +104,7 @@ nunca la *service_role*). El frontend no usa `@supabase/supabase-js`.
 | POST | `/auth/verificacion/reenviar` | 🌐 (5/h por IP; 1/min por cuenta) | `{email}` → siempre 200 "Si el correo tiene una cuenta pendiente, te enviamos un código nuevo." El código anterior deja de servir. |
 | POST | `/auth/contrasena/olvido` | 🌐 (5/h por IP; 1 cada 2 min por cuenta) | `{email}` → siempre 200 "Si el correo tiene una cuenta, te enviamos un enlace para crear una contraseña nueva. Vence en 15 minutos." Solo envía a cuentas con el correo verificado. El enlace es `{URL_FRONTEND}/restablecer#token=…` (el token va en el **fragmento**, no en la consulta); un enlace nuevo invalida el anterior. |
 | POST | `/auth/contrasena/restablecer` | 🌐 (10/min por IP) | `{token, password}` → 200 "Listo. Ya puedes iniciar sesión con tu contraseña nueva." Fija la contraseña, cierra **todas** las sesiones (renovar → 401; los `access_token` ya emitidos viven hasta vencer) y avisa por correo. Token vencido (15 min), usado o inexistente → 422 `REGLA_NEGOCIO` "El enlace ya se usó o venció. Pide uno nuevo." |
-| POST | `/auth/sesion` | 🌐 (30/min por IP) | `{email, password}` → 200 `{access_token, token_type, expira_en, usuario: {id, email, nombre}}` + cookie `sipe_refresh`. 401 credenciales; 422 correo sin verificar (`meta.requiere_verificacion: true`, sin sesión ni cookie). |
+| POST | `/auth/sesion` | 🌐 (30/min por IP) | `{email, password}` → 200 `{access_token, token_type, expira_en, usuario: {id, email, nombre}}` + cookie `sipe_refresh`. 401 credenciales; 422 correo sin verificar (`meta.requiere_verificacion: true`, sin sesión ni cookie); 403 cuenta suspendida. |
 | POST | `/auth/sesion/renovar` | 🍪 (60/min por IP) | Cuerpo `{}` (JSON obligatorio). Usa la cookie, la **rota** y devuelve un nuevo `access_token` con la misma forma. 401 sin cookie o vencida. |
 | DELETE | `/auth/sesion` | 🍪 | Cuerpo `{}` (JSON obligatorio) y `Authorization: Bearer` opcional. Revoca el refresh token en Supabase y borra la cookie. Siempre 200. |
 
@@ -120,6 +120,9 @@ nunca la *service_role*). El frontend no usa `@supabase/supabase-js`.
 - **Cuenta sin verificar** (HU-B-402): no inicia sesión ni renueva, y cualquier ruta 🎓🧑‍🏫🛡️ responde 403
   "Confirma tu correo para continuar." aunque el `access_token` lo haya emitido Supabase directamente.
   Supabase ya no envía correos de confirmación (*Confirm email* desactivado): los envía el backend.
+- **Cuenta suspendida** (HU-B-405): igual, pero 403 "Tu cuenta está suspendida. Habla con el
+  administrador." en `POST /auth/sesion` y en cualquier ruta 🎓🧑‍🏫🛡️; no recibe enlaces para
+  restablecer la contraseña. Los `access_token` ya emitidos viven hasta vencer; sus sesiones se cierran.
 
 | Rol | Cómo entra |
 |---|---|
@@ -191,6 +194,14 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | PATCH | `/admin/usuarios/{id}/rol` | Asignar `docente`/`estudiante`. |
 | PATCH | `/admin/usuarios/{id}/permisos` | `{puede_editar_nombre: bool}` → permite o impide que esa persona cambie su nombre y apellido. 404 si no existe. |
 | POST | `/admin/usuarios/permisos` | `{usuario_ids: [uuid] (1–100), puede_editar_nombre: bool}` → `{actualizados: N}`; los ids que no existen se ignoran y salen en `meta.no_encontrados`. |
+| GET | `/admin/usuarios` | Paginado. Filtros `?rol=&estado=pendiente_verificacion\|activa\|suspendida&q=` (nombre, apellido o correo, máx. 80), `?puede_editar_nombre=` y orden `?orden=nombre\|-creado_en\|-ultimo_acceso`. Cada fila: `id`, `nombre`, `apellido`, `email` (**completo**: el admin lo necesita), `rol`, `estado`, `puede_editar_nombre`, `creado_en`, `ultimo_acceso`, `correo_verificado_en`, `suspendido_en`, `motivo_suspension`, `ultimo_envio_verificacion` (`{estado: "enviado"\|"fallido", creado_en}` o `null`) y `cursos` (inscripciones activas; para docentes, cursos a cargo activos). `meta.totales` = cuentas por estado, sin depender de los filtros. |
+| GET | `/admin/usuarios/{id}` | La fila anterior + `inscripciones`, `cursos_a_cargo` (activos y archivados), `progreso` (solo estudiantes, igual a `/progreso/resumen`) y `acciones` (últimas 20 del administrador sobre la cuenta). |
+| POST | `/admin/usuarios/{id}/verificacion/reenviar` | Código nuevo al correo de una cuenta **sin verificar**; el anterior deja de servir. 409 si ya está verificada; 429 si hubo un código hace menos de 1 minuto. El resultado del envío se ve en `ultimo_envio_verificacion`. |
+| POST | `/admin/usuarios/{id}/verificacion` | Verificación **manual** `{motivo}` (10–300): marca el correo como verificado sin el código (aplica el rol docente si está preautorizado). 409 si ya está verificada. |
+| PATCH | `/admin/usuarios/{id}/estado` | `{estado: "suspendida", motivo}` (motivo 10–300, obligatorio) o `{estado: "activa"}` → `{id, estado}`. Suspender cierra todas sus sesiones. 403 sobre otro admin o sobre uno mismo. |
+| DELETE | `/admin/usuarios/{id}` | Cuerpo `{confirmacion: "<correo de la cuenta>"}`. Borra la cuenta, su perfil, progreso, intentos e inscripciones; **no se deshace**. 422 si la confirmación no coincide; 409 "Reasigna sus cursos a cargo (N) antes de eliminar la cuenta." (docentes, cuenta cursos activos y archivados); 403 sobre admins o sobre uno mismo. |
+
+Toda acción del administrador sobre una cuenta (reenviar, verificar a mano, suspender, reactivar, eliminar, cambiar rol, permiso de nombre) queda en `acciones_admin` con su motivo; nunca con contraseñas, códigos ni el correo completo de una cuenta eliminada.
 | GET · POST | `/admin/bloques` | Catálogo global de la ruta (todos los estados). |
 | GET · PATCH · DELETE | `/admin/bloques/{id}` | `DELETE` → 409 si tiene lecciones o evaluaciones (archivar). |
 | PATCH | `/admin/bloques/{id}/estado` | Igual que lecciones. |

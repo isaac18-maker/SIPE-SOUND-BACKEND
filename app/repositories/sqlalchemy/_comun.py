@@ -6,12 +6,13 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import inspect
+from sqlalchemy import TextClause, inspect, text
+from sqlalchemy.orm import Session
 
 from app.models.base import Base
 from app.repositories.base import AbrirSesion, Fila
 
-__all__ = ["AbrirSesion", "a_fila", "formatear_fecha"]
+__all__ = ["AbrirSesion", "a_fila", "filas_sql", "formatear_fecha"]
 
 
 def formatear_fecha(valor: datetime) -> str:
@@ -22,6 +23,15 @@ def formatear_fecha(valor: datetime) -> str:
     fecha, _, zona = texto.partition("+")
     entero, _, fraccion = fecha.partition(".")
     return f"{entero}.{fraccion.rstrip('0')}+{zona}"
+
+
+def filas_sql(sesion: Session, sql: str | TextClause, parametros: dict[str, Any]) -> list[Fila]:
+    """Ejecuta SQL y devuelve filas con las fechas como las serializa PostgreSQL."""
+    consulta = text(sql) if isinstance(sql, str) else sql
+    return [
+        {k: formatear_fecha(v) if isinstance(v, datetime) else v for k, v in f._mapping.items()}
+        for f in sesion.execute(consulta, parametros)
+    ]
 
 
 def a_fila(modelo: Base) -> Fila:

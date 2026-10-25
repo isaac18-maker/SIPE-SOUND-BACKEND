@@ -12,7 +12,8 @@ BUSCAR_PENDIENTE = text(
 BUSCAR_VERIFICADA = text(
     "select p.id, p.nombre, u.email "
     "from auth.users u join public.profiles p on p.id = u.id "
-    "where lower(u.email) = :email and p.correo_verificado_en is not null"
+    "where lower(u.email) = :email and p.correo_verificado_en is not null "
+    "and p.suspendido_en is null"
 )
 DATOS_DE_AVISO = text(
     "select p.nombre, u.email from auth.users u join public.profiles p on p.id = u.id "
@@ -26,6 +27,8 @@ CORREO_EN_USO = text(
 )
 # Funcion SECURITY DEFINER de la revision 0022 (EXECUTE solo para el rol del backend).
 CAMBIAR_CORREO = text("select public.cambiar_correo(cast(:id as uuid), :email)")
+# Funcion SECURITY DEFINER de la revision 0024: se niega con un administrador.
+ELIMINAR_CUENTA = text("select public.eliminar_cuenta(cast(:id as uuid))")
 # El trigger on_profile_verificado (revision 0019) aplica la preautorizacion de docente.
 MARCAR_VERIFICADA = text(
     "update public.profiles set correo_verificado_en = now() "
@@ -57,6 +60,9 @@ class SqlCuentaRepository:
 
     def cambiar_correo(self, sesion: Session, usuario_id: str, email: str) -> None:
         sesion.execute(CAMBIAR_CORREO, {"id": usuario_id, "email": email})
+
+    def eliminar_cuenta(self, sesion: Session, usuario_id: str) -> None:
+        sesion.execute(ELIMINAR_CUENTA, {"id": usuario_id})
 
     def fijar_contrasena(self, sesion: Session, usuario_id: str, password: str) -> None:
         sesion.execute(FIJAR_CONTRASENA, {"id": usuario_id, "password": password})

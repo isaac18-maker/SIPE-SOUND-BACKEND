@@ -1,10 +1,10 @@
 import logging
 from typing import Any
 
-from app.core.constants import CUENTA_ACTIVA, CUENTA_PENDIENTE, ROL_ADMIN
+from app.core.constants import CUENTA_ACTIVA, CUENTA_PENDIENTE, CUENTA_SUSPENDIDA, ROL_ADMIN
 from app.core.errors import Conflicto, NoEncontrado, SinPermiso
 from app.core.security import CurrentUser
-from app.repositories.base import AbrirSesion, RepositorioPerfiles
+from app.repositories.base import AbrirSesion, RepositorioAcciones, RepositorioPerfiles
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,8 @@ def estado_de_cuenta(perfil: dict[str, Any] | None) -> str | None:
     """Estado calculado de una cuenta (00-decisiones-fase-4, seccion 3). None = sin perfil."""
     if perfil is None:
         return None
+    if perfil["suspendido_en"]:
+        return CUENTA_SUSPENDIDA  # gana sobre "pendiente": primero se resuelve la suspension
     return CUENTA_ACTIVA if perfil["correo_verificado_en"] else CUENTA_PENDIENTE
 
 
@@ -61,9 +63,15 @@ class PerfilService:
 
 
 class AdminUsuariosService:
-    def __init__(self, abrir_sesion: AbrirSesion, perfiles: RepositorioPerfiles) -> None:
+    def __init__(
+        self,
+        abrir_sesion: AbrirSesion,
+        perfiles: RepositorioPerfiles,
+        auditoria: RepositorioAcciones,
+    ) -> None:
         self._abrir_sesion = abrir_sesion
         self._perfiles = perfiles
+        self._auditoria = auditoria
 
     def permiso_de_nombre(
         self, admin_id: str, usuario_ids: list[str], permitido: bool
@@ -72,6 +80,14 @@ class AdminUsuariosService:
         no_encontrados): los ids que no existen se ignoran."""
         with self._abrir_sesion() as sesion:
             actualizados = self._perfiles.actualizar_permiso_nombre(sesion, usuario_ids, permitido)
+            for usuario_id in actualizados:
+                self._auditoria.registrar(
+                    sesion,
+                    admin_id=admin_id,
+                    usuario_id=usuario_id,
+                    accion="permiso_nombre",
+                    detalle={"permitido": permitido},
+                )
         encontrados = set(actualizados)
         faltan = [i for i in usuario_ids if i not in encontrados]
         logger.info(
@@ -82,7 +98,7 @@ class AdminUsuariosService:
         )
         return actualizados, faltan
 
-    def cambiar_rol(self, usuario_id: str, rol: str) -> dict[str, Any]:
+    def cambiar_rol(self, admin_id: str, usuario_id: str, rol: str) -> dict[str, Any]:
         """Asigna un rol. Nunca deja el sistema sin al menos un administrador."""
         with self._abrir_sesion() as sesion:
             perfil = self._perfiles.obtener_para_actualizar(sesion, usuario_id)
@@ -95,4 +111,11 @@ class AdminUsuariosService:
                     "Asigna primero otro administrador."
                 )
             actualizado = self._perfiles.actualizar_rol(sesion, usuario_id, rol)
+            self._auditoria.registrar(
+                sesion,
+                admin_id=admin_id,
+                usuario_id=usuario_id,
+                accion="cambiar_rol",
+                detalle={"de": perfil["rol"], "a": rol},
+            )
         return {campo: actualizado[campo] for campo in CAMPOS_PERFIL}
