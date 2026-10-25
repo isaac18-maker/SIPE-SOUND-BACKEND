@@ -69,6 +69,11 @@ Identificadores de revisión **secuenciales legibles**: `alembic revision -m "..
 | `profiles` → `codigos_verificacion` | CASCADE | Códigos de un solo uso de esa persona (HU-B-402). |
 | `profiles` → `acciones_admin.admin_id` | SET NULL | La auditoría sobrevive al administrador (HU-B-405). `acciones_admin.usuario_id` **no** tiene FK: sobrevive a la cuenta eliminada. |
 | `profiles` → `envios_correo.usuario_id` | SET NULL | La bitácora de correos sobrevive a la cuenta eliminada (HU-B-401). |
+| `profiles` → `mensajes.remitente_id` | SET NULL | El mensaje sigue siendo útil a quien lo recibió (HU-B-409). |
+| `profiles` → `mensaje_destinatarios.destinatario_id` | CASCADE | Datos de esa persona (derecho de supresión). |
+| `mensajes` → `mensaje_destinatarios.mensaje_id` | CASCADE | Parte del mensaje. |
+| `cursos` → `mensajes.curso_id` | SET NULL | Un curso puede borrarse; por eso el CHECK solo exige "curso_id ⇒ alcance curso". |
+| `mensajes` → `mensajes.respuesta_a_id` | SET NULL | La respuesta no depende de que el original exista. |
 | `profiles` → `retroalimentaciones.docente_id` | SET NULL | El comentario sigue siendo útil para el estudiante. |
 | `profiles` (docente) → `cursos.docente_id` | **RESTRICT** | Un curso no puede quedar huérfano: primero se reasigna. |
 | `profiles` → `lecciones.autor_id`, `ejercicios.autor_id`, `evaluaciones.autor_id` | SET NULL | El contenido sobrevive a su autor. |
