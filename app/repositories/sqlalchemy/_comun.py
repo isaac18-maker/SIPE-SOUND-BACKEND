@@ -5,6 +5,7 @@
 # =========================================================
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import TextClause, inspect, text
 from sqlalchemy.orm import Session
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.models.base import Base
 from app.repositories.base import AbrirSesion, Fila
 
-__all__ = ["AbrirSesion", "a_fila", "filas_sql", "formatear_fecha"]
+__all__ = ["AbrirSesion", "a_fila", "filas_sql", "formatear_fecha", "valor_de_fila"]
 
 
 def formatear_fecha(valor: datetime) -> str:
@@ -25,11 +26,22 @@ def formatear_fecha(valor: datetime) -> str:
     return f"{entero}.{fraccion.rstrip('0')}+{zona}"
 
 
+def valor_de_fila(valor: Any) -> Any:
+    """Fechas como las serializa PostgreSQL y UUID como texto: el ORM (UUID(as_uuid=False)) ya
+    los entrega como texto, y el SQL crudo debe verse igual (si no, `fila["id"] == usuario_id`
+    compara un UUID con un str y nunca coincide)."""
+    if isinstance(valor, datetime):
+        return formatear_fecha(valor)
+    if isinstance(valor, UUID):
+        return str(valor)
+    return valor
+
+
 def filas_sql(sesion: Session, sql: str | TextClause, parametros: dict[str, Any]) -> list[Fila]:
-    """Ejecuta SQL y devuelve filas con las fechas como las serializa PostgreSQL."""
+    """Ejecuta SQL y devuelve filas listas para la API."""
     consulta = text(sql) if isinstance(sql, str) else sql
     return [
-        {k: formatear_fecha(v) if isinstance(v, datetime) else v for k, v in f._mapping.items()}
+        {k: valor_de_fila(v) for k, v in f._mapping.items()}
         for f in sesion.execute(consulta, parametros)
     ]
 

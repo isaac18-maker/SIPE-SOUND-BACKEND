@@ -2,6 +2,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.repositories.base import Fila
+from app.repositories.sqlalchemy._comun import filas_sql
 
 # Lee auth.users solo para ubicar la cuenta por su correo (como seguimiento_repository).
 BUSCAR_PENDIENTE = text(
@@ -40,19 +41,19 @@ class SqlCuentaRepository:
     """No abre ni confirma transacciones: usa la sesion del servicio."""
 
     def buscar_pendiente_por_email(self, sesion: Session, email: str) -> Fila | None:
-        fila = sesion.execute(BUSCAR_PENDIENTE, {"email": email}).mappings().first()
-        return dict(fila) if fila else None
+        filas = filas_sql(sesion, BUSCAR_PENDIENTE, {"email": email})
+        return filas[0] if filas else None
 
     def buscar_verificada_por_email(self, sesion: Session, email: str) -> Fila | None:
-        fila = sesion.execute(BUSCAR_VERIFICADA, {"email": email}).mappings().first()
-        return dict(fila) if fila else None
+        filas = filas_sql(sesion, BUSCAR_VERIFICADA, {"email": email})
+        return filas[0] if filas else None
 
     def marcar_verificada(self, sesion: Session, usuario_id: str) -> None:
         sesion.execute(MARCAR_VERIFICADA, {"id": usuario_id})
 
     def datos_de_aviso(self, sesion: Session, usuario_id: str) -> Fila | None:
-        fila = sesion.execute(DATOS_DE_AVISO, {"id": usuario_id}).mappings().first()
-        return dict(fila) if fila else None
+        filas = filas_sql(sesion, DATOS_DE_AVISO, {"id": usuario_id})
+        return filas[0] if filas else None
 
     def correo_en_uso(self, sesion: Session, email: str, *, excepto_id: str) -> bool:
         fila = sesion.execute(CORREO_EN_USO, {"email": email.lower(), "excepto": excepto_id})
