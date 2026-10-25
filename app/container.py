@@ -46,6 +46,7 @@ from app.repositories.sqlalchemy.progreso_docente_repository import SqlProgresoD
 from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
 from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRepository
+from app.repositories.sqlalchemy.terminos_repository import SqlTerminosRepository
 from app.services.acorde_service import AcordeService
 from app.services.admin_cuentas_service import AdminCuentasService
 from app.services.admin_cursos_service import AdminCursosService
@@ -67,6 +68,7 @@ from app.services.progreso_docente_service import ProgresoDocenteService
 from app.services.progreso_service import ProgresoService
 from app.services.recuperacion_service import RecuperacionService
 from app.services.ruta_service import RutaService
+from app.services.terminos_service import TerminosService, terminos_pendientes
 from app.services.verificacion_service import VerificacionService
 
 
@@ -154,6 +156,26 @@ def rol_de_usuario(usuario_id: str) -> str | None:
 
 def estado_de_usuario(usuario_id: str) -> str | None:
     return estado_de_cuenta(_perfil_en_peticion(usuario_id))
+
+
+@lru_cache
+def terminos_service() -> TerminosService:
+    return TerminosService(session_scope, SqlTerminosRepository())
+
+
+def _version_de_terminos_en_peticion() -> int:
+    """La version vigente se lee una vez por peticion (como el perfil)."""
+    if not has_app_context():
+        return terminos_service().version_vigente()
+    if "version_terminos" not in g:
+        g.version_terminos = terminos_service().version_vigente()
+    return g.version_terminos
+
+
+def terminos_pendientes_de(usuario_id: str) -> bool:
+    """True si la cuenta no ha aceptado la version vigente de los terminos (HU-B-411)."""
+    perfil = _perfil_en_peticion(usuario_id)
+    return terminos_pendientes(perfil, _version_de_terminos_en_peticion()) if perfil else False
 
 
 # --- Contenido editable (HU-B-309): un servicio generico configurado por tipo ---

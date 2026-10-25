@@ -16,6 +16,7 @@ from app.api.v1 import (
     me,
     mensajes,
     progreso_contenido,
+    terminos,
 )
 from app.core.limites import configurar_limites
 from app.core.responses import PREFIJO_V1
@@ -37,6 +38,7 @@ BLUEPRINTS = (
     evaluaciones,
     docente,
     docente_progreso,
+    terminos,
 )
 
 

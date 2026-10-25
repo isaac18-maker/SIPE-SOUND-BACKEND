@@ -1,6 +1,11 @@
 from flask import Blueprint, request
 
-from app.container import cuenta_service, perfil_service
+from app.container import (
+    cuenta_service,
+    perfil_service,
+    terminos_pendientes_de,
+    terminos_service,
+)
 from app.core.limites import limiter, por_usuario
 from app.core.responses import ok
 from app.core.security import auth_required, get_current_user
@@ -23,7 +28,12 @@ INTENTOS_POR_MINUTO = "10 per minute"
 @bp.get("/me")
 @auth_required
 def mi_perfil():
-    return ok(perfil_service().mi_perfil(get_current_user()))
+    usuario = get_current_user()
+    perfil = perfil_service().mi_perfil(usuario)
+    # La interfaz decide con esto si manda a leer y aceptar los terminos (HU-B-411).
+    perfil["terminos_version_vigente"] = terminos_service().version_vigente()
+    perfil["terminos_pendientes"] = terminos_pendientes_de(usuario.id)
+    return ok(perfil)
 
 
 @bp.patch("/me")

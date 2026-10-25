@@ -5,6 +5,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
+    Integer,
     PrimaryKeyConstraint,
     Text,
     func,
@@ -71,3 +72,7 @@ class Profile(CreadoEnMixin, Base):
     # Una cuenta suspendida no inicia sesion ni usa la API (HU-B-405).
     suspendido_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     motivo_suspension: Mapped[str | None] = mapped_column(Text)
+    # Version de los terminos que la persona acepto y cuando (HU-B-411). Nulo o menor que la
+    # vigente = debe volver a aceptarlos para usar la API.
+    terminos_version: Mapped[int | None] = mapped_column(Integer)
+    terminos_aceptados_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

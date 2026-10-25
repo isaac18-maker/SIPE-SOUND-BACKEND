@@ -85,6 +85,12 @@ CUENTA_ACTIVA = "activa"
 CUENTA_SUSPENDIDA = "suspendida"
 MENSAJE_SUSPENDIDA = "Tu cuenta está suspendida. Habla con el administrador."
 
+# Terminos y condiciones editables (HU-B-411): un solo documento vigente con numero de version.
+TIPO_TERMINOS = "terminos"
+TERMINOS_MAX = 60000
+MENSAJE_TERMINOS_PENDIENTES = "Lee y acepta los términos y condiciones actualizados para continuar."
+CODIGO_TERMINOS_PENDIENTES = "TERMINOS_PENDIENTES"
+
 # Auditoria del administrador (HU-B-405). Las que usan HU posteriores ya estan permitidas.
 ACCIONES_ADMIN = (
     "reenviar_verificacion",

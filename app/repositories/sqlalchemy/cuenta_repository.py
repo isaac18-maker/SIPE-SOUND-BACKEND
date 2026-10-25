@@ -32,7 +32,10 @@ CAMBIAR_CORREO = text("select public.cambiar_correo(cast(:id as uuid), :email)")
 ELIMINAR_CUENTA = text("select public.eliminar_cuenta(cast(:id as uuid))")
 # El trigger on_profile_verificado (revision 0019) aplica la preautorizacion de docente.
 MARCAR_VERIFICADA = text(
-    "update public.profiles set correo_verificado_en = now() "
+    "update public.profiles set correo_verificado_en = now(), "
+    # El registro exige marcar la casilla de terminos (HU-B-323): queda la version vigente.
+    "terminos_version = (select version from public.documentos_legales where tipo = 'terminos'), "
+    "terminos_aceptados_en = now() "
     "where id = :id and correo_verificado_en is null"
 )
 
