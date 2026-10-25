@@ -18,13 +18,29 @@ PATRON_TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")  # secrets.token_urlsafe(32)
 PATRON_NOMBRE = re.compile(r"[^\W\d_]+(?:[ '.\-]+[^\W\d_]+)*\.?")
 
 
-def _exigir_letras_y_numeros(valor: str) -> str:
+def exigir_letras_y_numeros(valor: str) -> str:
     if not (re.search(r"[A-Za-z]", valor) and re.search(r"\d", valor)):
         raise PydanticCustomError("valor_invalido", "La contraseña debe tener letras y números.")
     return valor
 
 
-def _normalizar_email(valor: object) -> object:
+def limpiar_texto(valor: object) -> object:
+    """Quita espacios de los extremos (tokens pegados desde un correo)."""
+    return valor.strip() if isinstance(valor, str) else valor
+
+
+def exigir_token(mensaje: str):
+    """Validador de tokens de 43 caracteres base64url (secrets.token_urlsafe(32))."""
+
+    def validar(valor: str) -> str:
+        if not PATRON_TOKEN.fullmatch(valor):
+            raise PydanticCustomError("valor_invalido", mensaje)
+        return valor
+
+    return validar
+
+
+def normalizar_email(valor: object) -> object:
     if not isinstance(valor, str):
         return valor
     valor = valor.strip().lower()
@@ -42,7 +58,7 @@ class InicioSesionIn(BaseModel):
     # La contrasena NO se recorta ni se normaliza: se envia tal cual a Supabase.
     password: str = Field(min_length=1, max_length=PASSWORD_MAX)
 
-    _email = field_validator("email", mode="before")(_normalizar_email)
+    _email = field_validator("email", mode="before")(normalizar_email)
 
 
 class ReenvioVerificacionIn(BaseModel):
@@ -52,7 +68,7 @@ class ReenvioVerificacionIn(BaseModel):
 
     email: str = Field(max_length=EMAIL_MAX)
 
-    _email = field_validator("email", mode="before")(_normalizar_email)
+    _email = field_validator("email", mode="before")(normalizar_email)
 
 
 class OlvidoContrasenaIn(ReenvioVerificacionIn):
@@ -68,23 +84,15 @@ class RestablecerContrasenaIn(BaseModel):
     # La contrasena NO se recorta ni se normaliza.
     password: str = Field(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
 
-    _password = field_validator("password")(_exigir_letras_y_numeros)
-
-    @field_validator("token", mode="before")
-    @classmethod
-    def limpiar_token(cls, valor: object) -> object:
-        return valor.strip() if isinstance(valor, str) else valor
-
-    @field_validator("token")
-    @classmethod
-    def formato_token(cls, valor: str) -> str:
-        if not PATRON_TOKEN.fullmatch(valor):
-            raise PydanticCustomError("valor_invalido", "El enlace no es válido. Pide uno nuevo.")
-        return valor
+    _password = field_validator("password")(exigir_letras_y_numeros)
+    _limpiar = field_validator("token", mode="before")(limpiar_texto)
+    _formato = field_validator("token")(exigir_token("El enlace no es válido. Pide uno nuevo."))
 
 
-class VerificacionIn(ReenvioVerificacionIn):
-    """Correo + codigo de 6 digitos (se aceptan espacios: "482 913")."""
+class CodigoIn(BaseModel):
+    """Codigo de 6 digitos (se aceptan espacios: "482 913")."""
+
+    model_config = ConfigDict(extra="forbid")
 
     codigo: str
 
@@ -101,6 +109,10 @@ class VerificacionIn(ReenvioVerificacionIn):
         return valor
 
 
+class VerificacionIn(ReenvioVerificacionIn, CodigoIn):
+    """Correo + codigo de verificacion (HU-B-402)."""
+
+
 class RegistroIn(BaseModel):
     """Registro de estudiante o de docente preautorizado (HU-B-322)."""
 
@@ -112,7 +124,7 @@ class RegistroIn(BaseModel):
     # Consentimiento (Ley 1581 de 2012): la API no crea cuentas sin él (HU-B-323).
     acepta_terminos: StrictBool
 
-    _email = field_validator("email", mode="before")(_normalizar_email)
+    _email = field_validator("email", mode="before")(normalizar_email)
 
     @field_validator("acepta_terminos")
     @classmethod
@@ -135,4 +147,4 @@ class RegistroIn(BaseModel):
             )
         return valor
 
-    _password = field_validator("password")(_exigir_letras_y_numeros)
+    _password = field_validator("password")(exigir_letras_y_numeros)

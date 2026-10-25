@@ -21,6 +21,11 @@ DATOS_DE_AVISO = text(
 # Funciones SECURITY DEFINER de la revision 0021 (EXECUTE solo para el rol del backend).
 FIJAR_CONTRASENA = text("select public.fijar_contrasena(cast(:id as uuid), :password)")
 CERRAR_SESIONES = text("select public.cerrar_sesiones(cast(:id as uuid), cast(:excepto as uuid))")
+CORREO_EN_USO = text(
+    "select 1 from auth.users where lower(email) = :email and id <> cast(:excepto as uuid) limit 1"
+)
+# Funcion SECURITY DEFINER de la revision 0022 (EXECUTE solo para el rol del backend).
+CAMBIAR_CORREO = text("select public.cambiar_correo(cast(:id as uuid), :email)")
 # El trigger on_profile_verificado (revision 0019) aplica la preautorizacion de docente.
 MARCAR_VERIFICADA = text(
     "update public.profiles set correo_verificado_en = now() "
@@ -45,6 +50,13 @@ class SqlCuentaRepository:
     def datos_de_aviso(self, sesion: Session, usuario_id: str) -> Fila | None:
         fila = sesion.execute(DATOS_DE_AVISO, {"id": usuario_id}).mappings().first()
         return dict(fila) if fila else None
+
+    def correo_en_uso(self, sesion: Session, email: str, *, excepto_id: str) -> bool:
+        fila = sesion.execute(CORREO_EN_USO, {"email": email.lower(), "excepto": excepto_id})
+        return fila.first() is not None
+
+    def cambiar_correo(self, sesion: Session, usuario_id: str, email: str) -> None:
+        sesion.execute(CAMBIAR_CORREO, {"id": usuario_id, "email": email})
 
     def fijar_contrasena(self, sesion: Session, usuario_id: str, password: str) -> None:
         sesion.execute(FIJAR_CONTRASENA, {"id": usuario_id, "password": password})

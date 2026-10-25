@@ -42,6 +42,9 @@ class CurrentUser:
     email: str | None
     token: str
     rol: str | None = None  # se carga desde profiles solo cuando la ruta exige roles
+    # Sesion de Supabase a la que pertenece el token (reclamo "session_id"). HU-B-404 ata a ella
+    # el permiso de cambiar correo o contrasena.
+    session_id: str | None = None
 
 
 def auth_required(f: Callable) -> Callable:
@@ -52,7 +55,7 @@ def auth_required(f: Callable) -> Callable:
         token = _extraer_token(request.headers.get("Authorization", ""))
         reclamos = _decodificar(token)
         _exigir_cuenta_verificada(reclamos["sub"])
-        g.current_user = CurrentUser(id=reclamos["sub"], email=reclamos.get("email"), token=token)
+        g.current_user = _usuario(reclamos, token)
         return f(*args, **kwargs)
 
     decorador.__dict__["requires_authentication"] = True
@@ -68,7 +71,7 @@ def usuario_opcional() -> CurrentUser | None:
     token = _extraer_token(cabecera)
     reclamos = _decodificar(token)
     _exigir_cuenta_verificada(reclamos["sub"])
-    g.current_user = CurrentUser(id=reclamos["sub"], email=reclamos.get("email"), token=token)
+    g.current_user = _usuario(reclamos, token)
     return g.current_user
 
 
@@ -113,6 +116,15 @@ def get_current_user() -> CurrentUser:
     if usuario is None:
         raise NoAutenticado(MENSAJE_FALTA_AUTENTICACION)
     return usuario
+
+
+def _usuario(reclamos: dict[str, Any], token: str) -> CurrentUser:
+    return CurrentUser(
+        id=reclamos["sub"],
+        email=reclamos.get("email"),
+        token=token,
+        session_id=reclamos.get("session_id"),
+    )
 
 
 def _extraer_token(cabecera: str) -> str:

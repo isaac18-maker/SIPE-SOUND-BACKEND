@@ -138,7 +138,14 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/me` | 🎓🧑‍🏫🛡️ | Perfil y rol del usuario actual. |
+| GET | `/me` | 🎓🧑‍🏫🛡️ | Perfil y rol del usuario actual: `id`, `nombre`, `rol`, `nivel`, `email` (el vigente en la base, no el del token) y `correo_verificado_en`. |
+| POST | `/me/reautenticacion` | 🎓🧑‍🏫🛡️ (5/h por persona) | Paso 1 para cambiar correo o contraseña. `{password_actual}` → 200 `{enviado_a: "a***@colegio.edu.co"}` y envía un código de 6 dígitos (10 min, un solo uso) al correo **actual**. 401 "La contraseña actual no coincide." |
+| POST | `/me/reautenticacion/confirmar` | 🎓🧑‍🏫🛡️ (10/min) | Paso 2. `{codigo}` → 200 `{token_reautenticacion, expira_en}`. El token vive 5 min, sirve **una vez**, está atado a la persona y a la **sesión** del JWT (reclamo `session_id`) y autoriza **un** cambio. Código errado, vencido o usado → 422 "El código no es válido o ya venció. Pide uno nuevo." |
+| PATCH | `/me/contrasena` | 🎓🧑‍🏫🛡️ (10/min) | `{token_reautenticacion, password_nueva}` → 200. Cierra las **demás** sesiones (esta sigue abierta) y avisa por correo. 422 "La contraseña nueva debe ser distinta de la actual." (el token no se gasta). Token inválido, usado, vencido o de otra sesión → 422 "Vuelve a confirmar tu identidad." |
+| POST | `/me/correo` | 🎓🧑‍🏫🛡️ (10/min) | `{token_reautenticacion, email_nuevo}` → 200 y envía un código (15 min) al correo **nuevo**; el correo no cambia todavía. 409 "Ese correo ya está en uso." (el token no se gasta); 422 si es el mismo correo. |
+| POST | `/me/correo/confirmar` | 🎓🧑‍🏫🛡️ (10/min) | `{codigo}` → 200 `{email}`. Cambia el correo, avisa al correo **anterior** y cierra las demás sesiones. |
+
+> Ninguna de estas rutas necesita permiso del administrador. Cambiar el nombre es otra cosa (HU-B-407).
 | GET | `/ruta?curso_id=` | 🌐🎓 | Bloques con estado (`bloqueado`, `disponible`, `aprobado`), mejor puntaje y `acordes` (distintos, en orden de lección, máx. 6; HU-B-324). Sin sesión: todos `disponible`, sin puntajes. |
 | GET | `/evaluaciones/{id}` | 🎓 | Evaluación sin respuestas correctas. |
 | POST | `/evaluaciones/{id}/intentos` | 🎓 | Presentar intento → calificación. |
@@ -246,6 +253,10 @@ así que nombre, correo y contraseña se validan en el formulario, en la API y e
 | `email` (preautorizar docente) | correo | máx. 254; formato; se guarda en minúsculas (API) | CHECK en `docentes_preautorizados` |
 | `password` (registro) | contraseña | 8–72; al menos una letra y un número; **no** se recorta (formulario y API) | Supabase Auth (configurar mínimo 8, letras y dígitos) |
 | `password` (inicio de sesión) | contraseña | 1–72, sin mínimo por cuentas antiguas (formulario y API) | Supabase Auth |
+| `password_actual` (reautenticación) | contraseña | 1–72, sin recortar | Supabase Auth |
+| `password_nueva` (cambiar contraseña) | contraseña | igual que el registro: 8–72, al menos una letra y un número; distinta de la actual | `fijar_contrasena` repite la regla (revisión `0021`) |
+| `email_nuevo` (cambiar correo) | correo | igual que el registro: máx. 254, formato `usuario@dominio.tld`, minúsculas | `cambiar_correo` valida formato, largo y unicidad (revisión `0022`) |
+| `token_reautenticacion` | texto | exactamente 43 caracteres `A–Z a–z 0–9 _ -` | HMAC `^[0-9a-f]{64}$`; vigencia 5 min (el CHECK permite hasta 15) |
 | `token` (restablecer contraseña) | texto | exactamente 43 caracteres `A–Z a–z 0–9 _ -` (`secrets.token_urlsafe(32)`) | HMAC `^[0-9a-f]{64}$`; vigencia ≤ 15 min (CHECK) |
 | `password` (restablecer contraseña) | contraseña | igual que el registro: 8–72, al menos una letra y un número, sin recortar | `fijar_contrasena` repite la regla (revisión `0021`) |
 | `codigo` (verificar correo) | código | exactamente 6 dígitos; se quitan los espacios ("482 913") | `^[0-9a-f]{64}$` del HMAC; vigencia ≤ 15 min (CHECK) |

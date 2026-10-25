@@ -23,9 +23,14 @@ class PerfilService:
     def mi_perfil(self, usuario: CurrentUser) -> dict[str, Any]:
         with self._abrir_sesion() as sesion:
             perfil = self._perfiles.obtener(sesion, usuario.id)
+            email = self._perfiles.email_de(sesion, usuario.id)
         if perfil is None:
             raise NoEncontrado("No encontramos tu perfil.")
-        return {**{campo: perfil[campo] for campo in CAMPOS_PERFIL}, "email": usuario.email}
+        return {
+            **{campo: perfil[campo] for campo in CAMPOS_PERFIL},
+            "email": email or usuario.email,
+            "correo_verificado_en": perfil["correo_verificado_en"],
+        }
 
     def perfil_de(self, usuario_id: str) -> dict[str, Any] | None:
         with self._abrir_sesion() as sesion:

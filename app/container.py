@@ -46,6 +46,7 @@ from app.services.bloque_service import BloqueService
 from app.services.codigo_service import CodigoService
 from app.services.contenido_service import ContenidoService
 from app.services.correo_service import MARCA, CorreoService, Enviador
+from app.services.cuenta_service import CuentaService
 from app.services.curso_service import CursoService
 from app.services.docente_service import DocenteService
 from app.services.ejercicio_service import EjercicioService
@@ -239,6 +240,17 @@ def recuperacion_service() -> RecuperacionService:
 @lru_cache
 def auth_service() -> AuthService:
     return AuthService(ClienteSupabaseAuth(), verificacion_service(), estado_de_usuario)
+
+
+@lru_cache
+def cuenta_service() -> CuentaService:
+    return CuentaService(
+        session_scope,
+        SqlCuentaRepository(),
+        codigo_service(),
+        correo_service(),
+        ClienteSupabaseAuth(),
+    )
 
 
 # --- Correo saliente (HU-B-401) ---
