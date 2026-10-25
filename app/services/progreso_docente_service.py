@@ -7,6 +7,7 @@
 # =========================================================
 from typing import Any, Protocol
 
+from app.core.avance import EN_CURSO, FINALIZADO, SIN_INICIAR, estado_de_avance
 from app.core.constants import ROL_ADMIN
 from app.core.errors import NoEncontrado
 from app.core.security import CurrentUser
@@ -18,6 +19,9 @@ MAXIMO_NECESITAN_APOYO = 20
 
 MOTIVO_SIN_ACTIVIDAD = "sin_actividad"
 MOTIVO_REPROBO_BLOQUE = "reprobo_bloque"
+
+TRAMOS_DE_AVANCE = 5
+ANCHO_DEL_TRAMO = 100 // TRAMOS_DE_AVANCE
 
 
 class RepositorioProgresoDocente(Protocol):
@@ -36,6 +40,9 @@ class RepositorioProgresoDocente(Protocol):
     def cursos_del_estudiante(
         self, sesion: Any, docente_id: str | None, estudiante_id: str
     ) -> list[int]: ...
+    def avance_de_la_seleccion(self, sesion: Any, filtros: Fila) -> list[Fila]: ...
+    def actividad_por_dia(self, sesion: Any, filtros: Fila, dias: int) -> list[Fila]: ...
+    def evaluaciones(self, sesion: Any, filtros: Fila) -> list[Fila]: ...
 
 
 def _bloque(fila: Fila) -> Fila:
@@ -79,6 +86,26 @@ def _necesita_apoyo(fila: Fila) -> Fila:
         "motivos": motivos,
         "bloque_reprobado": reprobado,
     }
+
+
+def _distribucion(grupos: list[Fila]) -> tuple[list[Fila], dict[str, int]]:
+    """Cinco tramos de 20 % (0-19 ... 80-100) y el conteo por estado, de los mismos grupos: asi
+    la suma de ambos siempre coincide. El estado sale de app/core/avance (decisiones fase 5 §2)."""
+    tramos = [0] * TRAMOS_DE_AVANCE
+    estados = {SIN_INICIAR: 0, EN_CURSO: 0, FINALIZADO: 0}
+    for g in grupos:
+        tramos[g["tramo"]] += g["estudiantes"]
+        estado = estado_de_avance(hay_registro=g["hay_registro"], completo=g["completo"])
+        estados[estado] += g["estudiantes"]
+    distribucion = [
+        {
+            "desde": i * ANCHO_DEL_TRAMO,
+            "hasta": 100 if i == TRAMOS_DE_AVANCE - 1 else (i + 1) * ANCHO_DEL_TRAMO - 1,
+            "estudiantes": cantidad,
+        }
+        for i, cantidad in enumerate(tramos)
+    ]
+    return distribucion, estados
 
 
 def _sin_correo(fila: Fila) -> Fila:
@@ -126,6 +153,30 @@ class ProgresoDocenteService:
         return {
             "cursos": [{**c, "bloques": por_curso[c["id"]]} for c in cursos],
             "necesitan_apoyo": [_necesita_apoyo(f) for f in apoyo],
+        }
+
+    def series(self, usuario: CurrentUser, filtros: dict[str, Any]) -> dict[str, Any]:
+        """Series para las graficas del panel: actividad por dia, distribucion del avance,
+        estados y evaluaciones. Todas salen del mismo alcance y filtros que /docente/progreso."""
+        curso_id = filtros["curso_id"]
+        consulta = {
+            "docente_id": self._alcance(usuario, filtros["docente_id"]),
+            "curso_id": curso_id,
+            "bloque_id": filtros["bloque_id"],
+            "estudiantes": filtros["estudiantes"],
+        }
+        with self._abrir_sesion() as sesion:
+            if curso_id is not None:
+                self._cursos.curso_propio(sesion, usuario, curso_id, activo=True)  # 404 si es ajeno
+            grupos = self._progreso.avance_de_la_seleccion(sesion, consulta)
+            actividad = self._progreso.actividad_por_dia(sesion, consulta, filtros["dias"])
+            evaluaciones = self._progreso.evaluaciones(sesion, consulta)
+        distribucion, estados = _distribucion(grupos)
+        return {
+            "actividad_por_dia": actividad,
+            "distribucion_avance": distribucion,
+            "estados": estados,
+            "evaluaciones": evaluaciones,
         }
 
     def matriz(

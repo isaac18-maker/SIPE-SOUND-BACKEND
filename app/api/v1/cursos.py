@@ -5,7 +5,7 @@ from app.core.constants import ROL_ESTUDIANTE
 from app.core.limites import limiter, por_usuario
 from app.core.responses import ok
 from app.core.security import get_current_user, roles_required
-from app.schemas.curso import UnirseCursoIn
+from app.schemas.curso import MisCursosQuery, UnirseCursoIn
 
 bp = Blueprint("cursos", __name__)
 
@@ -24,8 +24,10 @@ def unirse():
 @bp.get("/cursos")
 @roles_required(ROL_ESTUDIANTE)
 def mis_cursos():
-    """Cursos activos en los que esta inscrito el estudiante."""
-    return ok(curso_service().mis_cursos(get_current_user().id))
+    """Cursos activos en los que esta inscrito el estudiante, con su avance y estado (HU-B-502).
+    ?estado=sin_iniciar|en_curso|finalizado y ?orden=ultimo_avance|nombre|avance."""
+    filtros = MisCursosQuery.model_validate(request.args.to_dict())
+    return ok(curso_service().mis_cursos(get_current_user().id, **filtros.model_dump()))
 
 
 @bp.get("/cursos/<int:curso_id>/retroalimentaciones")

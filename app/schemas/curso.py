@@ -29,6 +29,15 @@ class CursoCreate(BaseModel):
     nivel: Nivel = "principiante"
 
 
+class MisCursosQuery(BaseModel):
+    """GET /cursos (HU-B-502): filtro por estado y orden (ultimo avance, nombre o avance)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    estado: Literal["sin_iniciar", "en_curso", "finalizado"] | None = None
+    orden: Literal["ultimo_avance", "nombre", "avance"] = "ultimo_avance"
+
+
 class UnirseCursoIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
