@@ -92,6 +92,12 @@ Leyenda de acceso: 🌐 público · 🎓 estudiante · 🧑‍🏫 docente · �
 | GET | `/ejercicios` | 🌐 | Lista. |
 | GET | `/acordes` | 🌐 | Lista con `diagram` (`frets`, `fingers`, `baseFret`, `barre`). |
 
+**Video guía (HU-B-410).** Bloques, lecciones, ejercicios y acordes pueden tener **un** video de
+YouTube opcional. Todas las lecturas (públicas, `/ruta` y panel docente) traen
+`video: {youtube_id, inicio_seg} | null`: solo el id de 11 caracteres y el segundo de inicio
+(`inicio_seg` puede ser `null`); la URL original no se guarda ni se devuelve. El frontend lo
+reproduce desde `youtube-nocookie.com/embed/{youtube_id}?start={inicio_seg}`.
+
 ### 4.1.1 Cuentas y sesión (HU-B-321, HU-B-322)
 
 El backend es el **único** que habla con Supabase Auth (con la clave pública `SUPABASE_ANON_KEY`;
@@ -222,6 +228,10 @@ Toda acción del administrador sobre una cuenta (reenviar, verificar a mano, sus
 | GET · POST | `/admin/bloques` | Catálogo global de la ruta (todos los estados). |
 | GET · PATCH · DELETE | `/admin/bloques/{id}` | `DELETE` → 409 si tiene lecciones o evaluaciones (archivar). |
 | PATCH | `/admin/bloques/{id}/estado` | Igual que lecciones. |
+| PUT | `/admin/acordes/{id}/video` | `{video_url, video_inicio_seg?}` → el acorde con su `video`. El catálogo de acordes es global: solo el admin. 400 si el enlace no es de YouTube; 404 si el acorde no existe. |
+| DELETE | `/admin/acordes/{id}/video` | Quita el video del acorde. |
+
+En **bloques** (`POST`/`PATCH /admin/bloques`), **lecciones** y **ejercicios** (`POST`/`PATCH /docente/...`, del propio docente; el admin, todos) se envía `video_url` (enlace de YouTube) y, opcional, `video_inicio_seg`. `video_url: null` o `""` quita el video y su segundo de inicio; editar otro campo no lo toca. El `video_inicio_seg` explícito gana sobre el `t=` de la URL.
 
 ### 4.5 Mensajería interna (Fase 4, HU-B-409)
 
@@ -260,6 +270,7 @@ remitente va como `{nombre, apellido, rol}` (o `null` si su cuenta ya no existe)
   "nivel": "principiante", "duracion_min": 35,
   "acordes": ["C", "G"], "temas": ["Acordes mayores"],
   "estado": "publicado", "autor_id": "uuid|null",
+  "video": { "youtube_id": "dQw4w9WgXcQ", "inicio_seg": 42 },
   "creado_en": "…", "actualizado_en": "…"
 }
 
@@ -330,6 +341,8 @@ así que nombre, correo y contraseña se validan en el formulario, en la API y e
 | `lecciones.temas` | lista | máx. 20 elementos de 1–60 caracteres | igual |
 | `ejercicios.pasos` | lista | máx. 30 elementos de 1–300 caracteres | igual |
 | `duracion_min` | entero | 1–600 (opcional) | 1–600 |
+| `video_url` | URL | opcional, máx. 300; solo YouTube: `watch?v=`, `youtu.be/`, `/embed/`, `/shorts/`, `/live/`, `m.youtube.com`, `music.youtube.com` y `youtube-nocookie.com`, con `t=90`, `t=1m30s` o `start=90`. Se guarda solo el id | `video_youtube_id` `^[A-Za-z0-9_-]{11}$` |
+| `video_inicio_seg` | entero | 0–43200 (opcional); no hay inicio sin video | 0–43200 y `video_youtube_id` no nulo |
 | `ejercicios.bpm_recomendado`, `mejor_bpm` | entero | 20–300 | 20–300 |
 | `ejercicios.compas` | texto | `N/D` con N ∈ {2,3,4,5,6,7,9,12} y D ∈ {2,4,8} (p. ej. `4/4`, `6/8`) | mismo patrón |
 | `acordes.nombre` | texto | 1–20 | 1–20 |

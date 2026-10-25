@@ -2,6 +2,7 @@ from flask import Blueprint, request
 
 from app.api.v1._crud_contenido import registrar_crud
 from app.container import (
+    acorde_service,
     admin_cuentas_service,
     admin_usuarios_service,
     bloque_contenido_service,
@@ -20,6 +21,7 @@ from app.schemas.admin_cuentas import (
 from app.schemas.contenido import BloqueCrear, BloqueEditar
 from app.schemas.docente import PreautorizacionDocenteIn
 from app.schemas.perfil import CambioRolIn, PermisoNombreEnLoteIn, PermisoNombreIn
+from app.schemas.video import VideoAcordeIn
 
 bp = Blueprint("admin", __name__)
 
@@ -33,6 +35,23 @@ registrar_crud(
     editar=BloqueEditar,
     roles=(ROL_ADMIN,),
 )
+
+
+@bp.put("/admin/acordes/<int:acorde_id>/video")
+@roles_required(ROL_ADMIN)
+def asignar_video_de_acorde(acorde_id: int):
+    """Video guia de un acorde (catalogo global: solo el administrador). Guarda el id de
+    YouTube; no se guarda ni se devuelve la URL."""
+    datos = VideoAcordeIn.model_validate(request.get_json(silent=True) or {})
+    acorde = acorde_service().asignar_video(acorde_id, datos.video_url, datos.video_inicio_seg)
+    return ok(acorde, mensaje="Video guardado.")
+
+
+@bp.delete("/admin/acordes/<int:acorde_id>/video")
+@roles_required(ROL_ADMIN)
+def quitar_video_de_acorde(acorde_id: int):
+    """Quita el video guia del acorde."""
+    return ok(acorde_service().quitar_video(acorde_id), mensaje="Video quitado.")
 
 
 @bp.patch("/admin/usuarios/<uuid:usuario_id>/rol")

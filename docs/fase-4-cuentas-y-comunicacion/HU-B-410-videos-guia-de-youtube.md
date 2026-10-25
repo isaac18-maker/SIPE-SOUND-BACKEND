@@ -27,7 +27,9 @@
    - `video_inicio_seg integer null`, CHECK 0–43200, y CHECK `video_inicio_seg is null or video_youtube_id is not null`.
 2. `app/core/youtube.py` (función pura): `extraer_video(url) -> (id, inicio_seg | None)`.
    Acepta `https://www.youtube.com/watch?v=ID`, `https://youtu.be/ID`, `/embed/ID`, `/shorts/ID`,
-   `m.youtube.com`, `music.youtube.com`, con `t=90`, `t=1m30s` o `start=90`. Rechaza cualquier otro
+   `/live/ID`, `m.youtube.com`, `music.youtube.com` y `youtube-nocookie.com`, con `t=90`,
+   `t=1m30s` o `start=90` (en la consulta o en el fragmento `#t=`). Un tiempo ilegible o fuera
+   de rango se ignora (no invalida el enlace). Rechaza cualquier otro
    dominio, listas sin `v=` y URLs de más de 300 caracteres → 400 "Pega el enlace de un video de YouTube
    (por ejemplo, https://youtu.be/…)."
 3. Entrada y salida:
