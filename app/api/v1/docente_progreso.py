@@ -4,7 +4,12 @@ from app.container import progreso_docente_service
 from app.core.constants import ROL_ADMIN, ROL_DOCENTE
 from app.core.responses import ok
 from app.core.security import get_current_user, roles_required
-from app.schemas.progreso_docente import DetalleProgresoQuery, MatrizQuery, ProgresoQuery
+from app.schemas.progreso_docente import (
+    DetalleProgresoQuery,
+    MatrizQuery,
+    ProgresoQuery,
+    SeriesQuery,
+)
 
 bp = Blueprint("docente_progreso", __name__)
 
@@ -26,6 +31,18 @@ def resumen_de_progreso():
             get_current_user(), filtros.curso_id, _texto(filtros.docente_id)
         )
     )
+
+
+@bp.get("/docente/progreso/series")
+@roles_required(*PANEL)
+def series_de_progreso():
+    """Datos para las graficas: actividad por dia, distribucion del avance en cinco tramos,
+    estados (sin_iniciar/en_curso/finalizado) y desempeno de cada evaluacion. Filtros:
+    ?curso_id=&bloque_id=&dias=7-90&estudiantes=al_dia|sin_actividad|en_riesgo."""
+    filtros = SeriesQuery.model_validate(request.args.to_dict())
+    datos = filtros.model_dump()
+    datos["docente_id"] = _texto(filtros.docente_id)
+    return ok(progreso_docente_service().series(get_current_user(), datos))
 
 
 @bp.get("/docente/progreso/matriz")

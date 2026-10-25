@@ -1,7 +1,13 @@
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.constants import (
+    ACTIVIDAD_DIAS_DEFECTO,
+    ACTIVIDAD_DIAS_MAX,
+    ACTIVIDAD_DIAS_MIN,
+)
 from app.schemas.curso import EstudiantesQuery
 
 
@@ -26,3 +32,11 @@ class DetalleProgresoQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     docente_id: UUID | None = None
+
+
+class SeriesQuery(ProgresoQuery):
+    """GET /docente/progreso/series: ?dias= (7-90), ?bloque_id= y ?estudiantes= filtran todo."""
+
+    dias: int = Field(default=ACTIVIDAD_DIAS_DEFECTO, ge=ACTIVIDAD_DIAS_MIN, le=ACTIVIDAD_DIAS_MAX)
+    bloque_id: int | None = Field(default=None, gt=0)
+    estudiantes: Literal["al_dia", "sin_actividad", "en_riesgo"] | None = None
