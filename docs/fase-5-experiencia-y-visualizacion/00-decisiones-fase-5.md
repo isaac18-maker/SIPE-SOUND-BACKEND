@@ -37,9 +37,13 @@ Corregidos fuera de HU (2026-10-25): el 429 al enviar la solicitud de cambio de 
    | `en_curso` | Al menos un registro y no todo completado |
    | `finalizado` | Todo lo que lo compone está completado (y, en un curso, sus bloques con evaluación aprobados) |
 
-3. **Los gráficos son SVG propios, sin librería** (contrato 02 §2: no sumar dependencias para
-   algo que se resuelve con 60 líneas). Cada gráfico lleva una **alternativa en tabla** (contrato
-   05 §6) y sus colores salen de tokens, nunca solo color: también texto y forma.
+3. **Los gráficos usan Recharts** (3.10, MIT, SVG, React 18): declarativo, responsive, con tooltip
+   y navegación con teclado. Se eligió sobre Nivo, Victory, Chart.js, ECharts y ApexCharts por
+   ser SVG (accesible y estilable con CSS), compatible con React 18 y de licencia MIT sin
+   condiciones. Cuesta ≈ 105 kB gzip, **solo** en las páginas con gráficos (no entra al paquete
+   inicial). Cada gráfico lleva una **alternativa en tabla** (contrato 05 §6) y sus colores salen
+   de tokens (`rgb(var(--color-x))`), nunca solo color: también texto y forma. Aprobado por el
+   equipo el 2026-10-25 (frontend: `src/shared/ui/graficos/`).
 4. **Sin tiempo real con websockets.** El chat consulta el hilo abierto cada 15 s mientras la
    pestaña esté visible; el contador de la navegación sigue cada 60 s (HU-F-407).
 5. **Habilitar o deshabilitar una evaluación** es publicar o cerrar (`PATCH /docente/evaluaciones/{id}/estado`,
