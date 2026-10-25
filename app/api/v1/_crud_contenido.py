@@ -41,7 +41,7 @@ def registrar_crud(  # noqa: PLR0913 - configuracion declarativa de un recurso
 
     def crear_uno():
         datos = crear.model_validate(request.get_json(silent=True) or {})
-        fila = servicio().crear(get_current_user(), datos.model_dump())
+        fila = servicio().crear(get_current_user(), datos.nuevos())
         return created(fila, mensaje=f"Se creó {nombre} como borrador.")
 
     def obtener(ident: int):

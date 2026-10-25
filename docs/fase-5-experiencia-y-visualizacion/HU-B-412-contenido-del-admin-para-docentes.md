@@ -5,7 +5,7 @@
 | Fase | 5 · Experiencia y visualización |
 | Prioridad | Must |
 | Estimación | 8 puntos |
-| Depende de | HU-B-309, HU-B-311, HU-B-411 (la migración 0027 sigue a la 0026) |
+| Depende de | HU-B-309, HU-B-311, HU-B-411 (la migración 0028 sigue a la 0027) |
 | Rama | `hu/HU-B-412-contenido-del-admin-para-docentes` |
 | Relacionada | HU-F-511 |
 
@@ -21,7 +21,7 @@
    suya, la global). Las evaluaciones propias del curso ya las gestionaba.
 2. **Puede**: ver, editar, publicar, archivar (lecciones y ejercicios) y cerrar o publicar
    evaluaciones. **No puede borrar** lo que no creó (403: "Solo quien creó… Puedes archivarlo / cerrarla").
-3. **Autoría**: migración 0027 con `actualizado_por` en lecciones, ejercicios y evaluaciones. Las
+3. **Autoría**: migración 0028 con `actualizado_por` en lecciones, ejercicios y evaluaciones. Las
    respuestas traen `autor` y `modificado_por` (nombre, nunca el correo); `modificado_por` es
    `null` si nadie lo ha modificado desde que se creó.
 4. **Privacidad**: los resultados de una evaluación global, vistos por un docente, solo incluyen
@@ -57,5 +57,5 @@ Escenario: Estudiantes de otros
 ```
 
 ## Definición de hecho específica
-- [ ] Migración 0027 aplicada (`uv run alembic upgrade head`) y guardia de migraciones en verde.
+- [ ] Migración 0028 aplicada (`uv run alembic upgrade head`) y guardia de migraciones en verde.
 - [ ] Un docente no ve ni nombres ni correos de estudiantes ajenos.

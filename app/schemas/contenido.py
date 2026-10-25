@@ -37,6 +37,7 @@ from app.core.longitudes import (
     TITULO_MAX,
     TITULO_MIN,
 )
+from app.schemas.video import ConVideo, columnas_de_video
 
 Nivel = Literal["principiante", "intermedio", "avanzado"]
 EstadoContenido = Literal["borrador", "publicado", "archivado"]
@@ -94,11 +95,16 @@ class EntradaEditable(BaseModel):
                     raise PydanticCustomError("valor_invalido", f"{campo}: No puede ser nulo.")
         return datos
 
+    def nuevos(self) -> dict[str, Any]:
+        """Los valores para crear la fila (video_url ya traducido a las columnas de video)."""
+        return columnas_de_video(self.model_dump())
+
     def cambios(self) -> dict[str, Any]:
         """Solo lo que se envio; una descripcion vacia se guarda como nula."""
         datos = self.model_dump(exclude_unset=True)
         if not datos:
             raise ValidacionError("Envía al menos un campo para editar.")
+        datos = columnas_de_video(datos)
         return {k: (None if v == "" else v) for k, v in datos.items()}
 
 
@@ -111,7 +117,7 @@ class _Compas(BaseModel):
         return valor
 
 
-class LeccionCrear(EntradaEditable):
+class LeccionCrear(EntradaEditable, ConVideo):
     bloque_id: int = Field(gt=0)
     numero: int = Field(ge=1, le=9999)
     titulo: Titulo
@@ -123,7 +129,7 @@ class LeccionCrear(EntradaEditable):
     temas: Temas = []
 
 
-class LeccionEditar(EntradaEditable):
+class LeccionEditar(EntradaEditable, ConVideo):
     NO_NULOS = ("bloque_id", "numero", "titulo", "nivel")
 
     bloque_id: int | None = Field(default=None, gt=0)
@@ -137,7 +143,7 @@ class LeccionEditar(EntradaEditable):
     temas: Temas | None = None
 
 
-class EjercicioCrear(EntradaEditable, _Compas):
+class EjercicioCrear(EntradaEditable, _Compas, ConVideo):
     leccion_id: int | None = Field(default=None, gt=0)
     nombre: Titulo
     descripcion: Descripcion | None = None
@@ -149,7 +155,7 @@ class EjercicioCrear(EntradaEditable, _Compas):
     pasos: Pasos = []
 
 
-class EjercicioEditar(EntradaEditable, _Compas):
+class EjercicioEditar(EntradaEditable, _Compas, ConVideo):
     NO_NULOS = ("nombre", "nivel", "bpm_recomendado", "compas")
 
     leccion_id: int | None = Field(default=None, gt=0)
@@ -163,7 +169,7 @@ class EjercicioEditar(EntradaEditable, _Compas):
     pasos: Pasos | None = None
 
 
-class BloqueCrear(EntradaEditable):
+class BloqueCrear(EntradaEditable, ConVideo):
     numero: int = Field(ge=1, le=999)
     titulo: Titulo
     descripcion: Descripcion | None = None
@@ -171,7 +177,7 @@ class BloqueCrear(EntradaEditable):
     orden_index: int = Field(ge=1, le=999)
 
 
-class BloqueEditar(EntradaEditable):
+class BloqueEditar(EntradaEditable, ConVideo):
     NO_NULOS = ("numero", "titulo", "nivel", "orden_index")
 
     numero: int | None = Field(default=None, ge=1, le=999)

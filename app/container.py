@@ -90,7 +90,8 @@ def ejercicio_service() -> EjercicioService:
 
 @lru_cache
 def acorde_service() -> AcordeService:
-    return AcordeService(SqlAcordeRepository(session_scope))
+    repositorio = SqlAcordeRepository(session_scope)
+    return AcordeService(repositorio, repositorio)
 
 
 @lru_cache

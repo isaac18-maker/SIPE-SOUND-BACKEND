@@ -8,14 +8,16 @@ from app.models.base import (
     Base,
     CreadoEnMixin,
     EstadoMixin,
+    VideoMixin,
     en_lista,
     existente,
     largo_entre,
     largo_maximo,
+    restricciones_video,
 )
 
 
-class Bloque(CreadoEnMixin, EstadoMixin, Base):
+class Bloque(CreadoEnMixin, EstadoMixin, VideoMixin, Base):
     __tablename__ = "bloques"
     __table_args__ = (
         PrimaryKeyConstraint("id", name=existente("bloques_pkey")),
@@ -24,6 +26,7 @@ class Bloque(CreadoEnMixin, EstadoMixin, Base):
         CheckConstraint(en_lista("estado", ESTADOS_CONTENIDO), name="estado"),
         CheckConstraint(largo_entre("titulo", TITULO_MIN, TITULO_MAX), name="titulo"),
         CheckConstraint(largo_maximo("descripcion", DESCRIPCION_MAX), name="descripcion"),
+        *restricciones_video(),
     )
 
     id: Mapped[int] = mapped_column(Integer)
