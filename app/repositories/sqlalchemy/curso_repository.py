@@ -2,7 +2,7 @@ from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 from sqlalchemy.orm import Session
 
-from app.core.constants import ESTADO_PUBLICADO
+from app.core.constants import ESTADO_PUBLICADO, EVALUACION_PUBLICADA
 from app.models.bloque import Bloque
 from app.models.curso import Curso
 from app.models.curso_bloque import CursoBloque
@@ -10,7 +10,71 @@ from app.models.inscripcion import Inscripcion
 from app.models.profile import Profile
 from app.models.retroalimentacion import Retroalimentacion
 from app.repositories.base import Fila
-from app.repositories.sqlalchemy._comun import a_fila, formatear_fecha
+from app.repositories.sqlalchemy._comun import a_fila, filas_sql, formatear_fecha
+
+# Avance del estudiante en cada uno de sus cursos activos (HU-B-502): UNA sentencia, sin N+1.
+# La ruta de cada curso es la propia (curso_bloques) o, si no definio la suya, la global: la misma
+# regla de la ruta del estudiante y del panel del docente (seguimiento_repository.CTE_RUTA).
+AVANCE_DE_CURSOS = """
+with mis as (
+  select c.id as curso_id
+  from public.inscripciones i
+  join public.cursos c on c.id = i.curso_id
+  where i.estudiante_id = cast(:e as uuid) and c.archivado_en is null
+),
+ruta as (
+  select m.curso_id, cb.bloque_id from mis m
+  join public.curso_bloques cb on cb.curso_id = m.curso_id
+  join public.bloques b on b.id = cb.bloque_id and b.estado = :publicado
+  union all
+  select m.curso_id, b.id from mis m
+  join public.bloques b on b.estado = :publicado
+  where not exists (select 1 from public.curso_bloques cb where cb.curso_id = m.curso_id)
+),
+lecc as (
+  select r.curso_id, l.id as leccion_id from ruta r
+  join public.lecciones l on l.bloque_id = r.bloque_id and l.estado = :publicado
+),
+ejer as (
+  select x.curso_id, e.id as ejercicio_id from lecc x
+  join public.ejercicios e on e.leccion_id = x.leccion_id and e.estado = :publicado
+),
+evals as (
+  select r.curso_id, r.bloque_id, ev.id as evaluacion_id from ruta r
+  join public.evaluaciones ev on ev.bloque_id = r.bloque_id and ev.curso_id is null
+    and ev.estado = :evaluacion_publicada
+)
+select m.curso_id,
+  (select count(*) from lecc x where x.curso_id = m.curso_id)::int as lecciones_total,
+  (select count(*) from lecc x
+     join public.progreso_lecciones p on p.leccion_id = x.leccion_id
+      and p.estudiante_id = cast(:e as uuid) and p.completado
+   where x.curso_id = m.curso_id)::int as lecciones_completadas,
+  (select count(*) from ejer x where x.curso_id = m.curso_id)::int as ejercicios_total,
+  (select count(*) from ejer x
+     join public.progreso_ejercicios p on p.ejercicio_id = x.ejercicio_id
+      and p.estudiante_id = cast(:e as uuid) and p.completado
+   where x.curso_id = m.curso_id)::int as ejercicios_completados,
+  (select count(*) from ruta x where x.curso_id = m.curso_id)::int as bloques_total,
+  (select count(distinct x.bloque_id) from evals x
+   where x.curso_id = m.curso_id)::int as bloques_con_evaluacion,
+  (select count(distinct x.bloque_id) from evals x
+     join public.intentos_evaluacion it on it.evaluacion_id = x.evaluacion_id
+      and it.estudiante_id = cast(:e as uuid) and it.aprobado
+   where x.curso_id = m.curso_id)::int as bloques_aprobados,
+  greatest(
+    (select max(p.actualizado_en) from lecc x
+       join public.progreso_lecciones p on p.leccion_id = x.leccion_id
+        and p.estudiante_id = cast(:e as uuid) where x.curso_id = m.curso_id),
+    (select max(p.actualizado_en) from ejer x
+       join public.progreso_ejercicios p on p.ejercicio_id = x.ejercicio_id
+        and p.estudiante_id = cast(:e as uuid) where x.curso_id = m.curso_id),
+    (select max(it.creado_en) from evals x
+       join public.intentos_evaluacion it on it.evaluacion_id = x.evaluacion_id
+        and it.estudiante_id = cast(:e as uuid) where x.curso_id = m.curso_id)
+  ) as ultimo_avance
+from mis m
+"""
 
 
 class SqlCursoRepository:
@@ -151,6 +215,19 @@ class SqlCursoRepository:
             .values(leida_en=func.now())
         )
 
+    def avance_de_cursos(self, sesion: Session, estudiante_id: str) -> dict[int, Fila]:
+        """curso_id -> conteos de avance del estudiante (HU-B-502). El estado se calcula aparte."""
+        filas = filas_sql(
+            sesion,
+            AVANCE_DE_CURSOS,
+            {
+                "e": estudiante_id,
+                "publicado": ESTADO_PUBLICADO,
+                "evaluacion_publicada": EVALUACION_PUBLICADA,
+            },
+        )
+        return {fila["curso_id"]: fila for fila in filas}
+
     def cursos_de_estudiante(self, sesion: Session, estudiante_id: str) -> list[Fila]:
         """Una sola consulta: curso + nombre del docente + comentarios sin leer."""
         sin_leer = (
@@ -169,6 +246,7 @@ class SqlCursoRepository:
                 Curso.descripcion,
                 Curso.nivel,
                 Profile.nombre.label("docente_nombre"),
+                Profile.apellido.label("docente_apellido"),
                 Inscripcion.inscrito_en,
                 sin_leer.label("retroalimentaciones_sin_leer"),
             )

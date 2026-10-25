@@ -7,6 +7,7 @@ from typing import Any, Protocol
 
 from sqlalchemy.exc import IntegrityError
 
+from app.core.avance import curso_completo, estado_de_avance, porcentaje
 from app.core.constants import ALFABETO_CODIGO, LARGO_CODIGO, ROL_ADMIN
 from app.core.errors import NoEncontrado, ReglaNegocio
 from app.core.privacidad import enmascarar_email
@@ -19,6 +20,49 @@ MENSAJE_CODIGO_INVALIDO = (
     "El código no existe o el curso ya cerró. Pídele a tu docente un código nuevo."
 )
 MENSAJE_ARCHIVADO = "El curso está archivado: no admite cambios."
+ORDENES_MIS_CURSOS = ("ultimo_avance", "nombre", "avance")
+
+
+def curso_con_avance(curso: Fila, conteos: Fila) -> Fila:
+    """El curso del estudiante con su avance y estado (HU-B-502). Funcion pura: los conteos vienen
+    de una sola consulta y el porcentaje usa las lecciones de la ruta del curso, igual que el panel
+    del docente (HU-B-310 y HU-B-408)."""
+    lecciones = (conteos.get("lecciones_completadas", 0), conteos.get("lecciones_total", 0))
+    ultimo = conteos.get("ultimo_avance")
+    completo = curso_completo(
+        lecciones_total=lecciones[1],
+        lecciones_completadas=lecciones[0],
+        bloques_con_evaluacion=conteos.get("bloques_con_evaluacion", 0),
+        bloques_aprobados=conteos.get("bloques_aprobados", 0),
+    )
+    return {
+        **curso,
+        "docente": {"nombre": curso["docente_nombre"], "apellido": curso.get("docente_apellido")},
+        "avance": {
+            "pct": porcentaje(*lecciones),
+            "lecciones": {"completadas": lecciones[0], "total": lecciones[1]},
+            "ejercicios": {
+                "completados": conteos.get("ejercicios_completados", 0),
+                "total": conteos.get("ejercicios_total", 0),
+            },
+            "bloques_aprobados": conteos.get("bloques_aprobados", 0),
+            "bloques_total": conteos.get("bloques_total", 0),
+        },
+        "estado": estado_de_avance(hay_registro=ultimo is not None, completo=completo),
+        "ultimo_avance": ultimo,
+    }
+
+
+def _ordenar_mis_cursos(cursos: list[Fila], orden: str) -> list[Fila]:
+    por_nombre = sorted(cursos, key=lambda c: c["nombre"].casefold())
+    if orden == "nombre":
+        return por_nombre
+    if orden == "avance":
+        return sorted(por_nombre, key=lambda c: c["avance"]["pct"], reverse=True)
+    # El ultimo avance mas reciente primero; sin avances al final (el texto ISO ordena como fecha).
+    con = sorted((c for c in por_nombre if c["ultimo_avance"]), key=lambda c: c["ultimo_avance"])
+    sin = [c for c in por_nombre if not c["ultimo_avance"]]
+    return con[::-1] + sin
 
 
 def generar_codigo() -> str:
@@ -211,12 +255,23 @@ class CursoService:
             if curso is None:
                 raise NoEncontrado(MENSAJE_CODIGO_INVALIDO)
             self._cursos.inscribir(sesion, curso["id"], estudiante_id)
-            mis_cursos = self._cursos.cursos_de_estudiante(sesion, estudiante_id)
+            mis_cursos = self._mis_cursos_con_avance(sesion, estudiante_id)
         return next(c for c in mis_cursos if c["id"] == curso["id"])
 
-    def mis_cursos(self, estudiante_id: str) -> list[Fila]:
+    def _mis_cursos_con_avance(self, sesion: Any, estudiante_id: str) -> list[Fila]:
+        cursos = self._cursos.cursos_de_estudiante(sesion, estudiante_id)
+        avance = self._cursos.avance_de_cursos(sesion, estudiante_id)
+        return [curso_con_avance(c, avance.get(c["id"], {})) for c in cursos]
+
+    def mis_cursos(
+        self, estudiante_id: str, *, estado: str | None = None, orden: str = "ultimo_avance"
+    ) -> list[Fila]:
+        """Mis cursos activos con su avance y estado; `estado` filtra y `orden` ordena."""
         with self._abrir_sesion() as sesion:
-            return self._cursos.cursos_de_estudiante(sesion, estudiante_id)
+            cursos = self._mis_cursos_con_avance(sesion, estudiante_id)
+        if estado is not None:
+            cursos = [c for c in cursos if c["estado"] == estado]
+        return _ordenar_mis_cursos(cursos, orden)
 
     def mis_retroalimentaciones(self, estudiante_id: str, curso_id: int) -> list[Fila]:
         """Comentarios del docente para el estudiante; al leerlos quedan marcados (leida_en).

@@ -159,7 +159,7 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | GET | `/progreso/resumen` | 🎓 | Totales y último avance. |
 | GET | `/progreso/actividad?dias=` | 🎓 | `dias` 7–90 (28 por defecto). `recientes` (10 eventos de lección, ejercicio o evaluación, del más reciente), `por_dia` (`fecha`, `registros`; días vacíos incluidos, zona America/Bogota) y `dias_con_practica`. Cuenta registros de avance, no minutos (HU-B-324). |
 | POST | `/cursos/unirse` | 🎓 | Body `{ codigo }`. |
-| GET | `/cursos` | 🎓 | Cursos donde está inscrito. |
+| GET | `/cursos` | 🎓 | Cursos **activos** donde está inscrito, con su avance (HU-B-502): `id`, `nombre`, `descripcion`, `nivel`, `docente` (`{nombre, apellido}`; también `docente_nombre` y `docente_apellido`), `inscrito_en`, `retroalimentaciones_sin_leer`, `avance` (`pct` 0–100 = lecciones completadas de **la ruta del curso** / lecciones de esa ruta, igual que el panel del docente; `lecciones` y `ejercicios` `{completadas\|completados, total}`; `bloques_aprobados` y `bloques_total`), `estado` (`sin_iniciar` sin ningún registro en esa ruta; `finalizado` con todas las lecciones completadas y las evaluaciones globales publicadas de sus bloques aprobadas; `en_curso` lo demás) y `ultimo_avance` (en esa ruta, o `null`). `?estado=sin_iniciar\|en_curso\|finalizado` filtra y `?orden=ultimo_avance\|nombre\|avance` ordena (por defecto, el avance más reciente primero; los que no empezaron al final). Una sola consulta agregada. |
 | GET | `/cursos/{id}/retroalimentaciones` | 🎓 | Mensajes del docente para él. |
 
 ### 4.3 Nuevos — panel docente (Fase 3, prefijo `/docente`)
