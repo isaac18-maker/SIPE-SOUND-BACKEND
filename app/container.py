@@ -23,6 +23,7 @@ from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
 from app.repositories.sqlalchemy.accion_admin_repository import SqlAccionAdminRepository
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
 from app.repositories.sqlalchemy.admin_cuentas_repository import SqlAdminCuentasRepository
+from app.repositories.sqlalchemy.admin_docentes_repository import SqlAdminDocentesRepository
 from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
 from app.repositories.sqlalchemy.codigo_repository import SqlCodigoRepository
 from app.repositories.sqlalchemy.contenido_repository import (
@@ -45,6 +46,7 @@ from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRepository
 from app.services.acorde_service import AcordeService
 from app.services.admin_cuentas_service import AdminCuentasService
+from app.services.admin_cursos_service import AdminCursosService
 from app.services.auth_service import AuthService
 from app.services.bloque_service import BloqueService
 from app.services.codigo_service import CodigoService
@@ -260,6 +262,18 @@ def admin_cuentas_service() -> AdminCuentasService:
         correo_service(),
         SqlAccionAdminRepository(),
         progreso_de,
+    )
+
+
+@lru_cache
+def admin_cursos_service() -> AdminCursosService:
+    return AdminCursosService(
+        session_scope,
+        SqlAdminDocentesRepository(),
+        SqlAdminCuentasRepository(),
+        SqlCursoRepository(),
+        SqlSeguimientoRepository(),
+        SqlAccionAdminRepository(),
     )
 
 

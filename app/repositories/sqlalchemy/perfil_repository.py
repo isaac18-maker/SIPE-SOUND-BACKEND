@@ -1,6 +1,7 @@
 from sqlalchemy import func, select, text, update
 from sqlalchemy.orm import Session
 
+from app.models.curso import Curso
 from app.models.profile import Profile
 from app.repositories.base import Fila
 from app.repositories.sqlalchemy._comun import a_fila
@@ -14,6 +15,14 @@ class SqlPerfilRepository:
     def obtener(self, sesion: Session, usuario_id: str) -> Fila | None:
         perfil = sesion.get(Profile, usuario_id)
         return a_fila(perfil) if perfil else None
+
+    def contar_cursos_activos_a_cargo(self, sesion: Session, usuario_id: str) -> int:
+        consulta = (
+            select(func.count())
+            .select_from(Curso)
+            .where(Curso.docente_id == usuario_id, Curso.archivado_en.is_(None))
+        )
+        return sesion.scalar(consulta) or 0
 
     def email_de(self, sesion: Session, usuario_id: str) -> str | None:
         """El correo vigente (el del JWT queda viejo tras un cambio de correo)."""

@@ -191,7 +191,14 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| PATCH | `/admin/usuarios/{id}/rol` | Asignar `docente`/`estudiante`. |
+| PATCH | `/admin/usuarios/{id}/rol` | Asignar `docente`/`estudiante`. 409 "Reasigna sus cursos activos (N) antes de quitarle el rol de docente." si un docente con cursos activos pasa a estudiante (los archivados no cuentan). |
+| GET | `/admin/docentes` | Paginado, `?q=` (nombre, apellido o correo, máx. 80). Por docente: `id`, `nombre`, `apellido`, `email` (completo), `estado`, `ultimo_acceso`, `cursos_activos`, `cursos_archivados` y `estudiantes` (distintos, en sus cursos activos). |
+| GET | `/admin/docentes/{id}/cursos` | Cursos del docente, **activos primero** y luego archivados: `id`, `nombre`, `descripcion`, `nivel`, `codigo_invitacion`, `creado_en`, `archivado_en`, `estudiantes`, `bloques_en_ruta`. 404 si la cuenta no es de un docente. |
+| GET | `/admin/cursos` | Todos los cursos, paginado. Filtros `?docente_id=&estado=activo\|archivado&q=` (nombre del curso, del docente o código). Cada fila trae `docente` y `docente_apellido`. |
+| PATCH | `/admin/cursos/{id}/docente` | `{docente_id}` → pasa el curso (también si está archivado) a otro docente **con la cuenta activa**: 422 si el destino es un estudiante, un docente sin verificar o suspendido, o el mismo docente. Los estudiantes y las evaluaciones se mantienen (cada evaluación conserva su `autor_id`). Registra `reasignar_curso` en la cuenta de origen y en la de destino. |
+| GET | `/admin/cursos/{id}/estudiantes` | Igual que `/docente/cursos/{id}/estudiantes` (`?q=&orden=&pagina=&por_pagina=`), sin restricción de propiedad y con el correo **completo**. |
+| DELETE | `/admin/cursos/{id}/estudiantes/{estudiante_id}` | Revoca el acceso: borra la inscripción, **no** el progreso del estudiante. 404 si no estaba inscrito. El mensaje recuerda que, si compartió el código, el docente debe regenerarlo. Registra `revocar_curso`. |
+| DELETE | `/admin/usuarios/{id}/cursos` | Revoca **todas** sus inscripciones en cursos activos → `{revocadas: N}`. Registra una acción `revocar_curso` por curso. |
 | PATCH | `/admin/usuarios/{id}/permisos` | `{puede_editar_nombre: bool}` → permite o impide que esa persona cambie su nombre y apellido. 404 si no existe. |
 | POST | `/admin/usuarios/permisos` | `{usuario_ids: [uuid] (1–100), puede_editar_nombre: bool}` → `{actualizados: N}`; los ids que no existen se ignoran y salen en `meta.no_encontrados`. |
 | GET | `/admin/usuarios` | Paginado. Filtros `?rol=&estado=pendiente_verificacion\|activa\|suspendida&q=` (nombre, apellido o correo, máx. 80), `?puede_editar_nombre=` y orden `?orden=nombre\|-creado_en\|-ultimo_acceso`. Cada fila: `id`, `nombre`, `apellido`, `email` (**completo**: el admin lo necesita), `rol`, `estado`, `puede_editar_nombre`, `creado_en`, `ultimo_acceso`, `correo_verificado_en`, `suspendido_en`, `motivo_suspension`, `ultimo_envio_verificacion` (`{estado: "enviado"\|"fallido", creado_en}` o `null`) y `cursos` (inscripciones activas; para docentes, cursos a cargo activos). `meta.totales` = cuentas por estado, sin depender de los filtros. |
@@ -201,7 +208,7 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | PATCH | `/admin/usuarios/{id}/estado` | `{estado: "suspendida", motivo}` (motivo 10–300, obligatorio) o `{estado: "activa"}` → `{id, estado}`. Suspender cierra todas sus sesiones. 403 sobre otro admin o sobre uno mismo. |
 | DELETE | `/admin/usuarios/{id}` | Cuerpo `{confirmacion: "<correo de la cuenta>"}`. Borra la cuenta, su perfil, progreso, intentos e inscripciones; **no se deshace**. 422 si la confirmación no coincide; 409 "Reasigna sus cursos a cargo (N) antes de eliminar la cuenta." (docentes, cuenta cursos activos y archivados); 403 sobre admins o sobre uno mismo. |
 
-Toda acción del administrador sobre una cuenta (reenviar, verificar a mano, suspender, reactivar, eliminar, cambiar rol, permiso de nombre) queda en `acciones_admin` con su motivo; nunca con contraseñas, códigos ni el correo completo de una cuenta eliminada.
+Toda acción del administrador sobre una cuenta (reenviar, verificar a mano, suspender, reactivar, eliminar, cambiar rol, permiso de nombre, reasignar y revocar cursos) queda en `acciones_admin` con su motivo; nunca con contraseñas, códigos ni el correo completo de una cuenta eliminada.
 | GET · POST | `/admin/bloques` | Catálogo global de la ruta (todos los estados). |
 | GET · PATCH · DELETE | `/admin/bloques/{id}` | `DELETE` → 409 si tiene lecciones o evaluaciones (archivar). |
 | PATCH | `/admin/bloques/{id}/estado` | Igual que lecciones. |
