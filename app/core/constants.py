@@ -82,6 +82,21 @@ MENSAJE_SIN_CONFIRMAR = (
 # Estado de una cuenta (se calcula, no se guarda).
 CUENTA_PENDIENTE = "pendiente_verificacion"
 CUENTA_ACTIVA = "activa"
+CUENTA_SUSPENDIDA = "suspendida"
+MENSAJE_SUSPENDIDA = "Tu cuenta está suspendida. Habla con el administrador."
+
+# Auditoria del administrador (HU-B-405). Las que usan HU posteriores ya estan permitidas.
+ACCIONES_ADMIN = (
+    "reenviar_verificacion",
+    "verificar_manual",
+    "suspender",
+    "reactivar",
+    "eliminar",
+    "cambiar_rol",
+    "revocar_curso",
+    "reasignar_curso",
+    "permiso_nombre",
+)
 
 ENVIO_ENVIADO = "enviado"
 ENVIO_FALLIDO = "fallido"

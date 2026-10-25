@@ -11,6 +11,7 @@ from flask import g, has_app_context
 from sqlalchemy import exists
 
 from app.core.config import get_settings
+from app.core.security import CurrentUser
 from app.infrastructure.correo_smtp import EnviadorArchivo, EnviadorSmtp
 from app.infrastructure.database import session_scope
 from app.infrastructure.supabase_auth import ClienteSupabaseAuth
@@ -19,7 +20,9 @@ from app.models.ejercicio import Ejercicio
 from app.models.evaluacion import Evaluacion
 from app.models.leccion import Leccion
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
+from app.repositories.sqlalchemy.accion_admin_repository import SqlAccionAdminRepository
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
+from app.repositories.sqlalchemy.admin_cuentas_repository import SqlAdminCuentasRepository
 from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
 from app.repositories.sqlalchemy.codigo_repository import SqlCodigoRepository
 from app.repositories.sqlalchemy.contenido_repository import (
@@ -41,6 +44,7 @@ from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepositor
 from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRepository
 from app.services.acorde_service import AcordeService
+from app.services.admin_cuentas_service import AdminCuentasService
 from app.services.auth_service import AuthService
 from app.services.bloque_service import BloqueService
 from app.services.codigo_service import CodigoService
@@ -110,7 +114,7 @@ def perfil_service() -> PerfilService:
 
 @lru_cache
 def admin_usuarios_service() -> AdminUsuariosService:
-    return AdminUsuariosService(session_scope, SqlPerfilRepository())
+    return AdminUsuariosService(session_scope, SqlPerfilRepository(), SqlAccionAdminRepository())
 
 
 @lru_cache
@@ -240,6 +244,23 @@ def recuperacion_service() -> RecuperacionService:
 @lru_cache
 def auth_service() -> AuthService:
     return AuthService(ClienteSupabaseAuth(), verificacion_service(), estado_de_usuario)
+
+
+@lru_cache
+def admin_cuentas_service() -> AdminCuentasService:
+    def progreso_de(usuario_id: str) -> dict:
+        # ProgresoService solo usa el id del usuario para el resumen.
+        return progreso_service().resumen(CurrentUser(id=usuario_id, email=None, token=""))
+
+    return AdminCuentasService(
+        session_scope,
+        SqlAdminCuentasRepository(),
+        SqlCuentaRepository(),
+        codigo_service(),
+        correo_service(),
+        SqlAccionAdminRepository(),
+        progreso_de,
+    )
 
 
 @lru_cache

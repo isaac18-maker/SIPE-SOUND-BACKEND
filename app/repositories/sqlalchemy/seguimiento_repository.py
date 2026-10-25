@@ -32,7 +32,7 @@ ESTUDIANTES = f"""
 with {CTE_RUTA},
 total as (select count(*) as n from lecciones_ruta),
 base as (
-  select i.estudiante_id, i.inscrito_en, p.nombre, u.email,
+  select i.estudiante_id, i.inscrito_en, p.nombre, p.apellido, u.email,
     (select count(*) from public.progreso_lecciones pl
       where pl.estudiante_id = i.estudiante_id and pl.completado
         and pl.leccion_id in (select id from lecciones_ruta)) as completadas,
@@ -51,7 +51,8 @@ base as (
   join public.profiles p on p.id = i.estudiante_id
   join auth.users u on u.id = i.estudiante_id
   where i.curso_id = :curso_id
-    and (cast(:q as text) is null or p.nombre ilike :patron or u.email ilike :patron)
+    and (cast(:q as text) is null or p.nombre ilike :patron or p.apellido ilike :patron
+      or u.email ilike :patron)
 )
 select base.*,
   case when total.n = 0 then 0 else round(base.completadas * 100.0 / total.n) end as avance_pct,
@@ -111,7 +112,7 @@ class SqlSeguimientoRepository:
 
     def inscripcion(self, sesion: Session, curso_id: int, estudiante_id: str) -> Fila | None:
         sql = """
-            select i.estudiante_id, i.inscrito_en, p.nombre, u.email
+            select i.estudiante_id, i.inscrito_en, p.nombre, p.apellido, u.email
             from public.inscripciones i
             join public.profiles p on p.id = i.estudiante_id
             join auth.users u on u.id = i.estudiante_id

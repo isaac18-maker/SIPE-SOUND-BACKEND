@@ -10,13 +10,19 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from app.core.constants import CUENTA_PENDIENTE, MENSAJE_SIN_CONFIRMAR
+from app.core.constants import (
+    CUENTA_PENDIENTE,
+    CUENTA_SUSPENDIDA,
+    MENSAJE_SIN_CONFIRMAR,
+    MENSAJE_SUSPENDIDA,
+)
 from app.core.errors import (
     AppError,
     CuentaExistente,
     NoAutenticado,
     ReglaNegocio,
     ServicioNoDisponible,
+    SinPermiso,
 )
 from app.schemas.auth import InicioSesionIn, RegistroIn
 
@@ -31,7 +37,9 @@ class EmisorDeCodigos(Protocol):
 
 
 class ProveedorIdentidad(Protocol):
-    def registrar(self, *, email: str, password: str, nombre: str) -> dict[str, Any]: ...
+    def registrar(
+        self, *, email: str, password: str, nombre: str, apellido: str | None = None
+    ) -> dict[str, Any]: ...
     def iniciar_sesion(self, *, email: str, password: str) -> dict[str, Any]: ...
     def refrescar(self, refresh_token: str) -> dict[str, Any]: ...
     def cerrar_sesion(self, access_token: str) -> None: ...
@@ -63,7 +71,10 @@ class AuthService:
         """
         try:
             respuesta = self._proveedor.registrar(
-                email=datos.email, password=datos.password, nombre=datos.nombre
+                email=datos.email,
+                password=datos.password,
+                nombre=datos.nombre,
+                apellido=datos.apellido,
             )
         except CuentaExistente:
             respuesta = {}
@@ -76,7 +87,11 @@ class AuthService:
 
     def iniciar_sesion(self, datos: InicioSesionIn) -> SesionEmitida:
         sesion = _sesion(self._proveedor.iniciar_sesion(email=datos.email, password=datos.password))
-        if self._estado_de(sesion.publica["usuario"]["id"]) == CUENTA_PENDIENTE:
+        estado = self._estado_de(sesion.publica["usuario"]["id"])
+        if estado == CUENTA_SUSPENDIDA:
+            self._revocar(sesion.publica["access_token"])
+            raise SinPermiso(MENSAJE_SUSPENDIDA)
+        if estado == CUENTA_PENDIENTE:
             self._revocar(sesion.publica["access_token"])
             raise ReglaNegocio(MENSAJE_SIN_CONFIRMAR, meta={"requiere_verificacion": True})
         return sesion
@@ -85,7 +100,10 @@ class AuthService:
         if not refresh_token:
             raise NoAutenticado(MENSAJE_SIN_SESION)
         sesion = _sesion(self._proveedor.refrescar(refresh_token))
-        if self._estado_de(sesion.publica["usuario"]["id"]) == CUENTA_PENDIENTE:
+        if self._estado_de(sesion.publica["usuario"]["id"]) in {
+            CUENTA_PENDIENTE,
+            CUENTA_SUSPENDIDA,
+        }:
             self._revocar(sesion.publica["access_token"])
             raise NoAutenticado(MENSAJE_SESION_VENCIDA)
         return sesion

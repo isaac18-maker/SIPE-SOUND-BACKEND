@@ -27,12 +27,14 @@
 
 ## Alcance
 **Incluye**
-1. Revisión `0024_apellido_y_permiso_nombre` (esquema):
+1. Revisión `0023_apellido_y_permiso_nombre` (esquema; el número se recalculó al implementar):
    - `profiles.apellido text null` con los CHECK del nombre (2–80, sin caracteres de control).
    - `profiles.puede_editar_nombre boolean not null default false`.
    - `handle_new_user()` copia y normaliza `raw_user_meta_data->>'apellido'` igual que el nombre
      (si no viene o no cumple, `null`).
 2. `RegistroIn` agrega `apellido` (mismas reglas que `nombre`) y lo envía a Supabase en `data`.
+   **Opcional por ahora** (contrato 07: el backend se despliega primero y no rompe al frontend
+   vigente, cuyo formulario no envía apellido); pasa a obligatorio cuando HU-F-403 lo incluya.
 3. `GET /me` agrega `apellido` y `puede_editar_nombre`.
 4. `PATCH /me` 🎓🧑‍🏫🛡️: `{nombre?, apellido?}` → 403 "El administrador no ha habilitado el cambio de
    nombre en tu cuenta." si `puede_editar_nombre` es `false` (los admins siempre pueden).
@@ -41,8 +43,11 @@
    - `PATCH /admin/usuarios/{id}/permisos` `{puede_editar_nombre: bool}`.
    - `POST /admin/usuarios/permisos` `{usuario_ids: [...] (1–100), puede_editar_nombre: bool}` →
      `{actualizados: N}`. Ids inexistentes se ignoran y se informan en `meta.no_encontrados`.
-   - Ambos registran `permiso_nombre` en `acciones_admin` (B-405).
-6. `GET /admin/usuarios` (B-405) incluye `apellido` y `puede_editar_nombre`, con filtro `?puede_editar_nombre=`.
+   - Ambos escriben en el log de la aplicación (admin, valor y cuántas cuentas). **No** pueden
+     registrar `permiso_nombre` en `acciones_admin` porque esa tabla la crea HU-B-405, que depende
+     de esta: HU-B-405 agrega ese registro.
+6. `GET /admin/usuarios` (HU-B-405) incluye `apellido` y `puede_editar_nombre`, con filtro
+   `?puede_editar_nombre=`.
 7. Listados del docente (`EstudianteCursoOut`) agregan `apellido`.
 8. Contrato 04 §4.1.1, §4.4, §5, §7 (`apellido`).
 

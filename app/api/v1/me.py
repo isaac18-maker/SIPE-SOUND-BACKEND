@@ -11,6 +11,7 @@ from app.schemas.cuenta import (
     ConfirmarReautenticacionIn,
     ReautenticacionIn,
 )
+from app.schemas.perfil import PerfilEditarIn
 
 bp = Blueprint("me", __name__)
 
@@ -23,6 +24,17 @@ INTENTOS_POR_MINUTO = "10 per minute"
 @auth_required
 def mi_perfil():
     return ok(perfil_service().mi_perfil(get_current_user()))
+
+
+@bp.patch("/me")
+@auth_required
+@limiter.limit(INTENTOS_POR_MINUTO, key_func=por_usuario)
+def editar_mi_nombre():
+    """Cambia el nombre y/o el apellido. Solo si un administrador habilito el permiso en esta
+    cuenta (los administradores siempre pueden); si no, 403. Cualquier otro campo es un 400."""
+    datos = PerfilEditarIn.model_validate(request.get_json(silent=True) or {})
+    perfil = perfil_service().editar_nombre(get_current_user(), datos.cambios())
+    return ok(perfil, mensaje="Listo, actualizamos tu nombre.")
 
 
 @bp.post("/me/reautenticacion")

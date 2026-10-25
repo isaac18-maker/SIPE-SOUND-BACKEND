@@ -7,6 +7,8 @@
 
 # Personas y cuentas
 NOMBRE_PERSONA_MIN, NOMBRE_PERSONA_MAX = 2, 80
+# El apellido tiene los mismos limites que el nombre (HU-B-407).
+APELLIDO_PERSONA_MIN, APELLIDO_PERSONA_MAX = NOMBRE_PERSONA_MIN, NOMBRE_PERSONA_MAX
 EMAIL_MAX = 254  # RFC 5321
 PASSWORD_MIN, PASSWORD_MAX = 8, 72  # 72: limite de bcrypt en Supabase Auth
 

@@ -103,6 +103,10 @@ class CodigoService:
             return None
         return abierto["usuario_id"]
 
+    def invalidar(self, sesion: Any, usuario_id: str, proposito: str) -> None:
+        """Deja sin efecto el codigo abierto (p. ej. tras verificar a mano)."""
+        self._codigos.invalidar_abiertos(sesion, usuario_id, proposito)
+
     def hay_espera(
         self,
         sesion: Any,

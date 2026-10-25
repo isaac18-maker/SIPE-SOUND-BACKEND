@@ -45,10 +45,13 @@ MENSAJE_CONTRASENA_DEBIL = (
 
 
 class ClienteSupabaseAuth:
-    def registrar(self, *, email: str, password: str, nombre: str) -> dict[str, Any]:
-        """Supabase envia el correo de confirmacion. El trigger handle_new_user crea el
-        perfil con rol 'estudiante' (o 'docente' si el correo esta preautorizado)."""
-        cuerpo = {"email": email, "password": password, "data": {"nombre": nombre}}
+    def registrar(
+        self, *, email: str, password: str, nombre: str, apellido: str | None = None
+    ) -> dict[str, Any]:
+        """El trigger handle_new_user crea el perfil con rol 'estudiante' (o 'docente' si el
+        correo esta preautorizado y se verifica) y copia nombre y apellido."""
+        datos = {"nombre": nombre, **({"apellido": apellido} if apellido else {})}
+        cuerpo = {"email": email, "password": password, "data": datos}
         return self._enviar("signup", cuerpo)
 
     def iniciar_sesion(self, *, email: str, password: str) -> dict[str, Any]:

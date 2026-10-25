@@ -13,7 +13,7 @@ import jwt
 from flask import Flask, current_app, g, request
 
 from app.core.config import get_settings
-from app.core.constants import CUENTA_PENDIENTE
+from app.core.constants import CUENTA_PENDIENTE, CUENTA_SUSPENDIDA, MENSAJE_SUSPENDIDA
 from app.core.errors import NoAutenticado, SinPermiso
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def auth_required(f: Callable) -> Callable:
     def decorador(*args, **kwargs):
         token = _extraer_token(request.headers.get("Authorization", ""))
         reclamos = _decodificar(token)
-        _exigir_cuenta_verificada(reclamos["sub"])
+        _exigir_cuenta_activa(reclamos["sub"])
         g.current_user = _usuario(reclamos, token)
         return f(*args, **kwargs)
 
@@ -70,7 +70,7 @@ def usuario_opcional() -> CurrentUser | None:
         return None
     token = _extraer_token(cabecera)
     reclamos = _decodificar(token)
-    _exigir_cuenta_verificada(reclamos["sub"])
+    _exigir_cuenta_activa(reclamos["sub"])
     g.current_user = _usuario(reclamos, token)
     return g.current_user
 
@@ -85,11 +85,15 @@ def configurar_proveedor_estado(app: Flask, proveedor: ProveedorEstado) -> None:
     app.extensions[CLAVE_PROVEEDOR_ESTADO] = proveedor
 
 
-def _exigir_cuenta_verificada(usuario_id: str) -> None:
-    """Un token de Supabase es publico: nadie que no haya verificado su correo usa la API,
-    aunque lo pida directo al proveedor de identidad (HU-B-402)."""
+def _exigir_cuenta_activa(usuario_id: str) -> None:
+    """Un token de Supabase es publico: nadie que no haya verificado su correo (HU-B-402) ni
+    cuya cuenta este suspendida (HU-B-405) usa la API, aunque pida el token directo al
+    proveedor de identidad."""
     proveedor = current_app.extensions.get(CLAVE_PROVEEDOR_ESTADO)
-    if proveedor is not None and proveedor(usuario_id) == ESTADO_PENDIENTE:
+    estado = proveedor(usuario_id) if proveedor is not None else None
+    if estado == CUENTA_SUSPENDIDA:
+        raise SinPermiso(MENSAJE_SUSPENDIDA)
+    if estado == ESTADO_PENDIENTE:
         raise SinPermiso(MENSAJE_SIN_VERIFICAR)
 
 
