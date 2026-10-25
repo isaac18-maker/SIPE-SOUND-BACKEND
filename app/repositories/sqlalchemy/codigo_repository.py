@@ -76,6 +76,23 @@ class SqlCodigoRepository:
         fila = sesion.scalar(consulta)
         return a_fila(fila) if fila else None
 
+    def obtener_abierto_por_hash(
+        self, sesion: Session, proposito: str, codigo_hash: str
+    ) -> Fila | None:
+        """Para tokens largos (enlaces): el token identifica a la persona. Bloquea la fila."""
+        consulta = (
+            select(Codigo)
+            .where(
+                Codigo.proposito == proposito,
+                Codigo.codigo_hash == codigo_hash,
+                Codigo.expira_en > func.now(),
+                *ABIERTO,
+            )
+            .with_for_update()
+        )
+        fila = sesion.scalar(consulta)
+        return a_fila(fila) if fila else None
+
     def registrar_fallo(self, sesion: Session, codigo_id: str) -> None:
         """Suma un intento; al llegar al maximo el codigo se invalida."""
         sesion.execute(

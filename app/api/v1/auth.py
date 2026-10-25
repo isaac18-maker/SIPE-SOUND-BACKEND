@@ -1,11 +1,18 @@
 from flask import Blueprint, Response, request
 
-from app.container import auth_service, verificacion_service
+from app.container import auth_service, recuperacion_service, verificacion_service
 from app.core.config import get_settings
 from app.core.errors import ValidacionError
 from app.core.limites import limiter
 from app.core.responses import PREFIJO_V1, created, ok
-from app.schemas.auth import InicioSesionIn, ReenvioVerificacionIn, RegistroIn, VerificacionIn
+from app.schemas.auth import (
+    InicioSesionIn,
+    OlvidoContrasenaIn,
+    ReenvioVerificacionIn,
+    RegistroIn,
+    RestablecerContrasenaIn,
+    VerificacionIn,
+)
 from app.services.auth_service import SesionEmitida
 
 bp = Blueprint("auth", __name__)
@@ -16,6 +23,8 @@ INICIOS_POR_IP = "30 per minute"
 RENOVACIONES_POR_IP = "60 per minute"
 VERIFICACIONES_POR_IP = "10 per minute"
 REENVIOS_POR_IP = "5 per hour"
+OLVIDOS_POR_IP = "5 per hour"
+RESTABLECIMIENTOS_POR_IP = "10 per minute"
 
 # El refresh token solo viaja en esta cookie: httpOnly (JavaScript no la lee) y limitada
 # a las rutas de autenticacion (no acompana al resto de peticiones).
@@ -62,6 +71,37 @@ def reenviar_verificacion():
     datos = ReenvioVerificacionIn.model_validate(request.get_json(silent=True) or {})
     verificacion_service().enviar_codigo(datos.email)
     return ok(None, mensaje="Si el correo tiene una cuenta pendiente, te enviamos un código nuevo.")
+
+
+@bp.post("/auth/contrasena/olvido")
+@limiter.limit(OLVIDOS_POR_IP)
+def olvido_contrasena():
+    """Envia un enlace (15 minutos, un solo uso) para crear una contrasena nueva.
+
+    Publico. Siempre 200 con el mismo texto: no revela si el correo tiene cuenta. Solo se
+    envia a cuentas con el correo verificado; 1 enlace cada 2 minutos por cuenta.
+    """
+    datos = OlvidoContrasenaIn.model_validate(request.get_json(silent=True) or {})
+    recuperacion_service().pedir_enlace(datos.email)
+    return ok(
+        None,
+        mensaje=(
+            "Si el correo tiene una cuenta, te enviamos un enlace para crear una contraseña "
+            "nueva. Vence en 15 minutos."
+        ),
+    )
+
+
+@bp.post("/auth/contrasena/restablecer")
+@limiter.limit(RESTABLECIMIENTOS_POR_IP)
+def restablecer_contrasena():
+    """Fija la contrasena nueva con el token del enlace y cierra todas las sesiones.
+
+    Publico. Un token vencido, usado o inexistente responde 422 con el mismo texto.
+    """
+    datos = RestablecerContrasenaIn.model_validate(request.get_json(silent=True) or {})
+    recuperacion_service().restablecer(datos.token, datos.password)
+    return ok(None, mensaje="Listo. Ya puedes iniciar sesión con tu contraseña nueva.")
 
 
 @bp.post("/auth/sesion")

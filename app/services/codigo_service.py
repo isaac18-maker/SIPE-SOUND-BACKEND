@@ -19,6 +19,8 @@ from app.core.constants import (
 )
 from app.repositories.base import RepositorioCodigos
 
+TOKEN_BYTES = 32
+
 
 class CodigoService:
     def __init__(self, codigos: RepositorioCodigos, secreto: bytes) -> None:
@@ -57,11 +59,47 @@ class CodigoService:
             return False
         return self._codigos.consumir(sesion, abierto["id"])
 
-    def hay_espera(self, sesion: Any, usuario_id: str, proposito: str) -> bool:
-        """True si ya se emitio uno hace menos de un minuto (limite por cuenta)."""
-        return self._codigos.hay_reciente(
-            sesion, usuario_id, proposito, segundos=CODIGO_ESPERA_SEGUNDOS
+    def emitir_token(
+        self, sesion: Any, usuario_id: str, proposito: str, email_destino: str | None = None
+    ) -> str:
+        """Token largo para enlaces (32 bytes, 43 caracteres base64url). Es inadivinable, asi
+        que no cuenta intentos: se busca por su hash y el propio token identifica a la persona."""
+        token = secrets.token_urlsafe(TOKEN_BYTES)
+        self._codigos.invalidar_abiertos(sesion, usuario_id, proposito)
+        self._codigos.crear(
+            sesion,
+            usuario_id=usuario_id,
+            proposito=proposito,
+            codigo_hash=self._hash_token(proposito, token),
+            email_destino=email_destino,
+            vigencia_min=VIGENCIA_CODIGO_MIN[proposito],
         )
+        return token
+
+    def consumir_token(self, sesion: Any, proposito: str, token: str) -> str | None:
+        """Id de la persona dueña del token si era el vigente (y ya no podra usarse otra vez);
+        None si no existe, vencio, fue reemplazado o ya se uso."""
+        abierto = self._codigos.obtener_abierto_por_hash(
+            sesion, proposito, self._hash_token(proposito, token)
+        )
+        if abierto is None or not self._codigos.consumir(sesion, abierto["id"]):
+            return None
+        return abierto["usuario_id"]
+
+    def hay_espera(
+        self,
+        sesion: Any,
+        usuario_id: str,
+        proposito: str,
+        *,
+        segundos: int = CODIGO_ESPERA_SEGUNDOS,
+    ) -> bool:
+        """True si ya se emitio uno hace menos de `segundos` (limite por cuenta)."""
+        return self._codigos.hay_reciente(sesion, usuario_id, proposito, segundos=segundos)
+
+    def _hash_token(self, proposito: str, token: str) -> str:
+        # Sin usuario_id: el token es lo unico que llega en el enlace. El proposito si va.
+        return hmac.new(self._secreto, f"{proposito}:{token}".encode(), hashlib.sha256).hexdigest()
 
     def _hash(self, usuario_id: str, proposito: str, codigo: str) -> str:
         # El proposito y la persona van dentro del hash: un codigo no sirve para otro fin.

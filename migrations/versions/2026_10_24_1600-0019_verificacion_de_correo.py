@@ -185,6 +185,13 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("usado_en IS NULL AND invalidado_en IS NULL"),
     )
+    # Los enlaces (HU-B-403) se buscan por su hash: indice parcial, solo sobre codigos abiertos.
+    op.create_index(
+        "ix_codigos_verificacion_hash_abierto",
+        TABLA,
+        ["codigo_hash"],
+        postgresql_where=sa.text("usado_en IS NULL AND invalidado_en IS NULL"),
+    )
     op.execute(f"alter table public.{TABLA} enable row level security")
 
     # El rol docente se aplica al verificar el correo con NUESTRO codigo.

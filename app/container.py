@@ -54,6 +54,7 @@ from app.services.gestion_evaluacion_service import GestionEvaluacionService
 from app.services.leccion_service import LeccionService
 from app.services.perfil_service import AdminUsuariosService, PerfilService, estado_de_cuenta
 from app.services.progreso_service import ProgresoService
+from app.services.recuperacion_service import RecuperacionService
 from app.services.ruta_service import RutaService
 from app.services.verificacion_service import VerificacionService
 
@@ -221,6 +222,17 @@ def codigo_service() -> CodigoService:
 def verificacion_service() -> VerificacionService:
     return VerificacionService(
         session_scope, SqlCuentaRepository(), codigo_service(), correo_service()
+    )
+
+
+@lru_cache
+def recuperacion_service() -> RecuperacionService:
+    return RecuperacionService(
+        session_scope,
+        SqlCuentaRepository(),
+        codigo_service(),
+        correo_service(),
+        origen_frontend=get_settings().origen_frontend,
     )
 
 

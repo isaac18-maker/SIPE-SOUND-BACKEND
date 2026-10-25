@@ -72,6 +72,8 @@ CODIGO_DIGITOS = 6
 CODIGO_INTENTOS_MAX = 5
 # Entre un codigo y el siguiente para la misma cuenta (evita llenar la bandeja de alguien).
 CODIGO_ESPERA_SEGUNDOS = 60
+# Entre un enlace de restablecimiento y el siguiente para la misma cuenta (HU-B-403).
+RECUPERACION_ESPERA_SEGUNDOS = 120
 
 MENSAJE_SIN_CONFIRMAR = (
     "Aún no confirmas tu correo. Escribe el código de 6 dígitos que te enviamos o pide uno nuevo."

@@ -182,6 +182,11 @@ class Settings(BaseSettings):
         return "archivo" if self.app_env == "local" else "smtp"
 
     @property
+    def origen_frontend(self) -> str:
+        """Base de los enlaces de los correos: URL_FRONTEND o, sin ella, el primer origen CORS."""
+        return self.url_frontend or self.cors_origins[0]
+
+    @property
     def remitente_correo(self) -> str | None:
         return self.correo_remitente or self.smtp_usuario
 
