@@ -89,7 +89,7 @@ Leyenda de acceso: 🌐 público · 🎓 estudiante · 🧑‍🏫 docente · �
 | GET | `/bloques` | 🌐 | Lista ordenada por `orden_index`. |
 | GET | `/lecciones` | 🌐 | Lista ordenada por `numero`. |
 | GET | `/lecciones/{id}` | 🌐 | Detalle. |
-| GET | `/ejercicios` | 🌐 | Lista. |
+| GET | `/ejercicios` | 🌐 | Ejercicios publicados, por `id`. **Con sesión** (HU-B-501) cada uno trae `mi_progreso`: `{estado: "sin_iniciar"\|"en_curso"\|"finalizado", mejor_bpm, ultimo_registro}` (`finalizado` si lo completó; `en_curso` si hay un registro, por ejemplo un BPM guardado, sin completar; `sin_iniciar` si no hay fila). Sin sesión el campo no viene y la respuesta es la de siempre. `?estado=` (solo con sesión; sin ella se ignora) y `?leccion_id=` filtran; un parámetro desconocido se ignora. Una sola consulta (`LEFT JOIN`). |
 | GET | `/acordes` | 🌐 | Lista con `diagram` (`frets`, `fingers`, `baseFret`, `barre`). |
 
 ### 4.1.1 Cuentas y sesión (HU-B-321, HU-B-322)

@@ -23,7 +23,9 @@ class LectorLecciones(Protocol):
 
 
 class LectorEjercicios(Protocol):
-    def listar(self) -> list[Fila]: ...
+    def listar(
+        self, *, estudiante_id: str | None = None, leccion_id: int | None = None
+    ) -> list[Fila]: ...
 
 
 class LectorAcordes(Protocol):
