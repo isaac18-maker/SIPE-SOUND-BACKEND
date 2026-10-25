@@ -13,6 +13,7 @@ from sqlalchemy.engine import make_url
 
 ENTORNO_PRODUCCION = "production"
 HOSTS_LOCALES = {"localhost", "127.0.0.1", "::1"}
+LARGO_MINIMO_SECRETO = 32
 
 
 class Settings(BaseSettings):
@@ -41,6 +42,9 @@ class Settings(BaseSettings):
     # La usan la app y Alembic. Contiene la contrasena: es secreta (HU-B-315).
     database_url: SecretStr
     sqlalchemy_echo: bool = False
+    # Clave del HMAC con que se guardan los codigos de verificacion (HU-B-402). Solo se
+    # guarda el hash: robar la tabla no basta para usar un codigo. Secreta, 32+ caracteres.
+    codigos_secreto: SecretStr
     # Correo saliente (HU-B-401). Sin CORREO_MODO: "archivo" en local y "smtp" fuera de local.
     correo_modo: Literal["smtp", "archivo"] | None = None
     smtp_host: str = "smtp.gmail.com"
@@ -72,6 +76,13 @@ class Settings(BaseSettings):
         """Una variable del .env sin valor (SMTP_USUARIO=) cuenta como no definida."""
         if isinstance(valor, str):
             return valor.strip() or None
+        return valor
+
+    @field_validator("codigos_secreto")
+    @classmethod
+    def exigir_secreto_largo(cls, valor: SecretStr) -> SecretStr:
+        if len(valor.get_secret_value()) < LARGO_MINIMO_SECRETO:
+            raise ValueError(f"debe tener al menos {LARGO_MINIMO_SECRETO} caracteres")
         return valor
 
     @field_validator("auth_cookie_samesite", mode="before")

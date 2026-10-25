@@ -54,6 +54,33 @@ TIPOS_CORREO = (
     CORREO_CAMBIAR_CORREO,
     CORREO_CORREO_CAMBIADO,
 )
+# Codigos de verificacion (HU-B-402): proposito -> minutos de vigencia. Nunca mas de 15.
+PROPOSITO_VERIFICAR_CORREO = "verificar_correo"
+PROPOSITO_RESTABLECER = "restablecer_contrasena"
+PROPOSITO_REAUTENTICAR = "reautenticar"
+PROPOSITO_REAUTENTICADO = "reautenticado"
+PROPOSITO_CAMBIAR_CORREO = "cambiar_correo"
+VIGENCIA_CODIGO_MIN = {
+    PROPOSITO_VERIFICAR_CORREO: 15,
+    PROPOSITO_RESTABLECER: 15,
+    PROPOSITO_REAUTENTICAR: 10,
+    PROPOSITO_REAUTENTICADO: 5,
+    PROPOSITO_CAMBIAR_CORREO: 15,
+}
+PROPOSITOS_CODIGO = tuple(VIGENCIA_CODIGO_MIN)
+CODIGO_DIGITOS = 6
+CODIGO_INTENTOS_MAX = 5
+# Entre un codigo y el siguiente para la misma cuenta (evita llenar la bandeja de alguien).
+CODIGO_ESPERA_SEGUNDOS = 60
+
+MENSAJE_SIN_CONFIRMAR = (
+    "Aún no confirmas tu correo. Escribe el código de 6 dígitos que te enviamos o pide uno nuevo."
+)
+
+# Estado de una cuenta (se calcula, no se guarda).
+CUENTA_PENDIENTE = "pendiente_verificacion"
+CUENTA_ACTIVA = "activa"
+
 ENVIO_ENVIADO = "enviado"
 ENVIO_FALLIDO = "fallido"
 ESTADOS_ENVIO = (ENVIO_ENVIADO, ENVIO_FALLIDO)

@@ -13,8 +13,10 @@ from typing import Any
 from urllib import error, parse, request
 
 from app.core.config import get_settings
+from app.core.constants import MENSAJE_SIN_CONFIRMAR
 from app.core.errors import (
     AppError,
+    CuentaExistente,
     DemasiadasSolicitudes,
     NoAutenticado,
     ReglaNegocio,
@@ -36,9 +38,6 @@ CODIGOS_REFRESCO_INVALIDO = {
     "session_expired",
 }
 MENSAJE_CREDENCIALES = "El correo o la contraseña no coinciden. Revísalos e inténtalo de nuevo."
-MENSAJE_SIN_CONFIRMAR = (
-    "Aún no confirmas tu correo. Abre el mensaje que te enviamos y confirma tu cuenta."
-)
 MENSAJE_SESION_VENCIDA = "Tu sesión terminó. Inicia sesión de nuevo."
 MENSAJE_CONTRASENA_DEBIL = (
     "La contraseña es demasiado débil. Usa al menos 8 caracteres con letras y números."
@@ -129,7 +128,13 @@ def _traducir(ruta: str, fallo: error.HTTPError) -> AppError:
 
 # Codigo de error de Supabase -> error de la API con mensaje para la persona.
 ERRORES_POR_CODIGO: dict[str, Callable[[], AppError]] = {
-    "email_not_confirmed": lambda: ReglaNegocio(MENSAJE_SIN_CONFIRMAR),
+    "email_not_confirmed": lambda: ReglaNegocio(
+        MENSAJE_SIN_CONFIRMAR, meta={"requiere_verificacion": True}
+    ),
+    # Con "Confirm email" desactivado Supabase avisa que el correo ya existe; el registro lo
+    # absorbe para no revelar que cuentas existen.
+    "user_already_exists": CuentaExistente,
+    "email_exists": CuentaExistente,
     "weak_password": lambda: ValidacionError(MENSAJE_CONTRASENA_DEBIL),
     **dict.fromkeys(CODIGOS_CREDENCIALES, lambda: NoAutenticado(MENSAJE_CREDENCIALES)),
     **dict.fromkeys(CODIGOS_REFRESCO_INVALIDO, lambda: NoAutenticado(MENSAJE_SESION_VENCIDA)),

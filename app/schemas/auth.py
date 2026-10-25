@@ -12,6 +12,7 @@ from app.core.longitudes import (
 )
 
 PATRON_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+PATRON_CODIGO = re.compile(r"\d{6}")
 # Letras (con tildes y ene), separadas por espacio, apostrofo, punto o guion: "Ana María", "O'Neil".
 PATRON_NOMBRE = re.compile(r"[^\W\d_]+(?:[ '.\-]+[^\W\d_]+)*\.?")
 
@@ -35,6 +36,34 @@ class InicioSesionIn(BaseModel):
     password: str = Field(min_length=1, max_length=PASSWORD_MAX)
 
     _email = field_validator("email", mode="before")(_normalizar_email)
+
+
+class ReenvioVerificacionIn(BaseModel):
+    """Pedir otro codigo de verificacion (HU-B-402)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(max_length=EMAIL_MAX)
+
+    _email = field_validator("email", mode="before")(_normalizar_email)
+
+
+class VerificacionIn(ReenvioVerificacionIn):
+    """Correo + codigo de 6 digitos (se aceptan espacios: "482 913")."""
+
+    codigo: str
+
+    @field_validator("codigo", mode="before")
+    @classmethod
+    def limpiar_codigo(cls, valor: object) -> object:
+        return "".join(valor.split()) if isinstance(valor, str) else valor
+
+    @field_validator("codigo")
+    @classmethod
+    def solo_digitos(cls, valor: str) -> str:
+        if not PATRON_CODIGO.fullmatch(valor):
+            raise PydanticCustomError("valor_invalido", "El código tiene 6 dígitos.")
+        return valor
 
 
 class RegistroIn(BaseModel):

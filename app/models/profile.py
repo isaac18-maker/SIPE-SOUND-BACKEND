@@ -41,3 +41,6 @@ class Profile(CreadoEnMixin, Base):
     actualizado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    # Lo llena el backend al verificar el codigo enviado al correo (HU-B-402). Nulo = la
+    # cuenta no puede iniciar sesion ni usar la API.
+    correo_verificado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -7,6 +7,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 
+from flask import g, has_app_context
 from sqlalchemy import exists
 
 from app.core.config import get_settings
@@ -20,10 +21,12 @@ from app.models.leccion import Leccion
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
 from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
+from app.repositories.sqlalchemy.codigo_repository import SqlCodigoRepository
 from app.repositories.sqlalchemy.contenido_repository import (
     SqlCatalogoRepository,
     SqlContenidoRepository,
 )
+from app.repositories.sqlalchemy.cuenta_repository import SqlCuentaRepository
 from app.repositories.sqlalchemy.curso_repository import SqlCursoRepository
 from app.repositories.sqlalchemy.docente_repository import SqlDocenteRepository
 from app.repositories.sqlalchemy.ejercicio_repository import SqlEjercicioRepository
@@ -40,6 +43,7 @@ from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRep
 from app.services.acorde_service import AcordeService
 from app.services.auth_service import AuthService
 from app.services.bloque_service import BloqueService
+from app.services.codigo_service import CodigoService
 from app.services.contenido_service import ContenidoService
 from app.services.correo_service import MARCA, CorreoService, Enviador
 from app.services.curso_service import CursoService
@@ -48,9 +52,10 @@ from app.services.ejercicio_service import EjercicioService
 from app.services.evaluacion_service import EvaluacionService
 from app.services.gestion_evaluacion_service import GestionEvaluacionService
 from app.services.leccion_service import LeccionService
-from app.services.perfil_service import AdminUsuariosService, PerfilService
+from app.services.perfil_service import AdminUsuariosService, PerfilService, estado_de_cuenta
 from app.services.progreso_service import ProgresoService
 from app.services.ruta_service import RutaService
+from app.services.verificacion_service import VerificacionService
 
 
 @lru_cache
@@ -118,8 +123,25 @@ def docente_service() -> DocenteService:
     return DocenteService(session_scope, SqlDocenteRepository())
 
 
+def _perfil_en_peticion(usuario_id: str) -> dict | None:
+    """El perfil se lee una vez por peticion: auth_required (estado) y roles_required (rol)
+    consultan a la misma persona y comparten la lectura."""
+    if not has_app_context():
+        return perfil_service().perfil_de(usuario_id)
+    perfiles = g.setdefault("perfiles_en_peticion", {})
+    if usuario_id not in perfiles:
+        perfiles[usuario_id] = perfil_service().perfil_de(usuario_id)
+    return perfiles[usuario_id]
+
+
 def rol_de_usuario(usuario_id: str) -> str | None:
-    return perfil_service().rol_de(usuario_id)
+    """El rol sale de la base, nunca del token: el usuario puede editar su user_metadata."""
+    perfil = _perfil_en_peticion(usuario_id)
+    return perfil["rol"] if perfil else None
+
+
+def estado_de_usuario(usuario_id: str) -> str | None:
+    return estado_de_cuenta(_perfil_en_peticion(usuario_id))
 
 
 # --- Contenido editable (HU-B-309): un servicio generico configurado por tipo ---
@@ -190,8 +212,21 @@ def gestion_evaluacion_service() -> GestionEvaluacionService:
 
 
 @lru_cache
+def codigo_service() -> CodigoService:
+    secreto = get_settings().codigos_secreto.get_secret_value().encode()
+    return CodigoService(SqlCodigoRepository(), secreto)
+
+
+@lru_cache
+def verificacion_service() -> VerificacionService:
+    return VerificacionService(
+        session_scope, SqlCuentaRepository(), codigo_service(), correo_service()
+    )
+
+
+@lru_cache
 def auth_service() -> AuthService:
-    return AuthService(ClienteSupabaseAuth())
+    return AuthService(ClienteSupabaseAuth(), verificacion_service(), estado_de_usuario)
 
 
 # --- Correo saliente (HU-B-401) ---

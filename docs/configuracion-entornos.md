@@ -20,6 +20,7 @@ Qué valor poner en cada variable del backend, en **local** (tu computador) y en
 | `SMTP_USUARIO` | opcional con `archivo`; la cuenta de Gmail con `smtp` | cuenta de Gmail que envía | No |
 | `SMTP_CLAVE_APLICACION` | opcional con `archivo` | contraseña de aplicación de Gmail | **Sí** |
 | `URL_FRONTEND` | `http://localhost:5173` | URL pública del frontend (igual a `CORS_ORIGINS`) | No |
+| `CODIGOS_SECRETO` | cadena aleatoria de 32+ caracteres | otra distinta, 32+ caracteres | **Sí** |
 | `DATABASE_URL` | Session pooler del proyecto que uses | Session pooler del proyecto de producción | **Sí** |
 | `SQLALCHEMY_ECHO` | `0` (o `1` solo para depurar) | `0` | No |
 
@@ -35,6 +36,7 @@ SUPABASE_URL=https://<proyecto>.supabase.co
 SUPABASE_ANON_KEY=<anon-o-publishable-key>
 AUTH_COOKIE_SECURE=
 AUTH_COOKIE_SAMESITE=Lax
+CODIGOS_SECRETO=<cadena-aleatoria-de-32-o-más-caracteres>
 CORREO_MODO=archivo
 URL_FRONTEND=http://localhost:5173
 DATABASE_URL=postgresql://postgres.<proyecto>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
@@ -51,6 +53,7 @@ SUPABASE_URL=https://<proyecto>.supabase.co
 SUPABASE_ANON_KEY=<anon-o-publishable-key>
 AUTH_COOKIE_SECURE=1
 AUTH_COOKIE_SAMESITE=Lax
+CODIGOS_SECRETO=<otra-cadena-aleatoria-de-32-o-más-caracteres>
 CORREO_MODO=smtp
 SMTP_USUARIO=<cuenta-de-gmail>
 SMTP_CLAVE_APLICACION=<contraseña-de-aplicación>
@@ -147,6 +150,17 @@ frontend lo guarda **solo en memoria**.
 > Abre el frontend y la API con el **mismo nombre de host** en local (`localhost` en ambos).
 > `localhost` y `127.0.0.1` son sitios distintos para el navegador y la cookie no viajaría.
 
+### `CODIGOS_SECRETO` 🔒 (HU-B-402)
+Clave del HMAC-SHA256 con que se guardan los códigos de verificación (registro, restablecer
+contraseña, cambio de correo). En la base solo queda el hash: quien robe la tabla no puede usar
+ningún código sin esta clave.
+
+- **Cómo crearla:** `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+- **Obligatoria** (mínimo 32 caracteres): sin ella la app, Alembic y los scripts no arrancan y el
+  error nombra `CODIGOS_SECRETO`. Usa una distinta en cada entorno.
+- Cambiarla invalida los códigos pendientes: quienes los pidieron tendrán que pedir uno nuevo.
+- Solo en el `.env` o en los secretos del servidor; nunca en git, el frontend ni el chat.
+
 ### Correo saliente: `CORREO_MODO`, `SMTP_*`, `CORREO_*` y `URL_FRONTEND` (HU-B-401)
 El backend envía sus propios correos (código de verificación, enlace para restablecer la
 contraseña y avisos de seguridad) por el SMTP de Gmail, con `smtplib` y STARTTLS.
@@ -192,16 +206,18 @@ HU-B-322, ahora para Supabase Auth (no para la API REST). El único secreto sigu
 ### Configuración de cuentas en Supabase (no son variables del backend)
 Desde HU-B-322 el registro y el inicio de sesión pasan por el backend (`/auth/*`), que llama a
 Supabase Auth. En el panel de Supabase:
-- Authentication → Providers → Email: **Confirm email activado** (obligatorio: el rol docente
-  se asigna al confirmar el correo) y contraseña mínima 8 con letras y dígitos.
-- Authentication → URL Configuration → **Site URL**: `<url-del-frontend>/login` (a donde vuelve
-  la persona desde el correo de confirmación; el backend no envía `redirect_to`).
+- Authentication → Providers → Email: **Confirm email DESACTIVADO** (HU-B-402): el correo con el
+  código lo envía el backend. ⚠️ Desactívalo **después** de aplicar las migraciones 0019 y 0020 y
+  desplegar la API, nunca antes: la 0019 mueve la asignación del rol docente a la verificación del
+  código; sin ella, quien se registre con un correo preautorizado ajeno sería docente.
+  Contraseña mínima 8 con letras y dígitos.
+- Authentication → URL Configuration → **Site URL**: `<url-del-frontend>/login` (ya no se usa
+  para confirmar cuentas; déjala por si Supabase envía otros correos).
 - Authentication → URL Configuration → *Redirect URLs*: `<url-del-frontend>/login`.
 - Project Settings → Data API: con el frontend fuera de Supabase, nadie necesita la API REST
   pública. Mantén **RLS activado** en todas las tablas de `public` (o quita `public` de
   *Exposed schemas*): la clave pública sigue existiendo y RLS es lo que impide leer tablas con ella.
-- ⚠️ El correo incluido en Supabase envía **muy pocos correos por hora**. Para un salón
-  completo, configura un SMTP propio en Authentication → Emails → SMTP Settings.
+- Los correos ya no salen de Supabase sino del SMTP de Gmail del backend (ver `CORREO_MODO`).
 
 ### `SQLALCHEMY_ECHO`
 Si es `1`, escribe en el log **cada sentencia SQL con sus valores**.

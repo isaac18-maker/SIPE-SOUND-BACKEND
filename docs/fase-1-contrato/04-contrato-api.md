@@ -99,8 +99,10 @@ nunca la *service_role*). El frontend no usa `@supabase/supabase-js`.
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| POST | `/auth/registro` | 🌐 (20/h por IP) | `{nombre, email, password, acepta_terminos: true}` → 201 `{email, requiere_confirmacion: true}`. Misma respuesta exista o no el correo. |
-| POST | `/auth/sesion` | 🌐 (30/min por IP) | `{email, password}` → 200 `{access_token, token_type, expira_en, usuario: {id, email, nombre}}` + cookie `sipe_refresh`. 401 credenciales; 422 correo sin confirmar. |
+| POST | `/auth/registro` | 🌐 (20/h por IP) | `{nombre, email, password, acepta_terminos: true}` → 201 `{email, requiere_confirmacion: true}` y envía por correo un código de 6 dígitos (HU-B-402). Misma respuesta exista o no el correo. |
+| POST | `/auth/verificacion` | 🌐 (10/min por IP) | `{email, codigo}` → 200 `{email, verificado: true}`. El código (6 dígitos, se aceptan espacios) vence a los 15 min, sirve una vez y se invalida tras 5 intentos fallidos. Código errado, vencido, usado o correo sin cuenta → **el mismo** 422 `REGLA_NEGOCIO` "El código no es válido o ya venció. Pide uno nuevo." |
+| POST | `/auth/verificacion/reenviar` | 🌐 (5/h por IP; 1/min por cuenta) | `{email}` → siempre 200 "Si el correo tiene una cuenta pendiente, te enviamos un código nuevo." El código anterior deja de servir. |
+| POST | `/auth/sesion` | 🌐 (30/min por IP) | `{email, password}` → 200 `{access_token, token_type, expira_en, usuario: {id, email, nombre}}` + cookie `sipe_refresh`. 401 credenciales; 422 correo sin verificar (`meta.requiere_verificacion: true`, sin sesión ni cookie). |
 | POST | `/auth/sesion/renovar` | 🍪 (60/min por IP) | Cuerpo `{}` (JSON obligatorio). Usa la cookie, la **rota** y devuelve un nuevo `access_token` con la misma forma. 401 sin cookie o vencida. |
 | DELETE | `/auth/sesion` | 🍪 | Cuerpo `{}` (JSON obligatorio) y `Authorization: Bearer` opcional. Revoca el refresh token en Supabase y borra la cookie. Siempre 200. |
 
@@ -113,11 +115,14 @@ nunca la *service_role*). El frontend no usa `@supabase/supabase-js`.
 - **CSRF**: `renovar` y `DELETE /auth/sesion` exigen `Content-Type: application/json`
   (un formulario de otro sitio no puede enviarlo sin *preflight*, que CORS rechaza).
 - El rol **no** viaja en la sesión: se consulta con `GET /me`.
+- **Cuenta sin verificar** (HU-B-402): no inicia sesión ni renueva, y cualquier ruta 🎓🧑‍🏫🛡️ responde 403
+  "Confirma tu correo para continuar." aunque el `access_token` lo haya emitido Supabase directamente.
+  Supabase ya no envía correos de confirmación (*Confirm email* desactivado): los envía el backend.
 
 | Rol | Cómo entra |
 |---|---|
 | Estudiante | `POST /auth/registro`. El trigger `handle_new_user` crea el perfil con rol `estudiante` y normaliza el nombre. |
-| Docente | Un admin **preautoriza** su correo; la persona se registra como cualquiera y, al **confirmar** su correo, la base le asigna `docente`. Si ya tenía cuenta confirmada, el cambio es inmediato. |
+| Docente | Un admin **preautoriza** su correo; la persona se registra como cualquiera y, al **verificar** su correo con el código (`profiles.correo_verificado_en`), la base le asigna `docente`. Si ya tenía cuenta verificada, el cambio es inmediato. |
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
@@ -239,6 +244,7 @@ así que nombre, correo y contraseña se validan en el formulario, en la API y e
 | `email` (preautorizar docente) | correo | máx. 254; formato; se guarda en minúsculas (API) | CHECK en `docentes_preautorizados` |
 | `password` (registro) | contraseña | 8–72; al menos una letra y un número; **no** se recorta (formulario y API) | Supabase Auth (configurar mínimo 8, letras y dígitos) |
 | `password` (inicio de sesión) | contraseña | 1–72, sin mínimo por cuentas antiguas (formulario y API) | Supabase Auth |
+| `codigo` (verificar correo) | código | exactamente 6 dígitos; se quitan los espacios ("482 913") | `^[0-9a-f]{64}$` del HMAC; vigencia ≤ 15 min (CHECK) |
 | `acepta_terminos` | booleano | debe ser `true` (formulario y API, HU-B-323) → "Debes aceptar los términos y condiciones." | — |
 | `codigo` (unirse a curso) | código | exactamente 8; `A–Z` y `2–9` sin `0 O 1 I L`; se acepta en minúsculas y con espacios a los lados | `^[A-HJKMNP-Z2-9]{8}$` |
 | `cursos.nombre` | texto | 3–120 | 3–120 |

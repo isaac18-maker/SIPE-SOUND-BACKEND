@@ -3,6 +3,7 @@
 from app.models.acorde import Acorde
 from app.models.base import Base, auth_users
 from app.models.bloque import Bloque
+from app.models.codigo_verificacion import CodigoVerificacion
 from app.models.curso import Curso
 from app.models.curso_bloque import CursoBloque
 from app.models.docente_preautorizado import DocentePreautorizado
@@ -19,6 +20,7 @@ __all__ = [
     "Acorde",
     "Base",
     "Bloque",
+    "CodigoVerificacion",
     "Curso",
     "CursoBloque",
     "DocentePreautorizado",
