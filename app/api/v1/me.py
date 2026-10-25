@@ -7,9 +7,10 @@ from app.container import (
     terminos_pendientes_de,
     terminos_service,
 )
+from app.core.constants import ROL_ADMIN, ROL_DOCENTE, ROL_ESTUDIANTE
 from app.core.limites import limiter, por_usuario
 from app.core.responses import ok
-from app.core.security import auth_required, get_current_user
+from app.core.security import auth_required, get_current_user, roles_required
 from app.schemas.cuenta import (
     CambiarContrasenaIn,
     CambiarCorreoIn,
@@ -51,7 +52,9 @@ def editar_mi_nombre():
 
 
 @bp.post("/me/solicitud-nombre")
-@auth_required
+# roles_required carga el rol desde la base: con auth_required solo, el rol seria el del token y el
+# limite por hora (que se busca por rol) valdria 0, es decir, siempre 429.
+@roles_required(ROL_ESTUDIANTE, ROL_DOCENTE, ROL_ADMIN)
 @limiter.limit(SOLICITUDES_DE_NOMBRE_POR_HORA, key_func=por_usuario)
 def solicitar_cambio_de_nombre():
     """Un aviso a los administradores pidiendo que habiliten el cambio de nombre. Los
