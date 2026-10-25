@@ -169,7 +169,11 @@ class ProgresoDocenteService:
             if curso_id is not None:
                 self._cursos.curso_propio(sesion, usuario, curso_id, activo=True)  # 404 si es ajeno
             grupos = self._progreso.avance_de_la_seleccion(sesion, consulta)
-            actividad = self._progreso.actividad_por_dia(sesion, consulta, filtros["dias"])
+            actividad = [
+                # AAAA-MM-DD: Flask serializa un date como "Mon, 19 Oct 2026 00:00:00 GMT".
+                {**dia, "fecha": dia["fecha"].isoformat()}
+                for dia in self._progreso.actividad_por_dia(sesion, consulta, filtros["dias"])
+            ]
             evaluaciones = self._progreso.evaluaciones(sesion, consulta)
         distribucion, estados = _distribucion(grupos)
         return {
