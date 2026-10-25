@@ -1,8 +1,8 @@
 """quien modifico por ultima vez lecciones, ejercicios y evaluaciones
 
 HU: HU-B-412
-Revision ID: 0027
-Revises: 0026
+Revision ID: 0028
+Revises: 0027
 Create Date: 2026-10-25 22:00:00+00:00
 Tipo: esquema
 Destructiva: no
@@ -19,8 +19,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0027"
-down_revision: str | Sequence[str] | None = "0026"
+revision: str = "0028"
+down_revision: str | Sequence[str] | None = "0027"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

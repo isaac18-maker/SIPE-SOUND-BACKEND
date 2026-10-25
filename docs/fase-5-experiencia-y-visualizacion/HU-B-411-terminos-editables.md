@@ -16,7 +16,7 @@
 
 ## Alcance
 **Incluye**
-1. Tabla `documentos_legales` (migración 0026): texto en Markdown, `version`, `actualizado_por`
+1. Tabla `documentos_legales` (migración 0027): texto en Markdown, `version`, `actualizado_por`
    (SET NULL) y `actualizado_en`. Se siembra con el texto que estaba en el frontend (versión 1).
 2. `profiles.terminos_version` y `terminos_aceptados_en`. Las cuentas existentes quedan en la
    versión 1; las nuevas la reciben al verificar su correo (el registro ya exige la casilla).
