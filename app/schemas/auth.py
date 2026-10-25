@@ -136,11 +136,8 @@ class RegistroIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nombre: str = Field(min_length=NOMBRE_PERSONA_MIN, max_length=NOMBRE_PERSONA_MAX)
-    # Opcional MIENTRAS el formulario del frontend no lo envie (contrato 07: el backend se
-    # despliega primero y no rompe al frontend vigente). Se vuelve obligatorio con HU-F-403.
-    apellido: str | None = Field(
-        default=None, min_length=APELLIDO_PERSONA_MIN, max_length=APELLIDO_PERSONA_MAX
-    )
+    # Obligatorio en registros nuevos (HU-F-403). Las cuentas anteriores lo tienen en null.
+    apellido: str = Field(min_length=APELLIDO_PERSONA_MIN, max_length=APELLIDO_PERSONA_MAX)
     email: str = Field(max_length=EMAIL_MAX)
     password: str = Field(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
     # Consentimiento (Ley 1581 de 2012): la API no crea cuentas sin él (HU-B-323).
