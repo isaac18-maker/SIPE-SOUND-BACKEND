@@ -1,0 +1,8 @@
+{{ marca }}
+==========
+
+{% block contenido %}{% endblock %}
+
+--
+Recibes este correo porque alguien usó esta dirección en {{ marca }}.
+Nunca te pediremos tu contraseña por correo. Si no fuiste tú, puedes ignorar este mensaje.

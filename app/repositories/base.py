@@ -88,3 +88,42 @@ class RepositorioCursos(Protocol):
     def retirar(self, sesion: Any, curso_id: int, estudiante_id: str) -> bool: ...
     def crear_retroalimentacion(self, sesion: Any, datos: Fila) -> Fila: ...
     def marcar_leidas(self, sesion: Any, curso_id: int, estudiante_id: str) -> None: ...
+
+
+class RepositorioCodigos(Protocol):
+    """Codigos de un solo uso. Opera dentro de la sesion del servicio."""
+
+    def invalidar_abiertos(self, sesion: Any, usuario_id: str, proposito: str) -> None: ...
+    def crear(
+        self,
+        sesion: Any,
+        *,
+        usuario_id: str,
+        proposito: str,
+        codigo_hash: str,
+        email_destino: str | None,
+        vigencia_min: int,
+    ) -> None: ...
+    def hay_reciente(
+        self, sesion: Any, usuario_id: str, proposito: str, *, segundos: int
+    ) -> bool: ...
+    def obtener_abierto_vigente(
+        self, sesion: Any, usuario_id: str, proposito: str
+    ) -> Fila | None: ...
+    def registrar_fallo(self, sesion: Any, codigo_id: str) -> None: ...
+    def consumir(self, sesion: Any, codigo_id: str) -> bool: ...
+
+
+class RepositorioCuentas(Protocol):
+    """Cuentas ubicadas por correo (auth.users). Opera dentro de la sesion del servicio."""
+
+    def buscar_pendiente_por_email(self, sesion: Any, email: str) -> Fila | None: ...
+    def marcar_verificada(self, sesion: Any, usuario_id: str) -> None: ...
+
+
+class RepositorioEnviosCorreo(Protocol):
+    """Bitacora de correos. Opera dentro de la sesion del servicio."""
+
+    def registrar(
+        self, sesion: Any, *, usuario_id: str | None, tipo: str, estado: str, error: str | None
+    ) -> None: ...

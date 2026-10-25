@@ -3,11 +3,11 @@ from flask_cors import CORS
 
 from app.api.documentacion import registrar_documentacion
 from app.api.v1 import register_blueprints
-from app.container import rol_de_usuario
+from app.container import estado_de_usuario, rol_de_usuario
 from app.core.config import Settings, get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
-from app.core.security import configurar_proveedor_rol
+from app.core.security import configurar_proveedor_estado, configurar_proveedor_rol
 
 
 def create_app(settings: Settings | None = None) -> Flask:
@@ -24,5 +24,6 @@ def create_app(settings: Settings | None = None) -> Flask:
     register_blueprints(app)
     registrar_documentacion(app)
     configurar_proveedor_rol(app, rol_de_usuario)
+    configurar_proveedor_estado(app, estado_de_usuario)
 
     return app

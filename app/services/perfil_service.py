@@ -1,11 +1,18 @@
 from typing import Any
 
-from app.core.constants import ROL_ADMIN
+from app.core.constants import CUENTA_ACTIVA, CUENTA_PENDIENTE, ROL_ADMIN
 from app.core.errors import Conflicto, NoEncontrado
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, RepositorioPerfiles
 
 CAMPOS_PERFIL = ("id", "nombre", "rol", "nivel")
+
+
+def estado_de_cuenta(perfil: dict[str, Any] | None) -> str | None:
+    """Estado calculado de una cuenta (00-decisiones-fase-4, seccion 3). None = sin perfil."""
+    if perfil is None:
+        return None
+    return CUENTA_ACTIVA if perfil["correo_verificado_en"] else CUENTA_PENDIENTE
 
 
 class PerfilService:
@@ -19,6 +26,10 @@ class PerfilService:
         if perfil is None:
             raise NoEncontrado("No encontramos tu perfil.")
         return {**{campo: perfil[campo] for campo in CAMPOS_PERFIL}, "email": usuario.email}
+
+    def perfil_de(self, usuario_id: str) -> dict[str, Any] | None:
+        with self._abrir_sesion() as sesion:
+            return self._perfiles.obtener(sesion, usuario_id)
 
     def rol_de(self, usuario_id: str) -> str | None:
         """El rol sale de la base, nunca del token: el usuario puede editar su user_metadata."""

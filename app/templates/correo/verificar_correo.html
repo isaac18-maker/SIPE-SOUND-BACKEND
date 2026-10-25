@@ -1,0 +1,12 @@
+{% extends "_base.html" %}
+{% from "_macros.html" import boton, caja_codigo, parrafo %}
+{% block previa %}Escribe este código para confirmar tu correo. Vence en {{ minutos }} minutos.{% endblock %}
+{% block contenido %}
+{% if prueba is defined and prueba %}
+{% call parrafo() %}<strong>Correo de prueba.</strong> Este código no sirve para ninguna cuenta.{% endcall %}
+{% endif %}
+{% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
+{% call parrafo() %}Este es tu código para confirmar tu correo en {{ marca }}:{% endcall %}
+{{ caja_codigo(codigo) }}
+{% call parrafo() %}Vence en {{ minutos }} minutos y solo sirve una vez. Escríbelo en la página donde te registraste.{% endcall %}
+{% endblock %}

@@ -54,14 +54,30 @@ MENSAJES_INTEGRIDAD = {
 }
 
 
+class EnvioCorreoFallido(Exception):
+    """El correo no salio. `codigo` es una etiqueta corta (p. ej. "smtp_auth"): nunca incluye
+    el texto del servidor SMTP, la direccion ni el contenido."""
+
+    def __init__(self, codigo: str) -> None:
+        super().__init__(codigo)
+        self.codigo = codigo
+
+
 class AppError(Exception):
     status = 500
     code = "ERROR_INTERNO"
     mensaje_por_defecto = MENSAJE_ERROR_INTERNO
 
-    def __init__(self, mensaje: str | None = None, *, details: list[dict] | None = None) -> None:
+    def __init__(
+        self,
+        mensaje: str | None = None,
+        *,
+        details: list[dict] | None = None,
+        meta: dict[str, Any] | None = None,
+    ) -> None:
         self.mensaje = mensaje or self.mensaje_por_defecto
         self.details = details or []
+        self.meta = meta or {}
         super().__init__(self.mensaje)
 
 
@@ -98,17 +114,31 @@ class DemasiadasSolicitudes(AppError):
     mensaje_por_defecto = "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
 
 
+class CuentaExistente(AppError):
+    """Supabase dijo que el correo ya tiene cuenta. Solo la usa el registro, que la absorbe:
+    la respuesta no debe revelar que cuentas existen."""
+
+    status, code = 409, "CONFLICTO"
+    mensaje_por_defecto = "Ese correo ya tiene una cuenta."
+
+
 class ServicioNoDisponible(AppError):
     status, code = 503, "SERVICIO_NO_DISPONIBLE"
     mensaje_por_defecto = "Este servicio no está disponible en este momento."
 
 
-def _respuesta(status: int, code: str, mensaje: str, details: list[dict] | None = None):
+def _respuesta(
+    status: int,
+    code: str,
+    mensaje: str,
+    details: list[dict] | None = None,
+    meta: dict[str, Any] | None = None,
+):
     # Estructura estandar (HU-B-317): el codigo de error va en "status".
     errores = [
         f"{d['campo']}: {d['mensaje']}" if d.get("campo") else d["mensaje"] for d in details or []
     ]
-    return respuesta(status, status=code, message=mensaje, errors=errores)
+    return respuesta(status, status=code, message=mensaje, errors=errores, meta=meta)
 
 
 # Pydantic redacta sus mensajes en ingles; el contrato exige espanol para el usuario.
@@ -163,7 +193,7 @@ def _detalles_validacion(error: ValidationError) -> list[dict]:
 def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(AppError)
     def manejar_app_error(error: AppError):
-        return _respuesta(error.status, error.code, error.mensaje, error.details)
+        return _respuesta(error.status, error.code, error.mensaje, error.details, error.meta)
 
     @app.errorhandler(ValidationError)
     def manejar_validacion(error: ValidationError):

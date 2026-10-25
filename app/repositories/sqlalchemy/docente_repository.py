@@ -5,11 +5,13 @@ from app.models.docente_preautorizado import DocentePreautorizado
 from app.repositories.base import Fila
 from app.repositories.sqlalchemy._comun import a_fila
 
-# Aplica la preautorizacion a una cuenta YA confirmada con ese correo (si existe).
+# Aplica la preautorizacion a una cuenta YA verificada con ese correo (si existe). "Verificada"
+# es profiles.correo_verificado_en (HU-B-402), no auth.users.email_confirmed_at.
 # La logica vive en la base (revision 0014) para que el trigger y la API hagan lo mismo.
 APLICAR_A_CUENTA_EXISTENTE = text(
     "select public.aplicar_docente_preautorizado(u.id, u.email) "
-    "from auth.users u where lower(u.email) = :email and u.email_confirmed_at is not null"
+    "from auth.users u join public.profiles p on p.id = u.id "
+    "where lower(u.email) = :email and p.correo_verificado_en is not null"
 )
 
 

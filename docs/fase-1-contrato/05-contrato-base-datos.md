@@ -66,6 +66,8 @@ Identificadores de revisión **secuenciales legibles**: `alembic revision -m "..
 | `profiles` → `progreso_lecciones`, `progreso_ejercicios` | CASCADE | Datos del estudiante (derecho de supresión). |
 | `profiles` → `intentos_evaluacion` | CASCADE | Datos del estudiante. |
 | `profiles` → `retroalimentaciones.estudiante_id` | CASCADE | Datos del estudiante. |
+| `profiles` → `codigos_verificacion` | CASCADE | Códigos de un solo uso de esa persona (HU-B-402). |
+| `profiles` → `envios_correo.usuario_id` | SET NULL | La bitácora de correos sobrevive a la cuenta eliminada (HU-B-401). |
 | `profiles` → `retroalimentaciones.docente_id` | SET NULL | El comentario sigue siendo útil para el estudiante. |
 | `profiles` (docente) → `cursos.docente_id` | **RESTRICT** | Un curso no puede quedar huérfano: primero se reasigna. |
 | `profiles` → `lecciones.autor_id`, `ejercicios.autor_id`, `evaluaciones.autor_id` | SET NULL | El contenido sobrevive a su autor. |

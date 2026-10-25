@@ -1,0 +1,8 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+Hola, {{ nombre }}.
+
+El correo de tu cuenta de {{ marca }} cambió el {{ fecha }}. Ahora es {{ correo_nuevo }}.
+
+Si no fuiste tú, crea una contraseña nueva con "¿Olvidaste tu contraseña?" y avisa al administrador.
+{% endblock %}

@@ -85,3 +85,32 @@ Las HU del frontend (`SIPE-SOUND-FULLSTACK/docs/`) que consumen estas APIs:
 | HU-B-310 | HU-F-307 (cursos), HU-F-309 (estudiantes) |
 | HU-B-311 | HU-F-310 (evaluaciones docente) |
 | HU-B-324 | HU-F-315 (inicio del estudiante), HU-F-317 (gráfico de práctica) |
+| HU-B-402 | HU-F-401 (verificar correo con código) |
+| HU-B-403 | HU-F-402 (recuperar contraseña) |
+| HU-B-404, HU-B-407 | HU-F-403 (mi cuenta) |
+| HU-B-405, HU-B-407 | HU-F-404 (admin: usuarios) |
+| HU-B-406 | HU-F-405 (admin: docentes y cursos) |
+| HU-B-408 | HU-F-406 (panel de progreso del docente) |
+| HU-B-409 | HU-F-407 (mensajes) |
+| HU-B-410 | HU-F-408 (videos guía) |
+
+## Fase 4 · Cuentas y comunicación
+
+Decisiones y modelo: [00-decisiones-fase-4.md](fase-4-cuentas-y-comunicacion/00-decisiones-fase-4.md)
+(el backend envía sus correos por Gmail SMTP y es dueño de los códigos; **orden de despliegue obligatorio** en §5).
+Los números de migración se recalculan al implementar.
+
+| Orden | HU | Pts | Depende de | Migraciones |
+|---|---|---|---|---|
+| 1 | [HU-B-401 Correo por Gmail SMTP y plantillas](fase-4-cuentas-y-comunicacion/HU-B-401-correo-smtp-y-plantillas.md) | 5 | 322 | 0018 |
+| 2 | [HU-B-402 Verificación de correo con código propio](fase-4-cuentas-y-comunicacion/HU-B-402-verificacion-de-correo.md) 🔴 seguridad | 8 | 401, 321, 322 | 0019 (destructiva aprobada: retira un trigger), 0020 |
+| 3 | [HU-B-403 Restablecer contraseña](fase-4-cuentas-y-comunicacion/HU-B-403-restablecer-contrasena.md) | 5 | 402 | 0021 |
+| 4 | [HU-B-404 Cambio de correo y contraseña con verificación de identidad](fase-4-cuentas-y-comunicacion/HU-B-404-cambio-de-correo-y-contrasena.md) | 8 | 403 | 0022 |
+| 5 | [HU-B-407 Nombre y apellido con permiso del admin](fase-4-cuentas-y-comunicacion/HU-B-407-nombre-y-apellido-con-permiso.md) | 3 | 402 | 0024 |
+| 6 | [HU-B-405 Admin: gestión de cuentas](fase-4-cuentas-y-comunicacion/HU-B-405-admin-gestion-de-cuentas.md) | 8 | 402, 407 | 0023 (destructiva aprobada: `eliminar_cuenta`) |
+| 7 | [HU-B-406 Admin: docentes, cursos asignados y accesos](fase-4-cuentas-y-comunicacion/HU-B-406-admin-docentes-y-accesos-a-cursos.md) | 5 | 405, 310 | — |
+| 8 | [HU-B-408 Panel de progreso del docente](fase-4-cuentas-y-comunicacion/HU-B-408-panel-de-progreso-docente.md) | 5 | 310, 308, 407 | — |
+| 9 | [HU-B-409 Mensajería interna y avisos](fase-4-cuentas-y-comunicacion/HU-B-409-mensajeria-interna.md) | 8 | 405, 307 | 0025 |
+| 10 | [HU-B-410 Video guía de YouTube](fase-4-cuentas-y-comunicacion/HU-B-410-videos-guia-de-youtube.md) | 3 | 306, 309 | 0026 |
+
+> HU-B-408 y HU-B-410 no dependen del correo: pueden avanzar en paralelo con 401–404.
