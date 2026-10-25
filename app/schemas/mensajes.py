@@ -43,6 +43,14 @@ BusquedaDestinatario = Annotated[
 ]
 
 
+class SolicitudNombreIn(BaseModel):
+    """POST /me/solicitud-nombre: solo el texto; el destino y el asunto los fija la API."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    cuerpo: Cuerpo
+
+
 class MensajeCrearIn(BaseModel):
     """Un mensaje nuevo (alcance, asunto) o la respuesta a uno recibido (respuesta_a_id)."""
 

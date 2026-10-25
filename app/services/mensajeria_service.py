@@ -38,6 +38,8 @@ MENSAJE_GRUPO_VACIO = (
     "No hay a quién enviarle este mensaje. "
     "Las cuentas sin verificar o suspendidas no reciben mensajes."
 )
+ASUNTO_SOLICITUD_NOMBRE = "Solicitud de cambio de nombre"
+MENSAJE_ADMIN_SIN_SOLICITUD = "Los administradores pueden cambiar su nombre sin pedir permiso."
 MENSAJE_LIMITE = "Enviaste muchos mensajes seguidos. Espera un rato antes de escribir otro."
 MENSAJE_SIN_ORIGINAL = "No encontramos el mensaje que quieres responder."
 MENSAJE_ORIGEN_ELIMINADO = "No puedes responder: la persona que lo envió ya no tiene cuenta."
@@ -193,6 +195,38 @@ class MensajeriaService:
             )
             if destinatarios == 0:
                 # Dentro del with: la transaccion se deshace y no queda un mensaje sin nadie.
+                raise ReglaNegocio(MENSAJE_GRUPO_VACIO)
+            self._mensajes.agregar_remitente(sesion, mensaje["id"], usuario.id)
+        return {"id": mensaje["id"], "hilo_id": mensaje["hilo_id"], "destinatarios": destinatarios}
+
+    def solicitar_cambio_de_nombre(self, usuario: CurrentUser, cuerpo: str) -> dict[str, Any]:
+        """Aviso a todos los administradores para pedir que habiliten el cambio de nombre.
+
+        Es la UNICA ruta por la que un estudiante o docente le escribe a los administradores: el
+        asunto es fijo y no se puede elegir otro destino."""
+        if usuario.rol == ROL_ADMIN:
+            raise ReglaNegocio(MENSAJE_ADMIN_SIN_SOLICITUD)
+        with self._abrir_sesion() as sesion:
+            self._exigir_dentro_del_limite(sesion, usuario, ALCANCE_ROL_ADMIN)
+            mensaje = self._mensajes.crear(
+                sesion,
+                remitente_id=usuario.id,
+                asunto=ASUNTO_SOLICITUD_NOMBRE,
+                cuerpo=cuerpo,
+                alcance=ALCANCE_ROL_ADMIN,
+                curso_id=None,
+                respuesta_a_id=None,
+                hilo_id=None,
+            )
+            destinatarios = self._mensajes.agregar_destinatarios(
+                sesion,
+                mensaje["id"],
+                alcance=ALCANCE_ROL_ADMIN,
+                remitente_id=usuario.id,
+                destinatario_id=None,
+                curso_id=None,
+            )
+            if destinatarios == 0:
                 raise ReglaNegocio(MENSAJE_GRUPO_VACIO)
             self._mensajes.agregar_remitente(sesion, mensaje["id"], usuario.id)
         return {"id": mensaje["id"], "hilo_id": mensaje["hilo_id"], "destinatarios": destinatarios}
