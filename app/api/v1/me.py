@@ -2,8 +2,8 @@ from flask import Blueprint, request
 
 from app.container import (
     cuenta_service,
-    mensajeria_service,
     perfil_service,
+    solicitud_nombre_service,
     terminos_pendientes_de,
     terminos_service,
 )
@@ -60,8 +60,15 @@ def solicitar_cambio_de_nombre():
     """Un aviso a los administradores pidiendo que habiliten el cambio de nombre. Los
     administradores no lo necesitan (siempre pueden): reciben 422."""
     datos = SolicitudNombreIn.model_validate(request.get_json(silent=True) or {})
-    resultado = mensajeria_service().solicitar_cambio_de_nombre(get_current_user(), datos.cuerpo)
+    resultado = solicitud_nombre_service().solicitar(get_current_user(), datos.cuerpo)
     return ok(resultado, mensaje="Avisamos a los administradores.", status=201)
+
+
+@bp.get("/me/solicitud-nombre")
+@roles_required(ROL_ESTUDIANTE, ROL_DOCENTE, ROL_ADMIN)
+def mi_solicitud_de_nombre():
+    """Tu ultima solicitud de cambio de nombre (pendiente, aceptada o rechazada) o null."""
+    return ok(solicitud_nombre_service().la_mia(get_current_user()))
 
 
 @bp.post("/me/reautenticacion")

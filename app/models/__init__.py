@@ -19,6 +19,7 @@ from app.models.profile import Profile
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
 from app.models.retroalimentacion import Retroalimentacion
 from app.models.solicitud_inscripcion import SolicitudInscripcion
+from app.models.solicitud_nombre import SolicitudNombre
 
 __all__ = [
     "AccionAdmin",
@@ -44,5 +45,6 @@ __all__ = [
     "ProgresoLeccion",
     "Retroalimentacion",
     "SolicitudInscripcion",
+    "SolicitudNombre",
     "auth_users",
 ]

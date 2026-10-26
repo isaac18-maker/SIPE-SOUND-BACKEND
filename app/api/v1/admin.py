@@ -7,6 +7,7 @@ from app.container import (
     admin_usuarios_service,
     bloque_contenido_service,
     docente_service,
+    solicitud_nombre_service,
 )
 from app.core.constants import ROL_ADMIN
 from app.core.errors import NoEncontrado
@@ -20,6 +21,7 @@ from app.schemas.admin_cuentas import (
 )
 from app.schemas.contenido import BloqueCrear, BloqueEditar
 from app.schemas.docente import PreautorizacionDocenteIn
+from app.schemas.mensajes import ResolverSolicitudNombreIn, SolicitudesNombreQuery
 from app.schemas.perfil import CambioRolIn, PermisoNombreEnLoteIn, PermisoNombreIn
 from app.schemas.video import VideoAcordeIn
 
@@ -150,6 +152,31 @@ def permiso_de_nombre_en_lote():
         get_current_user().id, ids, datos.puede_editar_nombre
     )
     return ok({"actualizados": len(actualizados)}, meta={"no_encontrados": faltan})
+
+
+@bp.get("/admin/solicitudes-nombre")
+@roles_required(ROL_ADMIN)
+def solicitudes_de_nombre():
+    """Solicitudes de cambio de nombre de estudiantes y docentes (HU-B-415): quien la envio
+    (nombre y rol, sin correo), su texto y su estado. ?estado=&rol=estudiante|docente.
+    meta.totales: pendientes, aceptadas y rechazadas de cada rol."""
+    filtros = SolicitudesNombreQuery.model_validate(request.args.to_dict())
+    filas, totales = solicitud_nombre_service().listar(filtros.estado, filtros.rol)
+    return ok(filas, meta={"totales": totales})
+
+
+@bp.patch("/admin/solicitudes-nombre/<uuid:solicitud_id>")
+@roles_required(ROL_ADMIN)
+def resolver_solicitud_de_nombre(solicitud_id):
+    """Aceptar habilita el cambio de nombre de esa cuenta (queda en la auditoria); rechazar la
+    cierra sin cambios. 409 si ya se resolvio."""
+    datos = ResolverSolicitudNombreIn.model_validate(request.get_json(silent=True) or {})
+    resuelta = solicitud_nombre_service().resolver(
+        get_current_user(), str(solicitud_id), datos.estado
+    )
+    habilitado = datos.estado == "aceptada"
+    mensaje = "Habilitaste el cambio de nombre." if habilitado else "Rechazaste la solicitud."
+    return ok(resuelta, mensaje=mensaje)
 
 
 @bp.post("/admin/docentes/preautorizaciones")
