@@ -2,13 +2,15 @@ from flask import Blueprint, request
 
 from app.container import (
     cuenta_service,
+    mensajeria_service,
     perfil_service,
     terminos_pendientes_de,
     terminos_service,
 )
+from app.core.constants import ROL_ADMIN, ROL_DOCENTE, ROL_ESTUDIANTE
 from app.core.limites import limiter, por_usuario
 from app.core.responses import ok
-from app.core.security import auth_required, get_current_user
+from app.core.security import auth_required, get_current_user, roles_required
 from app.schemas.cuenta import (
     CambiarContrasenaIn,
     CambiarCorreoIn,
@@ -16,6 +18,7 @@ from app.schemas.cuenta import (
     ConfirmarReautenticacionIn,
     ReautenticacionIn,
 )
+from app.schemas.mensajes import SolicitudNombreIn
 from app.schemas.perfil import PerfilEditarIn
 
 bp = Blueprint("me", __name__)
@@ -23,6 +26,7 @@ bp = Blueprint("me", __name__)
 # Por persona (no por IP: los colegios comparten IP). Cada cambio exige confirmar la identidad.
 CODIGOS_DE_IDENTIDAD_POR_HORA = "5 per hour"
 INTENTOS_POR_MINUTO = "10 per minute"
+SOLICITUDES_DE_NOMBRE_POR_HORA = "5 per hour"
 
 
 @bp.get("/me")
@@ -45,6 +49,19 @@ def editar_mi_nombre():
     datos = PerfilEditarIn.model_validate(request.get_json(silent=True) or {})
     perfil = perfil_service().editar_nombre(get_current_user(), datos.cambios())
     return ok(perfil, mensaje="Listo, actualizamos tu nombre.")
+
+
+@bp.post("/me/solicitud-nombre")
+# roles_required carga el rol desde la base: con auth_required solo, el rol seria el del token y el
+# limite por hora (que se busca por rol) valdria 0, es decir, siempre 429.
+@roles_required(ROL_ESTUDIANTE, ROL_DOCENTE, ROL_ADMIN)
+@limiter.limit(SOLICITUDES_DE_NOMBRE_POR_HORA, key_func=por_usuario)
+def solicitar_cambio_de_nombre():
+    """Un aviso a los administradores pidiendo que habiliten el cambio de nombre. Los
+    administradores no lo necesitan (siempre pueden): reciben 422."""
+    datos = SolicitudNombreIn.model_validate(request.get_json(silent=True) or {})
+    resultado = mensajeria_service().solicitar_cambio_de_nombre(get_current_user(), datos.cuerpo)
+    return ok(resultado, mensaje="Avisamos a los administradores.", status=201)
 
 
 @bp.post("/me/reautenticacion")
