@@ -150,8 +150,10 @@ class CursoService:
 
     # --- Docente: cursos disponibles (HU-B-413) ----------------------------------
     def disponibles(self) -> list[Fila]:
+        """Sin el codigo de invitacion: un curso que aun no es del docente no lo revela."""
         with self._abrir_sesion() as sesion:
-            return self._cursos.listar_disponibles(sesion)
+            filas = self._cursos.listar_disponibles(sesion)
+        return [{k: v for k, v in f.items() if k != "codigo_invitacion"} for f in filas]
 
     def asignarse(self, docente: CurrentUser, curso_id: int) -> Fila:
         """Toma un curso activo que no tiene docente. 409 si otro se adelantó."""
