@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.longitudes import POR_PAGINA_MAX
 from app.schemas.contenido import Busqueda
+from app.schemas.curso import CursoCreate
 
 
 class FiltrosDocentes(BaseModel):
@@ -33,3 +34,10 @@ class ReasignarCursoIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     docente_id: UUID
+
+
+class CursoAdminCrear(CursoCreate):
+    """POST /admin/cursos (HU-B-413): como crear un curso, y opcionalmente con docente.
+    Sin docente queda disponible para que un docente se asigne."""
+
+    docente_id: UUID | None = None

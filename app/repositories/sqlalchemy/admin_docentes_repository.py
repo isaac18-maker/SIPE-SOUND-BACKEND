@@ -47,7 +47,7 @@ with base as (
     c.docente_id, d.nombre as docente, d.apellido as docente_apellido,
     case when c.archivado_en is null then 'activo' else 'archivado' end as estado,
     {ESTUDIANTES_DEL_CURSO} as estudiantes, {BLOQUES_DEL_CURSO} as bloques_en_ruta
-  from public.cursos c join public.profiles d on d.id = c.docente_id
+  from public.cursos c left join public.profiles d on d.id = c.docente_id
   where (cast(:docente as uuid) is null or c.docente_id = cast(:docente as uuid))
     and (cast(:q as text) is null or c.nombre ilike :patron or d.nombre ilike :patron
          or d.apellido ilike :patron or c.codigo_invitacion ilike :patron)

@@ -31,8 +31,9 @@ class Curso(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     nombre: Mapped[str] = mapped_column(Text)
     descripcion: Mapped[str | None] = mapped_column(Text)
-    # RESTRICT: un curso no puede quedar sin docente; primero se reasigna.
-    docente_id: Mapped[str] = mapped_column(
+    # RESTRICT: un docente con cursos no se elimina; primero se reasignan. Nulo = curso disponible
+    # (sin docente, HU-B-413): conserva sus inscripciones hasta que un docente se asigne.
+    docente_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="RESTRICT"), index=True
     )
     nivel: Mapped[str] = mapped_column(Text, server_default="principiante")

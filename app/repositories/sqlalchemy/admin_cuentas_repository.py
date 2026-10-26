@@ -71,7 +71,7 @@ select i.curso_id, c.nombre as curso, d.nombre as docente, d.apellido as docente
        i.inscrito_en
 from public.inscripciones i
 join public.cursos c on c.id = i.curso_id
-join public.profiles d on d.id = c.docente_id
+left join public.profiles d on d.id = c.docente_id
 where i.estudiante_id = cast(:id as uuid) and c.archivado_en is null
 order by i.inscrito_en desc
 """

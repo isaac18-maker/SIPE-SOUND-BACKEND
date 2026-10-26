@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.avance import curso_completo, estado_de_avance, porcentaje
 from app.core.constants import ALFABETO_CODIGO, LARGO_CODIGO, ROL_ADMIN
-from app.core.errors import NoEncontrado, ReglaNegocio
+from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio
 from app.core.privacidad import enmascarar_email
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila, RepositorioCursos
@@ -20,6 +20,7 @@ MENSAJE_CODIGO_INVALIDO = (
     "El código no existe o el curso ya cerró. Pídele a tu docente un código nuevo."
 )
 MENSAJE_ARCHIVADO = "El curso está archivado: no admite cambios."
+MENSAJE_CURSO_NO_DISPONIBLE = "Ese curso ya tiene docente o dejó de estar disponible."
 ORDENES_MIS_CURSOS = ("ultimo_avance", "nombre", "avance")
 
 
@@ -146,6 +147,30 @@ class CursoService:
                 except IntegrityError:
                     continue
         raise ReglaNegocio("No se pudo generar un código de invitación. Inténtalo de nuevo.")
+
+    # --- Docente: cursos disponibles (HU-B-413) ----------------------------------
+    def disponibles(self) -> list[Fila]:
+        with self._abrir_sesion() as sesion:
+            return self._cursos.listar_disponibles(sesion)
+
+    def asignarse(self, docente: CurrentUser, curso_id: int) -> Fila:
+        """Toma un curso activo que no tiene docente. 409 si otro se adelantó."""
+        with self._abrir_sesion() as sesion:
+            curso = self._cursos.obtener(sesion, curso_id)
+            if curso is None:
+                raise NoEncontrado(f"No existe el curso {curso_id}")
+            asignado = self._cursos.asignar_docente(sesion, curso_id, docente.id)
+            if asignado is None:
+                raise Conflicto(MENSAJE_CURSO_NO_DISPONIBLE)
+            return asignado
+
+    def retirarse(self, docente: CurrentUser, curso_id: int) -> Fila:
+        """Deja el curso sin docente: sus estudiantes y su ruta se conservan."""
+        with self._abrir_sesion() as sesion:
+            curso = self._cursos.quitar_docente(sesion, curso_id, docente.id)
+            if curso is None:
+                raise NoEncontrado(f"No existe el curso {curso_id}")
+            return curso
 
     def actualizar(self, usuario: CurrentUser, curso_id: int, cambios: Fila) -> Fila:
         with self._abrir_sesion() as sesion:

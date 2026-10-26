@@ -9,6 +9,8 @@
 # =========================================================
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
+
 from app.core.constants import CUENTA_ACTIVA, ROL_DOCENTE
 from app.core.errors import NoEncontrado, ReglaNegocio
 from app.repositories.base import (
@@ -18,7 +20,7 @@ from app.repositories.base import (
     RepositorioAdminDocentes,
     RepositorioCursos,
 )
-from app.services.curso_service import RepositorioSeguimiento
+from app.services.curso_service import INTENTOS_CODIGO, RepositorioSeguimiento, generar_codigo
 
 MENSAJE_DESTINO = "El curso solo puede pasar a un docente con la cuenta activa."
 MENSAJE_MISMO_DOCENTE = "Ese curso ya está a cargo de ese docente."
@@ -64,6 +66,28 @@ class AdminCursosService:
             self._curso(sesion, curso_id)
             return self._seguimiento.estudiantes(sesion, curso_id, **filtros)
 
+    # --- Crear ----------------------------------------------------------------------------
+    def crear(self, datos: dict[str, Any]) -> dict[str, Any]:
+        """Crea un curso, con docente o sin el (queda disponible, HU-B-413), y su codigo unico."""
+        with self._abrir_sesion() as sesion:
+            docente_id = datos.get("docente_id")
+            if docente_id is not None:
+                destino = self._cuentas_admin.obtener(sesion, docente_id)
+                if (
+                    destino is None
+                    or destino["rol"] != ROL_DOCENTE
+                    or destino["estado"] != CUENTA_ACTIVA
+                ):
+                    raise ReglaNegocio(MENSAJE_DESTINO)
+            for _ in range(INTENTOS_CODIGO):
+                fila = {**datos, "codigo_invitacion": generar_codigo()}
+                try:
+                    with sesion.begin_nested():  # savepoint: una colision no aborta la transaccion
+                        return self._cursos.crear(sesion, fila)
+                except IntegrityError:
+                    continue
+        raise ReglaNegocio("No se pudo generar un código de invitación. Inténtalo de nuevo.")
+
     # --- Reasignar ------------------------------------------------------------------------
     def reasignar(self, admin_id: str, curso_id: int, docente_id: str) -> dict[str, Any]:
         with self._abrir_sesion() as sesion:
@@ -87,7 +111,7 @@ class AdminCursosService:
                 "a": docente_id,
             }
             # Una fila por cuenta afectada: cada una la ve en el detalle de su cuenta.
-            for afectada in (origen, docente_id):
+            for afectada in (a for a in (origen, docente_id) if a is not None):
                 self._auditoria.registrar(
                     sesion,
                     admin_id=admin_id,
