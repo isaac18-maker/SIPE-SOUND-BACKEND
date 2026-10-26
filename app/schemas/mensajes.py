@@ -128,3 +128,20 @@ class BuscarDestinatariosQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     q: BusquedaDestinatario | None = None
+
+
+class SolicitudesNombreQuery(BaseModel):
+    """GET /admin/solicitudes-nombre: ?estado=pendiente|aceptada|rechazada y ?rol=."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    estado: Literal["pendiente", "aceptada", "rechazada"] | None = None
+    rol: Literal["estudiante", "docente"] | None = None
+
+
+class ResolverSolicitudNombreIn(BaseModel):
+    """PATCH /admin/solicitudes-nombre/{id}: habilitar el cambio de nombre (aceptada) o rechazar."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    estado: Literal["aceptada", "rechazada"]
