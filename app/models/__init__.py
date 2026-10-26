@@ -18,6 +18,7 @@ from app.models.mensaje import Mensaje, MensajeDestinatario
 from app.models.profile import Profile
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
 from app.models.retroalimentacion import Retroalimentacion
+from app.models.solicitud_inscripcion import SolicitudInscripcion
 
 __all__ = [
     "AccionAdmin",
@@ -42,5 +43,6 @@ __all__ = [
     "ProgresoEjercicio",
     "ProgresoLeccion",
     "Retroalimentacion",
+    "SolicitudInscripcion",
     "auth_users",
 ]

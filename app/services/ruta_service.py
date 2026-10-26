@@ -14,9 +14,13 @@ from app.core.constants import (
     BLOQUE_APROBADO,
     BLOQUE_BLOQUEADO,
     BLOQUE_DISPONIBLE,
+    ROL_ESTUDIANTE,
 )
-from app.core.errors import NoAutenticado, NoEncontrado
+from app.core.errors import NoAutenticado, NoEncontrado, SinPermiso
 from app.repositories.base import AbrirSesion, Fila
+
+MENSAJE_RUTA_SIN_SESION = "Inicia sesión para ver la ruta de tu curso."
+MENSAJE_RUTA_SIN_CURSO = "Inscríbete en un curso (y que te acepten) para ver la ruta."
 
 
 class RepositorioRuta(Protocol):
@@ -32,6 +36,7 @@ class RepositorioRuta(Protocol):
 
 class VerificadorCurso(Protocol):
     def puede_ver(self, sesion: Any, curso_id: int, usuario_id: str) -> bool: ...
+    def tiene_inscripcion_activa(self, sesion: Any, usuario_id: str) -> bool: ...
 
 
 def estados_de_bloques(
@@ -67,9 +72,18 @@ class RutaService:
         self._ruta = ruta
         self._cursos = cursos
 
-    def ruta(self, usuario_id: str | None, curso_id: int | None) -> list[Fila]:
-        """Sin sesion: todos los bloques disponibles y sin puntajes."""
+    def ruta(self, usuario_id: str | None, curso_id: int | None, rol: str | None) -> list[Fila]:
+        """La ruta solo la ve quien tiene sesion; un estudiante, ademas, con una inscripcion
+        aceptada (HU-B-414). Docentes y administradores la ven siempre (la usan para preparar)."""
+        if usuario_id is None:
+            raise NoAutenticado(MENSAJE_RUTA_SIN_SESION)
         with self._abrir_sesion() as sesion:
+            if (
+                rol == ROL_ESTUDIANTE
+                and curso_id is None
+                and not self._cursos.tiene_inscripcion_activa(sesion, usuario_id)
+            ):
+                raise SinPermiso(MENSAJE_RUTA_SIN_CURSO)
             return self.ruta_en_sesion(sesion, usuario_id, curso_id)
 
     def ruta_en_sesion(self, sesion: Any, usuario_id: str | None, curso_id: int | None) -> list:
