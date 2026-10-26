@@ -11,7 +11,7 @@ Qué valor poner en cada variable del backend, en **local** (tu computador) y en
 | `APP_ENV` | `local` | `production` | No |
 | `FLASK_DEBUG` | `1` | `0` | No |
 | `LOG_LEVEL` | `DEBUG` o `INFO` | `INFO` | No |
-| `CORS_ORIGINS` | `http://localhost:5173` | URL pública del frontend, p. ej. `https://app.sipesound.co` | No |
+| `CORS_ORIGINS` | `http://localhost:5173` | URL pública del frontend, p. ej. `https://app.sipesound.co` | **Sí** (obligatoria, sin valor por defecto) |
 | `SUPABASE_URL` | URL del proyecto de Supabase | La misma (o la del proyecto de producción si tienen dos) | No |
 | `SUPABASE_ANON_KEY` | *anon* / *publishable key* del proyecto | La del proyecto de producción | No (pública), pero solo en el backend |
 | `AUTH_COOKIE_SECURE` | vacío (automático = `0`) | `1` (o vacío: automático = `1`) | No |
