@@ -1,6 +1,6 @@
 from flask import Blueprint, request
 
-from app.container import evaluacion_service, ruta_service
+from app.container import evaluacion_service, rol_de_usuario, ruta_service
 from app.core.constants import ROL_ESTUDIANTE
 from app.core.responses import created, ok
 from app.core.security import get_current_user, roles_required, usuario_opcional
@@ -13,12 +13,13 @@ bp = Blueprint("evaluaciones", __name__)
 def ruta():
     """Bloques de la ruta con estado (bloqueado, disponible, aprobado) y lecciones.
 
-    Publica. Con sesion trae el estado y el mejor puntaje del estudiante;
-    con ?curso_id= usa la ruta de ese curso (requiere estar inscrito).
+    Requiere sesion (HU-B-414). Un estudiante la ve solo si tiene una inscripcion aceptada (403
+    si no); con ?curso_id= usa la ruta de ese curso (requiere estar inscrito o ser su docente).
     """
     filtros = RutaQuery.model_validate(request.args.to_dict())
     usuario = usuario_opcional()
-    return ok(ruta_service().ruta(usuario.id if usuario else None, filtros.curso_id))
+    rol = rol_de_usuario(usuario.id) if usuario else None
+    return ok(ruta_service().ruta(usuario.id if usuario else None, filtros.curso_id, rol))
 
 
 @bp.get("/evaluaciones/<int:evaluacion_id>")

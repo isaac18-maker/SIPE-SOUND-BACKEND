@@ -127,6 +127,16 @@ class SqlCursoRepository:
         )
         return sesion.scalar(consulta) is not None
 
+    def tiene_inscripcion_activa(self, sesion: Session, usuario_id: str) -> bool:
+        """Esta inscrito en al menos un curso activo (HU-B-414: sin curso no hay ruta)."""
+        consulta = (
+            select(Inscripcion.id)
+            .join(Curso, Curso.id == Inscripcion.curso_id)
+            .where(Inscripcion.estudiante_id == usuario_id, Curso.archivado_en.is_(None))
+            .limit(1)
+        )
+        return sesion.scalar(consulta) is not None
+
     def bloques_publicados(self, sesion: Session, bloque_ids: set[int]) -> set[int]:
         consulta = select(Bloque.id).where(
             Bloque.id.in_(bloque_ids), Bloque.estado == ESTADO_PUBLICADO

@@ -47,6 +47,9 @@ from app.repositories.sqlalchemy.progreso_docente_repository import SqlProgresoD
 from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
 from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRepository
+from app.repositories.sqlalchemy.solicitud_inscripcion_repository import (
+    SqlSolicitudInscripcionRepository,
+)
 from app.repositories.sqlalchemy.terminos_repository import SqlTerminosRepository
 from app.services.acorde_service import AcordeService
 from app.services.admin_cuentas_service import AdminCuentasService
@@ -69,6 +72,7 @@ from app.services.progreso_docente_service import ProgresoDocenteService
 from app.services.progreso_service import ProgresoService
 from app.services.recuperacion_service import RecuperacionService
 from app.services.ruta_service import RutaService
+from app.services.solicitud_inscripcion_service import SolicitudInscripcionService
 from app.services.terminos_service import TerminosService, terminos_pendientes
 from app.services.verificacion_service import VerificacionService
 
@@ -131,6 +135,13 @@ def admin_usuarios_service() -> AdminUsuariosService:
 def curso_service() -> CursoService:
     return CursoService(
         session_scope, SqlCursoRepository(), SqlSeguimientoRepository(), ruta_service()
+    )
+
+
+@lru_cache
+def solicitud_inscripcion_service() -> SolicitudInscripcionService:
+    return SolicitudInscripcionService(
+        session_scope, SqlSolicitudInscripcionRepository(), SqlCursoRepository()
     )
 
 

@@ -6,6 +6,7 @@ from app.container import (
     ejercicio_contenido_service,
     gestion_evaluacion_service,
     leccion_contenido_service,
+    solicitud_inscripcion_service,
 )
 from app.core.constants import ROL_ADMIN, ROL_DOCENTE
 from app.core.responses import created, ok, paginated
@@ -16,8 +17,10 @@ from app.schemas.curso import (
     CursoEditar,
     CursosQuery,
     EstudiantesQuery,
+    ResolverSolicitudIn,
     RetroalimentacionIn,
     RutaCursoIn,
+    SolicitudesQuery,
 )
 from app.schemas.evaluacion import (
     EstadoEvaluacionIn,
@@ -75,6 +78,35 @@ def crear_curso():
     datos = CursoCreate.model_validate(request.get_json(silent=True) or {})
     curso = curso_service().crear(get_current_user(), datos)
     return created(curso, mensaje=f"Curso creado. Código: {curso['codigo_invitacion']}.")
+
+
+@bp.get("/docente/solicitudes-inscripcion")
+@roles_required(*PANEL)
+def solicitudes_de_inscripcion():
+    """Solicitudes de inscripcion a TUS cursos (el admin ve las de todos, incluidos los cursos sin
+    docente). ?estado=pendiente|aceptada|rechazada&curso_id=. meta.totales: cuantas hay de cada
+    estado. Sin correos (HU-B-414)."""
+    filtros = SolicitudesQuery.model_validate(request.args.to_dict())
+    filas, totales = solicitud_inscripcion_service().listar(
+        get_current_user(), filtros.estado, filtros.curso_id
+    )
+    return ok(filas, meta={"totales": totales})
+
+
+@bp.patch("/docente/solicitudes-inscripcion/<uuid:solicitud_id>")
+@roles_required(*PANEL)
+def resolver_solicitud(solicitud_id):
+    """Acepta (crea la inscripcion) o rechaza. 404 si no es de tus cursos; 409 si ya se resolvio."""
+    datos = ResolverSolicitudIn.model_validate(request.get_json(silent=True) or {})
+    solicitud = solicitud_inscripcion_service().resolver(
+        get_current_user(), str(solicitud_id), datos.estado
+    )
+    mensaje = (
+        "Aceptaste la solicitud: ya está inscrito."
+        if datos.estado == "aceptada"
+        else "Rechazaste la solicitud."
+    )
+    return ok(solicitud, mensaje=mensaje)
 
 
 @bp.get("/docente/cursos/disponibles")
