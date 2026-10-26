@@ -2,9 +2,14 @@ from flask import Blueprint, request
 
 from app.container import admin_cursos_service
 from app.core.constants import ROL_ADMIN
-from app.core.responses import ok, paginated
+from app.core.responses import created, ok, paginated
 from app.core.security import get_current_user, roles_required
-from app.schemas.admin_cursos import FiltrosCursosAdmin, FiltrosDocentes, ReasignarCursoIn
+from app.schemas.admin_cursos import (
+    CursoAdminCrear,
+    FiltrosCursosAdmin,
+    FiltrosDocentes,
+    ReasignarCursoIn,
+)
 from app.schemas.curso import EstudiantesQuery
 
 bp = Blueprint("admin_cursos", __name__)
@@ -38,6 +43,16 @@ def listar_cursos():
         consulta["docente_id"] = str(filtros.docente_id)
     filas, total = admin_cursos_service().listar_cursos(consulta)
     return paginated(filas, pagina=filtros.pagina, por_pagina=filtros.por_pagina, total=total)
+
+
+@bp.post("/admin/cursos")
+@roles_required(ROL_ADMIN)
+def crear_curso():
+    """Crea un curso. Sin `docente_id` queda disponible: un docente se asigna desde su panel."""
+    datos = CursoAdminCrear.model_validate(request.get_json(silent=True) or {})
+    cuerpo = datos.model_dump()
+    cuerpo["docente_id"] = str(datos.docente_id) if datos.docente_id else None
+    return created(admin_cursos_service().crear(cuerpo), mensaje="Curso creado.")
 
 
 @bp.patch("/admin/cursos/<int:curso_id>/docente")
