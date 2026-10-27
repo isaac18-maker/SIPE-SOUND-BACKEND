@@ -1,0 +1,8 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+Hola, {{ nombre }}.
+
+Un administrador suspendió tu cuenta de {{ marca }}. No podrás iniciar sesión ni ver tus cursos hasta que la reactive. Tu progreso se conserva.
+
+Si crees que es un error, escribe al administrador de tu aula.
+{% endblock %}

@@ -47,6 +47,8 @@ CORREO_CONTRASENA_CAMBIADA = "contrasena_cambiada"
 CORREO_CAMBIAR_CORREO = "cambiar_correo"
 CORREO_CORREO_CAMBIADO = "correo_cambiado"
 CORREO_CURSO_ASIGNADO = "curso_asignado"
+CORREO_ROL_CAMBIADO = "rol_cambiado"
+CORREO_CUENTA_SUSPENDIDA = "cuenta_suspendida"
 TIPOS_CORREO = (
     CORREO_VERIFICAR,
     CORREO_REAUTENTICACION,
@@ -55,6 +57,8 @@ TIPOS_CORREO = (
     CORREO_CAMBIAR_CORREO,
     CORREO_CORREO_CAMBIADO,
     CORREO_CURSO_ASIGNADO,
+    CORREO_ROL_CAMBIADO,
+    CORREO_CUENTA_SUSPENDIDA,
 )
 # Codigos de verificacion (HU-B-402): proposito -> minutos de vigencia. Nunca mas de 15.
 # El del registro dura 1 minuto (HU-B-416): la persona ve la cuenta regresiva y pide otro al vencer.
@@ -113,6 +117,7 @@ ACCIONES_ADMIN = (
     "permiso_nombre",
     "asignar_curso",
     "quitar_docente_curso",
+    "editar_cuenta",
 )
 
 # Actividad del docente en la plataforma (HU-B-418): que tipo de cosa hizo y en que curso, nunca

@@ -352,6 +352,7 @@ def admin_cuentas_service() -> AdminCuentasService:
         correo_service(),
         SqlAccionAdminRepository(),
         progreso_de,
+        lambda *a: admin_usuarios_service().cambiar_rol(*a),
         origen_frontend=get_settings().origen_frontend,
     )
 

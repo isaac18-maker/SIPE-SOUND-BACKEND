@@ -14,7 +14,9 @@ from app.core.errors import NoEncontrado
 from app.core.responses import created, ok
 from app.core.security import get_current_user, roles_required
 from app.schemas.admin_cuentas import (
+    AccionEnLoteIn,
     CambioEstadoIn,
+    EditarCuentaIn,
     EliminarCuentaIn,
     FiltrosUsuarios,
     VerificacionManualIn,
@@ -59,10 +61,14 @@ def quitar_video_de_acorde(acorde_id: int):
 @bp.patch("/admin/usuarios/<uuid:usuario_id>/rol")
 @roles_required(ROL_ADMIN)
 def cambiar_rol(usuario_id):
+    """Cambia el rol (el propio no). `notificar` avisa por correo a la persona."""
     entrada = CambioRolIn.model_validate(request.get_json(silent=True) or {})
-    return ok(
-        admin_usuarios_service().cambiar_rol(get_current_user().id, str(usuario_id), entrada.rol)
+    cuenta = admin_usuarios_service().cambiar_rol(
+        get_current_user().id, str(usuario_id), entrada.rol
     )
+    if entrada.notificar:
+        admin_cuentas_service().avisar_cambio_de_rol(str(usuario_id), entrada.rol)
+    return ok(cuenta)
 
 
 @bp.get("/admin/usuarios")
@@ -70,16 +76,34 @@ def cambiar_rol(usuario_id):
 def listar_usuarios():
     """Todas las cuentas con su estado (pendiente_verificacion, activa, suspendida), el ultimo
     envio del codigo y sus cursos. Filtros: ?rol=&estado=&q=&puede_editar_nombre=&orden=. En
-    meta.totales va el numero de cuentas por estado (sin depender de los filtros)."""
+    meta.totales va el numero de cuentas por estado y en meta.roles por rol (sin depender de
+    los filtros)."""
     filtros = FiltrosUsuarios.model_validate(request.args.to_dict())
-    filas, total, totales = admin_cuentas_service().listar(filtros.model_dump())
+    filas, total, totales, roles = admin_cuentas_service().listar(filtros.model_dump())
     meta = {
         "pagina": filtros.pagina,
         "por_pagina": filtros.por_pagina,
         "total": total,
         "totales": totales,
+        "roles": roles,
     }
     return ok(filas, meta=meta)
+
+
+@bp.post("/admin/usuarios/lote")
+@roles_required(ROL_ADMIN)
+def accion_en_lote():
+    """Cambia el rol, activa, suspende o reenvia el codigo a hasta 100 cuentas. Procesa solo las
+    validas: omite la propia cuenta y las que ya estan en ese estado (data.omitidas)."""
+    datos = AccionEnLoteIn.model_validate(request.get_json(silent=True) or {})
+    resultado = admin_cuentas_service().en_lote(
+        get_current_user().id,
+        [str(i) for i in datos.ids],
+        datos.accion,
+        rol=datos.rol,
+        notificar=datos.notificar,
+    )
+    return ok(resultado)
 
 
 @bp.get("/admin/usuarios/<uuid:usuario_id>")
@@ -87,6 +111,18 @@ def listar_usuarios():
 def detalle_usuario(usuario_id):
     """Detalle: inscripciones, cursos a cargo, resumen de progreso y ultimas acciones del admin."""
     return ok(admin_cuentas_service().detalle(str(usuario_id)))
+
+
+@bp.patch("/admin/usuarios/<uuid:usuario_id>")
+@roles_required(ROL_ADMIN)
+def editar_usuario(usuario_id):
+    """Nombre, apellido y correo (los tres obligatorios). Un correo nuevo deja la cuenta
+    pendiente y envia un codigo; el administrador no cambia asi su propio correo."""
+    datos = EditarCuentaIn.model_validate(request.get_json(silent=True) or {})
+    cuenta = admin_cuentas_service().editar(
+        get_current_user().id, str(usuario_id), datos.nombre, datos.apellido, datos.email
+    )
+    return ok(cuenta, mensaje="Cambios guardados.")
 
 
 @bp.post("/admin/usuarios/<uuid:usuario_id>/verificacion/reenviar")
@@ -112,10 +148,14 @@ def verificar_manualmente(usuario_id):
 @bp.patch("/admin/usuarios/<uuid:usuario_id>/estado")
 @roles_required(ROL_ADMIN)
 def cambiar_estado(usuario_id):
-    """Suspende (con motivo; cierra sus sesiones) o reactiva una cuenta."""
+    """Suspende (cierra sus sesiones; `notificar` avisa por correo) o reactiva una cuenta."""
     datos = CambioEstadoIn.model_validate(request.get_json(silent=True) or {})
     resultado = admin_cuentas_service().cambiar_estado(
-        get_current_user().id, str(usuario_id), datos.estado, datos.motivo
+        get_current_user().id,
+        str(usuario_id),
+        datos.estado,
+        datos.motivo,
+        notificar=datos.notificar,
     )
     return ok(resultado)
 
