@@ -17,13 +17,17 @@ from app.services.auth_service import SesionEmitida
 
 bp = Blueprint("auth", __name__)
 
-# Por IP: los estudiantes de un colegio comparten IP, por eso el margen es amplio.
-REGISTROS_POR_IP = "20 per hour"
-INICIOS_POR_IP = "30 per minute"
-RENOVACIONES_POR_IP = "60 per minute"
-VERIFICACIONES_POR_IP = "10 per minute"
-REENVIOS_POR_IP = "5 per hour"
-OLVIDOS_POR_IP = "5 per hour"
+# Por IP: los estudiantes de un colegio comparten IP, por eso el margen es amplio. Lo que
+# protege de verdad a cada cuenta ya no es la IP: un codigo cada 60 s por cuenta, 5 intentos
+# por codigo y vigencia de 1 minuto. Estos topes solo frenan el envio masivo de correos
+# (la cuota de Gmail es compartida por toda la plataforma).
+REGISTROS_POR_IP = "100 per hour"
+INICIOS_POR_IP = "60 per minute"
+RENOVACIONES_POR_IP = "120 per minute"
+VERIFICACIONES_POR_IP = "30 per minute"
+# Con codigos de 1 minuto cada persona puede pedir varios seguidos.
+REENVIOS_POR_IP = "60 per hour"
+OLVIDOS_POR_IP = "30 per hour"
 RESTABLECIMIENTOS_POR_IP = "10 per minute"
 
 # El refresh token solo viaja en esta cookie: httpOnly (JavaScript no la lee) y limitada
@@ -40,20 +44,30 @@ PREFIJO_BEARER = "Bearer "
 def registrar():
     """Registro: crea la cuenta en Supabase Auth y envia un codigo de 6 digitos al correo.
 
-    Publico. La respuesta no revela si el correo ya estaba registrado. El rol lo asigna
-    la base (estudiante, o docente si un admin preautorizo el correo y la persona verifica).
+    Publico. 409 si el correo ya tiene una cuenta; 200 con `registro_en_curso` si ya habia
+    empezado a registrarse (no se crea nada: puede escribir su codigo o pedir otro). El
+    codigo vence en 1 minuto y `vence_en_segundos` alimenta la cuenta regresiva. El rol lo
+    asigna la base (estudiante, o docente si un admin preautorizo el correo y verifica).
     """
     datos = RegistroIn.model_validate(request.get_json(silent=True) or {})
+    resultado = auth_service().registrar(datos)
+    if resultado["registro_en_curso"]:
+        return ok(
+            resultado,
+            mensaje=(
+                "Ya tienes un registro en curso con este correo. Escribe el código que te "
+                "enviamos o pide uno nuevo."
+            ),
+        )
     return created(
-        auth_service().registrar(datos),
-        mensaje="Te enviamos un código de 6 dígitos a tu correo. Vence en 15 minutos.",
+        resultado, mensaje="Te enviamos un código de 6 dígitos a tu correo. Vence en 1 minuto."
     )
 
 
 @bp.post("/auth/verificacion")
 @limiter.limit(VERIFICACIONES_POR_IP)
 def verificar_correo():
-    """Confirma el correo con el codigo recibido (6 digitos, 15 minutos, un solo uso).
+    """Confirma el correo con el codigo recibido (6 digitos, 1 minuto, un solo uso).
 
     Publico. Un codigo errado, vencido o usado y un correo sin cuenta responden lo mismo.
     """

@@ -10,6 +10,11 @@ BUSCAR_PENDIENTE = text(
     "from auth.users u join public.profiles p on p.id = u.id "
     "where lower(u.email) = :email and p.correo_verificado_en is null"
 )
+BUSCAR_POR_EMAIL = text(
+    "select p.id, p.nombre, p.correo_verificado_en is not null as verificada "
+    "from auth.users u join public.profiles p on p.id = u.id "
+    "where lower(u.email) = :email"
+)
 BUSCAR_VERIFICADA = text(
     "select p.id, p.nombre, u.email "
     "from auth.users u join public.profiles p on p.id = u.id "
@@ -45,6 +50,10 @@ class SqlCuentaRepository:
 
     def buscar_pendiente_por_email(self, sesion: Session, email: str) -> Fila | None:
         filas = filas_sql(sesion, BUSCAR_PENDIENTE, {"email": email})
+        return filas[0] if filas else None
+
+    def buscar_por_email(self, sesion: Session, email: str) -> Fila | None:
+        filas = filas_sql(sesion, BUSCAR_POR_EMAIL, {"email": email})
         return filas[0] if filas else None
 
     def buscar_verificada_por_email(self, sesion: Session, email: str) -> Fila | None:

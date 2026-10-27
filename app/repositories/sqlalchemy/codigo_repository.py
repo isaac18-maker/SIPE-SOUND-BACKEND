@@ -1,3 +1,5 @@
+import math
+
 from sqlalchemy import Interval, case, func, literal_column, select, update
 from sqlalchemy.orm import Session
 
@@ -92,6 +94,22 @@ class SqlCodigoRepository:
         )
         fila = sesion.scalar(consulta)
         return a_fila(fila) if fila else None
+
+    def segundos_restantes(self, sesion: Session, usuario_id: str, proposito: str) -> int:
+        """Segundos que le quedan al codigo abierto mas reciente; 0 si no hay ninguno vigente."""
+        consulta = (
+            select(func.extract("epoch", Codigo.expira_en - func.now()))
+            .where(
+                Codigo.usuario_id == usuario_id,
+                Codigo.proposito == proposito,
+                Codigo.expira_en > func.now(),
+                *ABIERTO,
+            )
+            .order_by(Codigo.creado_en.desc())
+            .limit(1)
+        )
+        restante = sesion.scalar(consulta)
+        return max(0, math.ceil(float(restante))) if restante is not None else 0
 
     def registrar_fallo(self, sesion: Session, codigo_id: str) -> None:
         """Suma un intento; al llegar al maximo el codigo se invalida."""
