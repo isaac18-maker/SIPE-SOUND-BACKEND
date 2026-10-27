@@ -1,0 +1,8 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+Hola, {{ nombre }}.
+
+Un administrador cambió tu rol en {{ marca }}. Ahora eres {{ rol }}.
+
+Si no esperabas este cambio, escribe al administrador de tu aula.
+{% endblock %}

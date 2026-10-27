@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% from "_macros.html" import parrafo %}
+{% block previa %}Tu rol en {{ marca }} ahora es {{ rol }}.{% endblock %}
+{% block contenido %}
+{% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
+{% call parrafo() %}Un administrador cambió tu rol en {{ marca }}. Ahora eres <strong>{{ rol }}</strong>.{% endcall %}
+{% call parrafo() %}Si no esperabas este cambio, escribe al administrador de tu aula.{% endcall %}
+{% endblock %}

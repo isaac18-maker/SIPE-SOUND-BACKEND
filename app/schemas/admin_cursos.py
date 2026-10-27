@@ -58,7 +58,9 @@ class FiltrosActividadDocentes(BaseModel):
 
     estado_actividad: Literal["activo", "inactivo", "sin_actividad"] | None = None
     q: Busqueda | None = None
-    orden: Literal["ultima_actividad", "-acciones_30d", "nombre"] = "nombre"
+    orden: Literal["ultima_actividad", "-acciones_30d", "-cursos", "-estudiantes", "nombre"] = (
+        "nombre"
+    )
     pagina: int = Field(default=1, ge=1)
     por_pagina: int = Field(default=20, ge=1, le=POR_PAGINA_MAX)
 
@@ -78,7 +80,14 @@ class LineaDeTiempoQuery(BaseModel):
 
     tipo: (
         Literal[
-            "sesion", "leccion", "ejercicio", "evaluacion", "retroalimentacion", "mensaje", "curso"
+            "sesion",
+            "leccion",
+            "ejercicio",
+            "evaluacion",
+            "retroalimentacion",
+            "mensaje",
+            "curso",
+            "contenido",
         ]
         | None
     ) = None
