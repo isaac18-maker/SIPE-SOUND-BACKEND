@@ -1,0 +1,10 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+Hola, {{ nombre }}.
+
+Pediste crear una contraseña nueva en {{ marca }}. Abre este enlace para elegirla. Vence en {{ minutos }} minutos y solo sirve una vez:
+
+{{ enlace }}
+
+Si no lo pediste, ignora este mensaje: tu contraseña sigue igual.
+{% endblock %}

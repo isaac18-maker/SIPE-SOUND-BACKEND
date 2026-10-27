@@ -4,13 +4,23 @@ from sqlalchemy import CheckConstraint, Integer, PrimaryKeyConstraint, Text, Uni
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, CreadoEnMixin, en_lista, existente
+from app.core.longitudes import DESCRIPCION_ACORDE_MAX, NOMBRE_ACORDE_MAX, NOMBRE_ACORDE_MIN
+from app.models.base import (
+    Base,
+    CreadoEnMixin,
+    VideoMixin,
+    en_lista,
+    existente,
+    largo_entre,
+    largo_maximo,
+    restricciones_video,
+)
 
 TIPOS_ACORDE = ("mayor", "menor", "septima", "disminuido")
 DIFICULTADES = ("facil", "medio", "dificil")
 
 
-class Acorde(CreadoEnMixin, Base):
+class Acorde(CreadoEnMixin, VideoMixin, Base):
     __tablename__ = "acordes"
     __table_args__ = (
         PrimaryKeyConstraint("id", name=existente("acordes_pkey")),
@@ -19,6 +29,9 @@ class Acorde(CreadoEnMixin, Base):
             en_lista("dificultad", DIFICULTADES), name=existente("acordes_dificultad_check")
         ),
         CheckConstraint(en_lista("tipo", TIPOS_ACORDE), name=existente("acordes_tipo_check")),
+        CheckConstraint(largo_entre("nombre", NOMBRE_ACORDE_MIN, NOMBRE_ACORDE_MAX), name="nombre"),
+        CheckConstraint(largo_maximo("descripcion", DESCRIPCION_ACORDE_MAX), name="descripcion"),
+        *restricciones_video(),
     )
 
     id: Mapped[int] = mapped_column(Integer)

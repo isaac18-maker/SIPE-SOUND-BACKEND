@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>{{ asunto }}</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+<style>
+  @media (max-width: 620px) {
+    .contenedor { width: 100% !important; }
+    .relleno { padding: 24px 20px !important; }
+    .codigo { font-size: 24px !important; letter-spacing: 4px !important; }
+  }
+  @media (prefers-color-scheme: dark) {
+    .fondo { background: #10162B !important; }
+    .tarjeta { background: #171D33 !important; border-color: #3A4673 !important; }
+    .texto { color: #F5F6FF !important; }
+    .suave { color: #AEB6D8 !important; }
+    .caja-codigo { background: #10162B !important; border-color: #3A4673 !important; }
+    .codigo { color: #F5F6FF !important; }
+    a.enlace { color: #B9C8FF !important; }
+  }
+</style>
+</head>
+<body class="fondo" style="margin:0;padding:0;background:#F2F3F9;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">{% block previa %}{% endblock %}{{ ("&zwnj;&nbsp;" * 40) | safe }}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="fondo" style="background:#F2F3F9;">
+<tr><td align="center" style="padding:32px 16px;">
+<!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+<table role="presentation" class="contenedor" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+<tr><td class="texto" style="padding:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:bold;color:#1B2140;">{{ marca }}</td></tr>
+<tr><td class="tarjeta relleno texto" style="background:#FFFFFF;border:1px solid #D9DCEC;border-radius:10px;padding:32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;color:#1B2140;">
+{% block contenido %}{% endblock %}
+</td></tr>
+<tr><td class="suave" style="padding:20px 8px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#5A6283;">Recibes este correo porque alguien usó esta dirección en {{ marca }}. Nunca te pediremos tu contraseña por correo. Si no fuiste tú, puedes ignorar este mensaje.</td></tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>

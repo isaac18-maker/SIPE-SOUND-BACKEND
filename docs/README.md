@@ -51,16 +51,23 @@ Los números de migración de las HU 307 en adelante se recalculan al implementa
 | 4 | [HU-B-304 Roles y autorización](fase-3-backend-y-bd/HU-B-304-roles-y-autorizacion.md) | 3 | 303, 205 | 0002 |
 | 5 | [HU-B-305 Progreso con integridad](fase-3-backend-y-bd/HU-B-305-progreso-con-integridad.md) | 5 | 304 | 0003, 0004 |
 | 6 | [HU-B-306 Contenido editable](fase-3-backend-y-bd/HU-B-306-contenido-editable.md) | 5 | 305 | 0006, 0007 |
-| 7 | [HU-B-307 Cursos e inscripciones](fase-3-backend-y-bd/HU-B-307-cursos-e-inscripciones.md) | 3 | 306 | 0007 |
-| 8 | [HU-B-308 Evaluaciones e intentos](fase-3-backend-y-bd/HU-B-308-evaluaciones-e-intentos.md) | 8 | 307 | 0008, 0009 |
+| 7 | [HU-B-307 Cursos e inscripciones](fase-3-backend-y-bd/HU-B-307-cursos-e-inscripciones.md) | 3 | 306 | 0011 |
+| 8 | [HU-B-308 Evaluaciones e intentos](fase-3-backend-y-bd/HU-B-308-evaluaciones-e-intentos.md) | 8 | 307 | 0015, 0016 |
 | 9 | [HU-B-309 API docente: contenido](fase-3-backend-y-bd/HU-B-309-api-docente-contenido.md) | 5 | 306, 304 | — |
 | 10 | [HU-B-310 API docente: cursos y estudiantes](fase-3-backend-y-bd/HU-B-310-api-docente-cursos-y-estudiantes.md) | 8 | 307, 308 | — |
 | 11 | [HU-B-311 API docente: evaluaciones](fase-3-backend-y-bd/HU-B-311-api-docente-evaluaciones.md) | 5 | 308, 310 | — |
-| 12 | [HU-B-312 Retroalimentación y retiro de legado](fase-3-backend-y-bd/HU-B-312-retroalimentacion-y-retiro-legado.md) | 5 | 308, 310, HU-F-304, HU-F-306 | 0010 (destructiva aprobada) |
+| 12 | [HU-B-312 Retroalimentación y retiro de legado](fase-3-backend-y-bd/HU-B-312-retroalimentacion-y-retiro-legado.md) | 5 | 308, 310 | 0017 (destructiva aprobada) |
 | 6.1 | [HU-B-313 Proteger respuestas de quizzes](fase-3-backend-y-bd/HU-B-313-proteger-respuestas-quiz.md) 🔴 seguridad | 2 | 301, 303 | 0005 |
 | 6.2 | [HU-B-314 Retirar tabla partituras](fase-3-backend-y-bd/HU-B-314-retirar-partituras.md) | 1 | 303 | 0008 (destructiva aprobada) |
 | 6.3 | [HU-B-315 Una sola conexión (Session pooler)](fase-3-backend-y-bd/HU-B-315-una-sola-conexion.md) | 3 | 305, 313 | — |
 | 6.4 | [HU-B-316 Corrección de riesgos](fase-3-backend-y-bd/HU-B-316-correccion-de-riesgos.md) 🔴 seguridad | 5 | 315 | 0009, 0010 |
+| 7.1 | [HU-B-317 Respuesta estándar y Swagger](fase-3-backend-y-bd/HU-B-317-respuesta-estandar.md) | 3 | 204, 307 | — |
+| 7.2 | [HU-B-318 Registro e invitaciones](fase-3-backend-y-bd/HU-B-318-registro-de-cuentas.md) | 5 | 304, 317 | — |
+| 7.3 | [HU-B-319 Retiro inmediato del legado](fase-3-backend-y-bd/HU-B-319-retiro-del-legado.md) | 3 | 317 | 0012 (destructiva aprobada) |
+| 7.4 | [HU-B-320 Límites de los campos](fase-3-backend-y-bd/HU-B-320-limites-de-campos.md) | 3 | 319 | 0013 |
+| 7.5 | [HU-B-321 Cuentas sin clave service_role](fase-3-backend-y-bd/HU-B-321-registro-sin-service-role.md) | 3 | 320 | 0014 |
+| 7.6 | [HU-B-322 Autenticación a través del backend](fase-3-backend-y-bd/HU-B-322-autenticacion-por-backend.md) | 5 | 321 | — |
+| 8 | [HU-B-324 Actividad del estudiante para su inicio](fase-3-backend-y-bd/HU-B-324-datos-del-inicio-del-estudiante.md) | 3 | 305, 308 | — |
 
 ## Relación con el frontend
 
@@ -70,9 +77,52 @@ Las HU del frontend (`SIPE-SOUND-FULLSTACK/docs/`) que consumen estas APIs:
 |---|---|
 | HU-B-204 (`/api/v1`) | HU-F-203 (cliente HTTP) |
 | HU-B-304 (`/me`, roles) | HU-F-204 (sesión), HU-F-303 (navegación por rol) |
+| HU-B-322 (`/auth/*`) | HU-F-207 (autenticación por el backend) |
 | HU-B-305, HU-B-308 | HU-F-304 (ruta), HU-F-306 (evaluación y progreso) |
 | HU-B-312 | HU-F-311 (retroalimentación) |
 | HU-B-307 | HU-F-311 (unirse a curso) |
 | HU-B-309 | HU-F-308 (contenido docente) |
 | HU-B-310 | HU-F-307 (cursos), HU-F-309 (estudiantes) |
 | HU-B-311 | HU-F-310 (evaluaciones docente) |
+| HU-B-324 | HU-F-315 (inicio del estudiante), HU-F-317 (gráfico de práctica) |
+| HU-B-402 | HU-F-401 (verificar correo con código) |
+| HU-B-403 | HU-F-402 (recuperar contraseña) |
+| HU-B-404, HU-B-407 | HU-F-403 (mi cuenta) |
+| HU-B-405, HU-B-407 | HU-F-404 (admin: usuarios) |
+| HU-B-406 | HU-F-405 (admin: docentes y cursos) |
+| HU-B-408 | HU-F-406 (panel de progreso del docente) |
+| HU-B-409 | HU-F-407 (mensajes) |
+| HU-B-410 | HU-F-408 (videos guía) |
+
+## Fase 4 · Cuentas y comunicación
+
+Decisiones y modelo: [00-decisiones-fase-4.md](fase-4-cuentas-y-comunicacion/00-decisiones-fase-4.md)
+(el backend envía sus correos por Gmail SMTP y es dueño de los códigos; **orden de despliegue obligatorio** en §5).
+Los números de migración se recalculan al implementar.
+
+| Orden | HU | Pts | Depende de | Migraciones |
+|---|---|---|---|---|
+| 1 | [HU-B-401 Correo por Gmail SMTP y plantillas](fase-4-cuentas-y-comunicacion/HU-B-401-correo-smtp-y-plantillas.md) | 5 | 322 | 0018 |
+| 2 | [HU-B-402 Verificación de correo con código propio](fase-4-cuentas-y-comunicacion/HU-B-402-verificacion-de-correo.md) 🔴 seguridad | 8 | 401, 321, 322 | 0019 (destructiva aprobada: retira un trigger), 0020 |
+| 3 | [HU-B-403 Restablecer contraseña](fase-4-cuentas-y-comunicacion/HU-B-403-restablecer-contrasena.md) | 5 | 402 | 0021 |
+| 4 | [HU-B-404 Cambio de correo y contraseña con verificación de identidad](fase-4-cuentas-y-comunicacion/HU-B-404-cambio-de-correo-y-contrasena.md) | 8 | 403 | 0022 |
+| 5 | [HU-B-407 Nombre y apellido con permiso del admin](fase-4-cuentas-y-comunicacion/HU-B-407-nombre-y-apellido-con-permiso.md) | 3 | 402 | 0024 |
+| 6 | [HU-B-405 Admin: gestión de cuentas](fase-4-cuentas-y-comunicacion/HU-B-405-admin-gestion-de-cuentas.md) | 8 | 402, 407 | 0023 (destructiva aprobada: `eliminar_cuenta`) |
+| 7 | [HU-B-406 Admin: docentes, cursos asignados y accesos](fase-4-cuentas-y-comunicacion/HU-B-406-admin-docentes-y-accesos-a-cursos.md) | 5 | 405, 310 | — |
+| 8 | [HU-B-408 Panel de progreso del docente](fase-4-cuentas-y-comunicacion/HU-B-408-panel-de-progreso-docente.md) | 5 | 310, 308, 407 | — |
+| 9 | [HU-B-409 Mensajería interna y avisos](fase-4-cuentas-y-comunicacion/HU-B-409-mensajeria-interna.md) | 8 | 405, 307 | 0025 |
+| 10 | [HU-B-410 Video guía de YouTube](fase-4-cuentas-y-comunicacion/HU-B-410-videos-guia-de-youtube.md) | 3 | 306, 309 | 0026 |
+
+> HU-B-408 y HU-B-410 no dependen del correo: pueden avanzar en paralelo con 401–404.
+
+## Fase 5 · Experiencia y visualización
+
+Decisiones: [00-decisiones-fase-5.md](fase-5-experiencia-y-visualizacion/00-decisiones-fase-5.md)
+(el backend calcula el estado de avance una sola vez; los gráficos del frontend son SVG propios).
+Ninguna HU de esta fase cambia el esquema: son consultas agregadas.
+
+| Orden | HU | Pts | Depende de | Migraciones |
+|---|---|---|---|---|
+| 1 | [HU-B-502 Avance y estado por curso](fase-5-experiencia-y-visualizacion/HU-B-502-avance-por-curso.md) | 5 | 307, 308 | — |
+| 2 | [HU-B-501 Progreso por ejercicio](fase-5-experiencia-y-visualizacion/HU-B-501-progreso-por-ejercicio.md) | 3 | 305 | — |
+| 3 | [HU-B-503 Series del panel del docente](fase-5-experiencia-y-visualizacion/HU-B-503-series-del-panel-docente.md) | 5 | 408 | — |

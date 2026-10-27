@@ -25,3 +25,4 @@ Thumbs.db
 
 # Respaldos de datos (contienen datos personales de estudiantes)
 respaldos/
+tmp/

@@ -1,0 +1,8 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+Hola, {{ nombre }}.
+
+Tu contraseña de {{ marca }} cambió el {{ fecha }}. Cerramos tus sesiones abiertas en otros dispositivos.
+
+Si no fuiste tú, usa "¿Olvidaste tu contraseña?" en la página de inicio de sesión para crear una nueva y avisa a tu docente o al administrador.
+{% endblock %}

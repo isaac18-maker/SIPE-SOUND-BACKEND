@@ -10,18 +10,39 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.constants import ESTADOS_CONTENIDO
+from app.core.longitudes import (
+    BPM_MAXIMO,
+    BPM_MINIMO,
+    DESCRIPCION_MAX,
+    DURACION_MIN_MAXIMO,
+    DURACION_MIN_MINIMO,
+    MAXIMO_ACORDES,
+    MAXIMO_PASOS,
+    NOMBRE_ACORDE_MAX,
+    PASO_MAX,
+    PATRON_COMPAS,
+    TITULO_MAX,
+    TITULO_MIN,
+)
 from app.models.base import (
     NIVELES,
     AutoriaMixin,
     Base,
     CreadoEnMixin,
     EstadoMixin,
+    VideoMixin,
+    elementos_caben,
+    elementos_maximo,
     en_lista,
+    entero_entre,
     existente,
+    largo_entre,
+    largo_maximo,
+    restricciones_video,
 )
 
 
-class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
+class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, VideoMixin, Base):
     __tablename__ = "ejercicios"
     __table_args__ = (
         PrimaryKeyConstraint("id", name=existente("ejercicios_pkey")),
@@ -38,7 +59,21 @@ class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
         CheckConstraint(
             "(estado = 'archivado') = (archivado_en IS NOT NULL)", name="archivado_coherente"
         ),
-        CheckConstraint("duracion_min IS NULL OR duracion_min > 0", name="duracion_min"),
+        CheckConstraint(
+            entero_entre("duracion_min", DURACION_MIN_MINIMO, DURACION_MIN_MAXIMO),
+            name="duracion_min",
+        ),
+        CheckConstraint(largo_entre("nombre", TITULO_MIN, TITULO_MAX), name="nombre"),
+        CheckConstraint(largo_maximo("descripcion", DESCRIPCION_MAX), name="descripcion"),
+        CheckConstraint(
+            entero_entre("bpm_recomendado", BPM_MINIMO, BPM_MAXIMO), name="bpm_recomendado"
+        ),
+        CheckConstraint(f"compas ~ '{PATRON_COMPAS}'", name="compas"),
+        CheckConstraint(elementos_maximo("acordes", MAXIMO_ACORDES), name="acordes"),
+        CheckConstraint(elementos_maximo("pasos", MAXIMO_PASOS), name="pasos"),
+        CheckConstraint(elementos_caben("acordes", NOMBRE_ACORDE_MAX), name="acordes_largo"),
+        CheckConstraint(elementos_caben("pasos", PASO_MAX), name="pasos_largo"),
+        *restricciones_video(),
     )
 
     id: Mapped[int] = mapped_column(Integer)
@@ -47,8 +82,6 @@ class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
     descripcion: Mapped[str | None] = mapped_column(Text)
     nivel: Mapped[str] = mapped_column(Text, server_default="principiante")
     bpm_recomendado: Mapped[int | None] = mapped_column(Integer, server_default="60")
-    # TODO(HU-B-312): retirar `duracion` (texto) cuando el frontend use duracion_min.
-    duracion: Mapped[str | None] = mapped_column(Text)
     compas: Mapped[str | None] = mapped_column(Text, server_default="4/4")
     acordes: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
     pasos: Mapped[list[str] | None] = mapped_column(ARRAY(Text))

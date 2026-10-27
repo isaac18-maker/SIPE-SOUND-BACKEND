@@ -3,7 +3,7 @@ from flask import Blueprint, request
 from app.container import progreso_service
 from app.core.responses import ok
 from app.core.security import auth_required, get_current_user
-from app.schemas.progreso import AvanceEjercicioIn, AvanceIn
+from app.schemas.progreso import ActividadQuery, AvanceEjercicioIn, AvanceIn
 
 bp = Blueprint("progreso_contenido", __name__)
 
@@ -26,3 +26,10 @@ def registrar_ejercicio(ejercicio_id: int):
 @auth_required
 def resumen():
     return ok(progreso_service().resumen(get_current_user()))
+
+
+@bp.get("/progreso/actividad")
+@auth_required
+def actividad():
+    filtros = ActividadQuery.model_validate(request.args.to_dict())
+    return ok(progreso_service().actividad(get_current_user(), filtros.dias))

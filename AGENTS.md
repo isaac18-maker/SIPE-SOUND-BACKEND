@@ -9,7 +9,7 @@ Frontend en el repositorio hermano `SIPE-SOUND-FULLSTACK`.
 
 ## Antes de escribir código
 1. Lee `docs/fase-1-contrato/` completo (contrato vinculante).
-2. Lee la HU asignada en `docs/fase-2-reestructuracion/` o `docs/fase-3-backend-y-bd/`.
+2. Lee la HU asignada en `docs/fase-2-reestructuracion/`, `docs/fase-3-backend-y-bd/` o `docs/fase-4-cuentas-y-comunicacion/` (en esta última, también su `00-decisiones-fase-4.md`).
 3. Si la HU contradice el contrato, gana el contrato: avisa.
 
 ## Reglas que no se negocian

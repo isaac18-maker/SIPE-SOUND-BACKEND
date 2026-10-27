@@ -8,6 +8,17 @@
 | Depende de | HU-B-308, HU-B-310 |
 | Rama | `hu/HU-B-311-docente-evaluaciones` |
 
+## Implementación (2026-10-24)
+- `GestionEvaluacionService` reutiliza `CursoService.curso_propio` (propiedad del curso).
+- Resultados en 4 consultas agregadas fijas. El "mejor intento" de cada estudiante es el de
+  mayor puntaje (empate: el más reciente); `aciertos_pct` sale de sus `respuestas` (jsonb).
+- La clave `porcentaje_aprobacion` del ejemplo se llama **`aprobaron_pct`** (% de estudiantes que
+  aprobaron) para no confundirla con el umbral, que sale como `minimo_requerido`.
+  También se entrega `sin_presentar` (inscritos sin intentos).
+- Con intentos: no se reemplazan preguntas ni se cambia `porcentaje_aprobacion` (422);
+  `DELETE` → 409 con `errors: ["sugerencia: cerrar"]`. `cerrada` es final.
+- `fecha_limite` debe ser futura y con zona horaria (ISO-8601).
+
 ## Historia
 **Como** docente
 **quiero** crear evaluaciones para mi curso, publicarlas con fecha límite y analizar los resultados

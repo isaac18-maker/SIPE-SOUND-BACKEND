@@ -1,0 +1,9 @@
+{% extends "_base.html" %}
+{% from "_macros.html" import boton, caja_codigo, parrafo %}
+{% block previa %}Confirma tu correo nuevo con este código. Vence en {{ minutos }} minutos.{% endblock %}
+{% block contenido %}
+{% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
+{% call parrafo() %}Pediste usar este correo en tu cuenta de {{ marca }}. Para confirmarlo, escribe este código:{% endcall %}
+{{ caja_codigo(codigo) }}
+{% call parrafo() %}Vence en {{ minutos }} minutos y solo sirve una vez. Si no lo pediste, ignora este mensaje: tu cuenta no cambia.{% endcall %}
+{% endblock %}

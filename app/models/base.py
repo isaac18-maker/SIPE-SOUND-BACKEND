@@ -5,7 +5,17 @@
 # =========================================================
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, MetaData, Table, Text, func
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    MetaData,
+    Table,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 from sqlalchemy.sql.elements import conv
@@ -33,6 +43,55 @@ def existente(nombre: str) -> conv:
 def en_lista(columna: str, valores: tuple[str, ...]) -> str:
     """Expresion CHECK equivalente a la de la base: columna in (...)."""
     return f"{columna} in ({', '.join(repr(v) for v in valores)})"
+
+
+# Limites de campos (HU-B-320): mismas expresiones que la revision 0013.
+def largo_entre(columna: str, minimo: int, maximo: int) -> str:
+    """Sin contar espacios de los extremos: "   " no es un titulo."""
+    return f"char_length(btrim({columna})) BETWEEN {minimo} AND {maximo}"
+
+
+def largo_maximo(columna: str, maximo: int) -> str:
+    return f"char_length({columna}) <= {maximo}"
+
+
+def entero_entre(columna: str, minimo: int, maximo: int) -> str:
+    return f"{columna} IS NULL OR ({columna} >= {minimo} AND {columna} <= {maximo})"
+
+
+def elementos_maximo(columna: str, maximo: int) -> str:
+    return f"cardinality({columna}) <= {maximo}"
+
+
+def elementos_caben(columna: str, maximo: int) -> str:
+    """Cada elemento de la lista con 1..maximo caracteres (funcion de la revision 0013)."""
+    return f"public.elementos_caben({columna}, {maximo})"
+
+
+class VideoMixin:
+    """Video guia de YouTube, opcional (HU-B-410). Solo el id y el segundo de inicio."""
+
+    video_youtube_id: Mapped[str | None] = mapped_column(Text)
+    video_inicio_seg: Mapped[int | None] = mapped_column(Integer)
+
+
+def restricciones_video() -> tuple[CheckConstraint, ...]:
+    """Los CHECK de VideoMixin (mismos de la revision 0026). Un CheckConstraint no se puede
+    compartir entre tablas, por eso se crea uno nuevo en cada llamada."""
+    return (
+        CheckConstraint(
+            "video_youtube_id IS NULL OR video_youtube_id ~ '^[A-Za-z0-9_-]{11}$'",
+            name="video_youtube_id",
+        ),
+        CheckConstraint(
+            "video_inicio_seg IS NULL OR (video_inicio_seg >= 0 AND video_inicio_seg <= 43200)",
+            name="video_inicio_seg",
+        ),
+        CheckConstraint(
+            "video_inicio_seg IS NULL OR video_youtube_id IS NOT NULL",
+            name="video_inicio_con_video",
+        ),
+    )
 
 
 class CreadoEnMixin:
@@ -65,6 +124,13 @@ class AutoriaMixin:
 
     @declared_attr
     def autor_id(cls) -> Mapped[str | None]:  # noqa: N805 - declared_attr recibe la clase
+        return mapped_column(
+            UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), index=True
+        )
+
+    # Quien lo modifico por ultima vez (HU-B-412); nulo = nadie lo ha modificado desde que se creo.
+    @declared_attr
+    def actualizado_por(cls) -> Mapped[str | None]:  # noqa: N805 - declared_attr recibe la clase
         return mapped_column(
             UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), index=True
         )
