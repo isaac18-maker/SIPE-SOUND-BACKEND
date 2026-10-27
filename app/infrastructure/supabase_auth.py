@@ -42,6 +42,13 @@ MENSAJE_SESION_VENCIDA = "Tu sesión terminó. Inicia sesión de nuevo."
 MENSAJE_CONTRASENA_DEBIL = (
     "La contraseña es demasiado débil. Usa al menos 8 caracteres con letras y números."
 )
+# Limite de correos de Supabase (su correo integrado permite muy pocos por hora): dura mucho
+# mas que el minuto del limite propio, asi que se avisa distinto.
+CODIGO_LIMITE_CORREO = "over_email_send_rate_limit"
+MENSAJE_LIMITE_CORREO = (
+    "El servicio de cuentas alcanzó su límite de correos por ahora. "
+    "Si ya te registraste, usa «Pedir otro código»; si no, inténtalo en una hora."
+)
 CODIGOS_CORREO_RECHAZADO = {"email_address_invalid", "email_address_not_authorized"}
 MENSAJE_CORREO_RECHAZADO = (
     "No pudimos usar ese correo. Escribe una dirección real y vuelve a intentar."
@@ -124,7 +131,9 @@ def _traducir(ruta: str, fallo: error.HTTPError) -> AppError:
     # Solo se registran el estado y el codigo de Supabase, nunca el cuerpo enviado.
     logger.warning("Supabase Auth %s respondio %s (%s)", ruta, fallo.code, codigo)
     if fallo.code == HTTP_LIMITE:
-        return DemasiadasSolicitudes()
+        return DemasiadasSolicitudes(
+            MENSAJE_LIMITE_CORREO if codigo == CODIGO_LIMITE_CORREO else None
+        )
     if codigo in ERRORES_POR_CODIGO:
         return ERRORES_POR_CODIGO[codigo]()
     if fallo.code in HTTP_TOKEN_RECHAZADO:
