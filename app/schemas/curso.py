@@ -29,6 +29,15 @@ class CursoCreate(BaseModel):
     nivel: Nivel = "principiante"
 
 
+class MisCursosQuery(BaseModel):
+    """GET /cursos (HU-B-502): filtro por estado y orden (ultimo avance, nombre o avance)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    estado: Literal["sin_iniciar", "en_curso", "finalizado"] | None = None
+    orden: Literal["ultimo_avance", "nombre", "avance"] = "ultimo_avance"
+
+
 class UnirseCursoIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -110,3 +119,20 @@ class EstudiantesQuery(BaseModel):
     orden: Literal["nombre", "-avance_pct", "-ultimo_avance"] = "nombre"
     pagina: int = Field(default=1, ge=1)
     por_pagina: int = Field(default=20, ge=1, le=POR_PAGINA_MAX)
+
+
+class SolicitudesQuery(BaseModel):
+    """GET /docente/solicitudes-inscripcion: ?estado=pendiente|aceptada|rechazada y ?curso_id=."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    estado: Literal["pendiente", "aceptada", "rechazada"] | None = None
+    curso_id: int | None = Field(default=None, gt=0)
+
+
+class ResolverSolicitudIn(BaseModel):
+    """PATCH /docente/solicitudes-inscripcion/{id}: aceptar o rechazar."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    estado: Literal["aceptada", "rechazada"]

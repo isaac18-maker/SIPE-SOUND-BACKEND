@@ -116,3 +116,15 @@ Los números de migración se recalculan al implementar.
 | 10 | [HU-B-410 Video guía de YouTube](fase-4-cuentas-y-comunicacion/HU-B-410-videos-guia-de-youtube.md) | 3 | 306, 309 | 0026 |
 
 > HU-B-408 y HU-B-410 no dependen del correo: pueden avanzar en paralelo con 401–404.
+
+## Fase 5 · Experiencia y visualización
+
+Decisiones: [00-decisiones-fase-5.md](fase-5-experiencia-y-visualizacion/00-decisiones-fase-5.md)
+(el backend calcula el estado de avance una sola vez; los gráficos del frontend son SVG propios).
+Ninguna HU de esta fase cambia el esquema: son consultas agregadas.
+
+| Orden | HU | Pts | Depende de | Migraciones |
+|---|---|---|---|---|
+| 1 | [HU-B-502 Avance y estado por curso](fase-5-experiencia-y-visualizacion/HU-B-502-avance-por-curso.md) | 5 | 307, 308 | — |
+| 2 | [HU-B-501 Progreso por ejercicio](fase-5-experiencia-y-visualizacion/HU-B-501-progreso-por-ejercicio.md) | 3 | 305 | — |
+| 3 | [HU-B-503 Series del panel del docente](fase-5-experiencia-y-visualizacion/HU-B-503-series-del-panel-docente.md) | 5 | 408 | — |

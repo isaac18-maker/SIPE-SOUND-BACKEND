@@ -71,6 +71,10 @@ class Evaluacion(Base):
     autor_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), index=True
     )
+    # Quien la modifico por ultima vez (HU-B-412).
+    actualizado_por: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("profiles.id", ondelete="SET NULL"), index=True
+    )
     porcentaje_aprobacion: Mapped[int] = mapped_column(Integer, server_default=text("80"))
     intentos_max: Mapped[int | None] = mapped_column(Integer)
     fecha_limite: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

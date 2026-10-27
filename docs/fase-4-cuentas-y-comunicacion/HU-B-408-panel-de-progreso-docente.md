@@ -26,11 +26,13 @@ sus cursos activos; el admin puede pasar `?docente_id=`)
 
 | Endpoint | Detalle |
 |---|---|
-| `GET /progreso` | `?curso_id=` opcional (sin él: todos los cursos activos del docente). Devuelve `cursos` (por curso: `estudiantes`, `avance_promedio`, `estudiantes_al_dia` (último avance ≤ 7 días), `sin_actividad_14_dias`), `bloques` de la ruta (del curso o global, en orden) con `aprobados`, `intentos`, `promedio_mejor_puntaje` y `pregunta_mas_fallada` (`enunciado` recortado a 120), y `necesitan_apoyo` (máx. 20): estudiantes sin actividad en 14 días **o** con 2+ intentos reprobados en el bloque disponible, con el motivo en texto (`"sin_actividad"`, `"reprobo_bloque"`). |
+| `GET /progreso` | `?curso_id=` opcional (sin él: todos los cursos activos del docente). Devuelve `cursos` (por curso: `estudiantes`, `avance_promedio`, `estudiantes_al_dia` (último avance ≤ 7 días), `sin_actividad_14_dias` y **sus** `bloques`, porque cada curso puede tener su propia ruta: `aprobados`, `intentos`, `promedio_mejor_puntaje` y `pregunta_mas_fallada` con `enunciado` recortado a 120), y `necesitan_apoyo` (máx. 20): estudiantes sin actividad en 14 días **o** con 2+ intentos reprobados en un bloque que no han aprobado. Cada uno trae `motivos` (lista de códigos `"sin_actividad"`, `"reprobo_bloque"`; el frontend arma el texto) y `bloque_reprobado`. |
 | `GET /progreso/matriz` | `?curso_id=` **obligatorio**, paginado por estudiante (`por_pagina` ≤ 100), `?orden=nombre\|-avance_pct\|-ultimo_avance`, `?q=`. Por estudiante: `estudiante_id`, `nombre`, `apellido`, `avance_pct`, `ultimo_avance` y `bloques: [{bloque_id, estado: bloqueado\|disponible\|aprobado, mejor_puntaje, intentos}]` en el orden de la ruta. |
 | `GET /progreso/estudiantes/{estudiante_id}` | Progreso de un estudiante en **todos** los cursos del docente donde está inscrito (reutiliza el detalle de B-310 por curso). 404 si no es estudiante suyo. |
 
-1. Consultas en `SqlSeguimientoRepository` reutilizando la CTE de la ruta de B-310; el estado
+1. Consultas en `SqlProgresoDocenteRepository` (agregan por **todos** los cursos y estudiantes del
+   alcance a la vez: 3 sentencias para el resumen y 5 para una página de la matriz, sin
+   importar cuántos cursos o estudiantes haya) con la definición de ruta de B-310; el estado
    del bloque se calcula con la misma regla que `RutaService` (desbloqueo por intento aprobado).
 2. Correo del estudiante **no** se incluye (el panel no lo necesita; B-310 lo da enmascarado).
 3. Contrato 04 §4.3.

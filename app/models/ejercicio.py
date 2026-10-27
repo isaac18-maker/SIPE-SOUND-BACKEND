@@ -30,6 +30,7 @@ from app.models.base import (
     Base,
     CreadoEnMixin,
     EstadoMixin,
+    VideoMixin,
     elementos_caben,
     elementos_maximo,
     en_lista,
@@ -37,10 +38,11 @@ from app.models.base import (
     existente,
     largo_entre,
     largo_maximo,
+    restricciones_video,
 )
 
 
-class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
+class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, VideoMixin, Base):
     __tablename__ = "ejercicios"
     __table_args__ = (
         PrimaryKeyConstraint("id", name=existente("ejercicios_pkey")),
@@ -71,6 +73,7 @@ class Ejercicio(CreadoEnMixin, EstadoMixin, AutoriaMixin, Base):
         CheckConstraint(elementos_maximo("pasos", MAXIMO_PASOS), name="pasos"),
         CheckConstraint(elementos_caben("acordes", NOMBRE_ACORDE_MAX), name="acordes_largo"),
         CheckConstraint(elementos_caben("pasos", PASO_MAX), name="pasos_largo"),
+        *restricciones_video(),
     )
 
     id: Mapped[int] = mapped_column(Integer)

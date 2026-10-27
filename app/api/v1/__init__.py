@@ -3,16 +3,20 @@ from flask import Flask
 from app.api.v1 import (
     acordes,
     admin,
+    admin_cursos,
     auth,
     bloques,
     cursos,
     docente,
+    docente_progreso,
     ejercicios,
     evaluaciones,
     health,
     lecciones,
     me,
+    mensajes,
     progreso_contenido,
+    terminos,
 )
 from app.core.limites import configurar_limites
 from app.core.responses import PREFIJO_V1
@@ -26,11 +30,15 @@ BLUEPRINTS = (
     ejercicios,
     acordes,
     me,
+    mensajes,
     admin,
+    admin_cursos,
     progreso_contenido,
     cursos,
     evaluaciones,
     docente,
+    docente_progreso,
+    terminos,
 )
 
 

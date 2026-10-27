@@ -58,8 +58,11 @@
    | GET | `/mensajes/no-leidos` | `{total}` (para el contador; consulta por índice, < 10 ms). |
    | GET | `/mensajes/destinatarios` | `?q=` (2–80). Personas y grupos a los que **este** usuario puede escribir, máx. 20: `{tipo: usuario\|curso\|grupo, id, etiqueta, detalle}`. El estudiante ve solo sus docentes con el nombre del curso. |
 3. Datos que se muestran: remitente con `nombre`, `apellido` y `rol`; **nunca** correos.
-4. Límites (`app/core/limites.py`): estudiante 20 mensajes/hora, docente 60/hora, admin 120/hora;
-   avisos de grupo (`alcance` ≠ `usuario`): 10/hora por remitente.
+4. Límites: estudiante 20 mensajes/hora, docente 60/hora, admin 120/hora; avisos de grupo
+   (`alcance` ≠ `usuario`): 10/hora por remitente. **Se miden en la base** (se cuentan los
+   mensajes reales de la última hora, `MensajeriaService`), no en `app/core/limites.py`: el
+   limitador de Flask vive en memoria de cada proceso y se perdería con varios procesos o al
+   reiniciar. Constantes en `app/core/constants.py`.
 5. Contrato 04 (nueva sección 4.5 Mensajería, §7 `asunto` 3–120 y `cuerpo` 1–4000) y contrato 05
    (tabla ON DELETE).
 

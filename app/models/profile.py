@@ -5,6 +5,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
+    Integer,
     PrimaryKeyConstraint,
     Text,
     func,
@@ -44,6 +45,13 @@ class Profile(CreadoEnMixin, Base):
         # El apellido es opcional en la base: las cuentas anteriores a HU-B-407 no lo tienen.
         CheckConstraint(f"apellido IS NULL OR {APELLIDO_LARGO}", name="apellido"),
         CheckConstraint(
+            "(suspendido_en IS NULL) = (motivo_suspension IS NULL)", name="suspension_coherente"
+        ),
+        CheckConstraint(
+            "motivo_suspension IS NULL OR char_length(btrim(motivo_suspension)) BETWEEN 10 AND 300",
+            name="motivo_suspension",
+        ),
+        CheckConstraint(
             "apellido IS NULL OR apellido !~ '[[:cntrl:]]'", name="apellido_sin_control"
         ),
     )
@@ -61,3 +69,10 @@ class Profile(CreadoEnMixin, Base):
     # Lo llena el backend al verificar el codigo enviado al correo (HU-B-402). Nulo = la
     # cuenta no puede iniciar sesion ni usar la API.
     correo_verificado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Una cuenta suspendida no inicia sesion ni usa la API (HU-B-405).
+    suspendido_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    motivo_suspension: Mapped[str | None] = mapped_column(Text)
+    # Version de los terminos que la persona acepto y cuando (HU-B-411). Nulo o menor que la
+    # vigente = debe volver a aceptarlos para usar la API.
+    terminos_version: Mapped[int | None] = mapped_column(Integer)
+    terminos_aceptados_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

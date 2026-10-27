@@ -82,7 +82,74 @@ MENSAJE_SIN_CONFIRMAR = (
 # Estado de una cuenta (se calcula, no se guarda).
 CUENTA_PENDIENTE = "pendiente_verificacion"
 CUENTA_ACTIVA = "activa"
+CUENTA_SUSPENDIDA = "suspendida"
+MENSAJE_SUSPENDIDA = "Tu cuenta está suspendida. Habla con el administrador."
+
+# Terminos y condiciones editables (HU-B-411): un solo documento vigente con numero de version.
+TIPO_TERMINOS = "terminos"
+TERMINOS_MAX = 60000
+MENSAJE_TERMINOS_PENDIENTES = "Lee y acepta los términos y condiciones actualizados para continuar."
+CODIGO_TERMINOS_PENDIENTES = "TERMINOS_PENDIENTES"
+
+# Auditoria del administrador (HU-B-405). Las que usan HU posteriores ya estan permitidas.
+ACCIONES_ADMIN = (
+    "reenviar_verificacion",
+    "verificar_manual",
+    "suspender",
+    "reactivar",
+    "eliminar",
+    "cambiar_rol",
+    "revocar_curso",
+    "reasignar_curso",
+    "permiso_nombre",
+)
 
 ENVIO_ENVIADO = "enviado"
 ENVIO_FALLIDO = "fallido"
 ESTADOS_ENVIO = (ENVIO_ENVIADO, ENVIO_FALLIDO)
+
+# Mensajeria interna (HU-B-409). Los limites por hora los mide la base (cuenta mensajes
+# reales), no un contador en memoria: valen aunque haya varios procesos.
+ALCANCE_USUARIO = "usuario"
+ALCANCE_CURSO = "curso"
+ALCANCE_ESTUDIANTES_DOCENTE = "estudiantes_docente"
+ALCANCE_ROL_ESTUDIANTE = "rol_estudiante"
+ALCANCE_ROL_DOCENTE = "rol_docente"
+ALCANCE_ROL_ADMIN = "rol_admin"
+ALCANCE_TODOS = "todos"
+ALCANCES_MENSAJE = (
+    ALCANCE_USUARIO,
+    ALCANCE_CURSO,
+    ALCANCE_ESTUDIANTES_DOCENTE,
+    ALCANCE_ROL_ESTUDIANTE,
+    ALCANCE_ROL_DOCENTE,
+    ALCANCE_ROL_ADMIN,
+    ALCANCE_TODOS,
+)
+# A que puede escribir cada rol (00-decisiones-fase-4, seccion 6).
+ALCANCES_POR_ROL = {
+    ROL_ADMIN: frozenset(
+        {
+            ALCANCE_USUARIO,
+            ALCANCE_ROL_ESTUDIANTE,
+            ALCANCE_ROL_DOCENTE,
+            ALCANCE_ROL_ADMIN,
+            ALCANCE_TODOS,
+        }
+    ),
+    ROL_DOCENTE: frozenset(
+        {
+            ALCANCE_USUARIO,
+            ALCANCE_CURSO,
+            ALCANCE_ESTUDIANTES_DOCENTE,
+            ALCANCE_ROL_DOCENTE,
+            ALCANCE_ROL_ADMIN,
+        }
+    ),
+    ROL_ESTUDIANTE: frozenset({ALCANCE_USUARIO}),
+}
+MENSAJES_POR_HORA = {ROL_ESTUDIANTE: 20, ROL_DOCENTE: 60, ROL_ADMIN: 120}
+AVISOS_DE_GRUPO_POR_HORA = 10
+EXTRACTO_MENSAJE_MAX = 140
+DESTINATARIOS_SUGERIDOS_MAX = 20
+FILTROS_BANDEJA = ("recibidos", "enviados", "no_leidos", "archivados")

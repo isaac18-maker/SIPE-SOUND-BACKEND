@@ -11,6 +11,7 @@ from flask import g, has_app_context
 from sqlalchemy import exists
 
 from app.core.config import get_settings
+from app.core.security import CurrentUser
 from app.infrastructure.correo_smtp import EnviadorArchivo, EnviadorSmtp
 from app.infrastructure.database import session_scope
 from app.infrastructure.supabase_auth import ClienteSupabaseAuth
@@ -19,7 +20,11 @@ from app.models.ejercicio import Ejercicio
 from app.models.evaluacion import Evaluacion
 from app.models.leccion import Leccion
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
+from app.repositories.sqlalchemy._autoria import alcance_de_ejercicios, alcance_de_lecciones
+from app.repositories.sqlalchemy.accion_admin_repository import SqlAccionAdminRepository
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
+from app.repositories.sqlalchemy.admin_cuentas_repository import SqlAdminCuentasRepository
+from app.repositories.sqlalchemy.admin_docentes_repository import SqlAdminDocentesRepository
 from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
 from app.repositories.sqlalchemy.codigo_repository import SqlCodigoRepository
 from app.repositories.sqlalchemy.contenido_repository import (
@@ -36,11 +41,20 @@ from app.repositories.sqlalchemy.gestion_evaluacion_repository import (
     SqlGestionEvaluacionRepository,
 )
 from app.repositories.sqlalchemy.leccion_repository import SqlLeccionRepository
+from app.repositories.sqlalchemy.mensajeria_repository import SqlMensajeriaRepository
 from app.repositories.sqlalchemy.perfil_repository import SqlPerfilRepository
+from app.repositories.sqlalchemy.progreso_docente_repository import SqlProgresoDocenteRepository
 from app.repositories.sqlalchemy.progreso_repository import SqlProgresoRepository
 from app.repositories.sqlalchemy.ruta_repository import SqlRutaRepository
 from app.repositories.sqlalchemy.seguimiento_repository import SqlSeguimientoRepository
+from app.repositories.sqlalchemy.solicitud_inscripcion_repository import (
+    SqlSolicitudInscripcionRepository,
+)
+from app.repositories.sqlalchemy.solicitud_nombre_repository import SqlSolicitudNombreRepository
+from app.repositories.sqlalchemy.terminos_repository import SqlTerminosRepository
 from app.services.acorde_service import AcordeService
+from app.services.admin_cuentas_service import AdminCuentasService
+from app.services.admin_cursos_service import AdminCursosService
 from app.services.auth_service import AuthService
 from app.services.bloque_service import BloqueService
 from app.services.codigo_service import CodigoService
@@ -53,10 +67,15 @@ from app.services.ejercicio_service import EjercicioService
 from app.services.evaluacion_service import EvaluacionService
 from app.services.gestion_evaluacion_service import GestionEvaluacionService
 from app.services.leccion_service import LeccionService
+from app.services.mensajeria_service import MensajeriaService
 from app.services.perfil_service import AdminUsuariosService, PerfilService, estado_de_cuenta
+from app.services.progreso_docente_service import ProgresoDocenteService
 from app.services.progreso_service import ProgresoService
 from app.services.recuperacion_service import RecuperacionService
 from app.services.ruta_service import RutaService
+from app.services.solicitud_inscripcion_service import SolicitudInscripcionService
+from app.services.solicitud_nombre_service import SolicitudNombreService
+from app.services.terminos_service import TerminosService, terminos_pendientes
 from app.services.verificacion_service import VerificacionService
 
 
@@ -77,7 +96,8 @@ def ejercicio_service() -> EjercicioService:
 
 @lru_cache
 def acorde_service() -> AcordeService:
-    return AcordeService(SqlAcordeRepository(session_scope))
+    repositorio = SqlAcordeRepository(session_scope)
+    return AcordeService(repositorio, repositorio)
 
 
 @lru_cache
@@ -110,13 +130,30 @@ def perfil_service() -> PerfilService:
 
 @lru_cache
 def admin_usuarios_service() -> AdminUsuariosService:
-    return AdminUsuariosService(session_scope, SqlPerfilRepository())
+    return AdminUsuariosService(session_scope, SqlPerfilRepository(), SqlAccionAdminRepository())
 
 
 @lru_cache
 def curso_service() -> CursoService:
     return CursoService(
         session_scope, SqlCursoRepository(), SqlSeguimientoRepository(), ruta_service()
+    )
+
+
+@lru_cache
+def solicitud_inscripcion_service() -> SolicitudInscripcionService:
+    return SolicitudInscripcionService(
+        session_scope, SqlSolicitudInscripcionRepository(), SqlCursoRepository()
+    )
+
+
+@lru_cache
+def solicitud_nombre_service() -> SolicitudNombreService:
+    return SolicitudNombreService(
+        session_scope,
+        SqlSolicitudNombreRepository(),
+        lambda *a: admin_usuarios_service().permiso_de_nombre(*a),
+        lambda usuario, texto: mensajeria_service().solicitar_cambio_de_nombre(usuario, texto),
     )
 
 
@@ -146,6 +183,26 @@ def estado_de_usuario(usuario_id: str) -> str | None:
     return estado_de_cuenta(_perfil_en_peticion(usuario_id))
 
 
+@lru_cache
+def terminos_service() -> TerminosService:
+    return TerminosService(session_scope, SqlTerminosRepository())
+
+
+def _version_de_terminos_en_peticion() -> int:
+    """La version vigente se lee una vez por peticion (como el perfil)."""
+    if not has_app_context():
+        return terminos_service().version_vigente()
+    if "version_terminos" not in g:
+        g.version_terminos = terminos_service().version_vigente()
+    return g.version_terminos
+
+
+def terminos_pendientes_de(usuario_id: str) -> bool:
+    """True si la cuenta no ha aceptado la version vigente de los terminos (HU-B-411)."""
+    perfil = _perfil_en_peticion(usuario_id)
+    return terminos_pendientes(perfil, _version_de_terminos_en_peticion()) if perfil else False
+
+
 # --- Contenido editable (HU-B-309): un servicio generico configurado por tipo ---
 @lru_cache
 def leccion_contenido_service() -> ContenidoService:
@@ -154,6 +211,7 @@ def leccion_contenido_service() -> ContenidoService:
         columna_texto=Leccion.titulo,
         filtros=("estado", "bloque_id"),
         en_uso=lambda i: exists().where(ProgresoLeccion.leccion_id == i),
+        alcance=alcance_de_lecciones,
     )
     return ContenidoService(
         session_scope,
@@ -173,6 +231,7 @@ def ejercicio_contenido_service() -> ContenidoService:
         columna_texto=Ejercicio.nombre,
         filtros=("estado", "leccion_id"),
         en_uso=lambda i: exists().where(ProgresoEjercicio.ejercicio_id == i),
+        alcance=alcance_de_ejercicios,
     )
     return ContenidoService(
         session_scope,
@@ -240,6 +299,51 @@ def recuperacion_service() -> RecuperacionService:
 @lru_cache
 def auth_service() -> AuthService:
     return AuthService(ClienteSupabaseAuth(), verificacion_service(), estado_de_usuario)
+
+
+@lru_cache
+def admin_cuentas_service() -> AdminCuentasService:
+    def progreso_de(usuario_id: str) -> dict:
+        # ProgresoService solo usa el id del usuario para el resumen.
+        return progreso_service().resumen(CurrentUser(id=usuario_id, email=None, token=""))
+
+    return AdminCuentasService(
+        session_scope,
+        SqlAdminCuentasRepository(),
+        SqlCuentaRepository(),
+        codigo_service(),
+        correo_service(),
+        SqlAccionAdminRepository(),
+        progreso_de,
+    )
+
+
+@lru_cache
+def admin_cursos_service() -> AdminCursosService:
+    return AdminCursosService(
+        session_scope,
+        SqlAdminDocentesRepository(),
+        SqlAdminCuentasRepository(),
+        SqlCursoRepository(),
+        SqlSeguimientoRepository(),
+        SqlAccionAdminRepository(),
+    )
+
+
+@lru_cache
+def progreso_docente_service() -> ProgresoDocenteService:
+    return ProgresoDocenteService(
+        session_scope,
+        SqlProgresoDocenteRepository(),
+        SqlRutaRepository(),
+        SqlSeguimientoRepository(),
+        curso_service(),
+    )
+
+
+@lru_cache
+def mensajeria_service() -> MensajeriaService:
+    return MensajeriaService(session_scope, SqlMensajeriaRepository())
 
 
 @lru_cache

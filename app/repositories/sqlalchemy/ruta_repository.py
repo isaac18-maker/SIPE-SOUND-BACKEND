@@ -8,8 +8,17 @@ from app.models.evaluacion import Evaluacion, IntentoEvaluacion
 from app.models.leccion import Leccion
 from app.models.progreso_contenido import ProgresoLeccion
 from app.repositories.base import Fila
+from app.repositories.sqlalchemy._comun import video_de_fila
 
-COLUMNAS_BLOQUE = (Bloque.id, Bloque.numero, Bloque.titulo, Bloque.descripcion, Bloque.nivel)
+COLUMNAS_BLOQUE = (
+    Bloque.id,
+    Bloque.numero,
+    Bloque.titulo,
+    Bloque.descripcion,
+    Bloque.nivel,
+    Bloque.video_youtube_id,
+    Bloque.video_inicio_seg,
+)
 
 
 class SqlRutaRepository:
@@ -25,7 +34,7 @@ class SqlRutaRepository:
                 .where(CursoBloque.curso_id == curso_id, Bloque.estado == ESTADO_PUBLICADO)
                 .order_by(CursoBloque.orden)
             )
-            filas = [dict(f._mapping) for f in sesion.execute(del_curso)]
+            filas = [video_de_fila(dict(f._mapping)) for f in sesion.execute(del_curso)]
             if filas:
                 return filas
         globales = (
@@ -33,7 +42,7 @@ class SqlRutaRepository:
             .where(Bloque.estado == ESTADO_PUBLICADO)
             .order_by(Bloque.orden_index)
         )
-        return [dict(f._mapping) for f in sesion.execute(globales)]
+        return [video_de_fila(dict(f._mapping)) for f in sesion.execute(globales)]
 
     def lecciones(
         self, sesion: Session, bloque_ids: list[int], estudiante_id: str | None

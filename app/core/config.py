@@ -24,9 +24,9 @@ class Settings(BaseSettings):
     app_env: Literal["local", "staging", "production"] = "local"
     flask_debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
-    cors_origins: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: ["http://localhost:5173"]
-    )
+    # Sin valor por defecto: cada entorno declara el origen exacto de su frontend, y un
+    # olvido en produccion falla al arrancar en vez de abrir un origen local.
+    cors_origins: Annotated[list[str], NoDecode]
     # Proyecto de Supabase: de aqui salen el emisor y las claves publicas (JWKS)
     # con que se validan los tokens de los usuarios.
     supabase_url: str

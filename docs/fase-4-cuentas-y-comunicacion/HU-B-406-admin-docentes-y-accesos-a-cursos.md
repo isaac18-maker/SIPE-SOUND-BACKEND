@@ -28,7 +28,7 @@
 | `GET /docentes` | Paginado, `?q=`. Por docente: `id`, `nombre`, `email`, `estado` (B-405), `cursos_activos`, `cursos_archivados`, `estudiantes` (distintos en sus cursos activos), `ultimo_acceso`. |
 | `GET /docentes/{id}/cursos` | Cursos del docente (activos y archivados) con `estudiantes`, `bloques_en_ruta`, `codigo_invitacion`, `creado_en`, `archivado_en`. 404 si el id no es docente. |
 | `GET /cursos` | Todos los cursos, `?docente_id=&estado=activo\|archivado&q=`. |
-| `PATCH /cursos/{id}/docente` | `{docente_id}` → reasigna. 422 si el destino no es docente activo. Registra `reasignar_curso` (origen y destino). Las evaluaciones del curso conservan su `autor_id`. |
+| `PATCH /cursos/{id}/docente` | `{docente_id}` → reasigna. 422 si el destino no es docente activo. 422 si el destino es el mismo docente. Registra `reasignar_curso` **una vez por cuenta afectada** (origen y destino), para que cada una lo vea en su detalle. Las evaluaciones del curso conservan su `autor_id`. |
 | `GET /cursos/{id}/estudiantes` | Igual que el endpoint del docente (reutiliza `SeguimientoService`), sin restricción de propiedad y con el correo **completo**. |
 | `DELETE /cursos/{id}/estudiantes/{estudiante_id}` | Revoca el acceso: borra la inscripción (no el progreso). Registra `revocar_curso`. |
 | `DELETE /usuarios/{id}/cursos` | Revoca **todas** las inscripciones de un estudiante (p. ej. cambió de colegio). Registra una acción por curso. |
@@ -36,7 +36,8 @@
 1. `PATCH /admin/usuarios/{id}/rol` a `estudiante` sobre un docente con cursos activos → 409
    "Reasigna sus cursos activos (N) antes de quitarle el rol de docente."
 2. Para evitar que un estudiante retirado vuelva a entrar con el código viejo, la respuesta de
-   revocar sugiere en `message` regenerar el código ("Si compartió el código, regenéralo desde el curso.").
+   revocar sugiere en `message` regenerar el código ("Si compartió el código del curso, pídele al
+   docente que lo regenere."): quien lo regenera es el docente, no el admin.
    Regenerarlo sigue siendo acción del docente (`POST /docente/cursos/{id}/codigo`).
 3. Contrato 04 §4.4.
 
