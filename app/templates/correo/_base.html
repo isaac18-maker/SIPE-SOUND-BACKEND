@@ -1,3 +1,4 @@
+{# Colores: los tokens del frontend (src/styles/tokens.css). Claro por defecto (:root[data-tema="claro"]) y oscuro en prefers-color-scheme: dark. El logo viaja dentro del correo (cid:logo), no desde una URL. #}
 <!doctype html>
 <html lang="es" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head>
@@ -15,27 +16,34 @@
     .codigo { font-size: 24px !important; letter-spacing: 4px !important; }
   }
   @media (prefers-color-scheme: dark) {
-    .fondo { background: #10162B !important; }
+    .fondo { background: #0B1020 !important; }
+    .cabecera { background: #10162B !important; }
     .tarjeta { background: #171D33 !important; border-color: #3A4673 !important; }
     .texto { color: #F5F6FF !important; }
     .suave { color: #AEB6D8 !important; }
     .caja-codigo { background: #10162B !important; border-color: #3A4673 !important; }
     .codigo { color: #F5F6FF !important; }
+    .boton { background: #6257F5 !important; }
     a.enlace { color: #B9C8FF !important; }
   }
 </style>
 </head>
-<body class="fondo" style="margin:0;padding:0;background:#F2F3F9;">
+<body class="fondo" style="margin:0;padding:0;background:#F3F1FF;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">{% block previa %}{% endblock %}{{ ("&zwnj;&nbsp;" * 40) | safe }}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="fondo" style="background:#F2F3F9;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="fondo" style="background:#F3F1FF;">
 <tr><td align="center" style="padding:32px 16px;">
 <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
 <table role="presentation" class="contenedor" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
-<tr><td class="texto" style="padding:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:18px;line-height:24px;font-weight:bold;color:#1B2140;">{{ marca }}</td></tr>
-<tr><td class="tarjeta relleno texto" style="background:#FFFFFF;border:1px solid #D9DCEC;border-radius:10px;padding:32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;color:#1B2140;">
+<tr><td class="cabecera" bgcolor="#211B50" style="background:#211B50;border-radius:10px 10px 0 0;padding:16px 32px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+<td style="padding:0 12px 0 0;vertical-align:middle;"><img src="cid:logo" alt="" width="40" height="40" style="display:block;width:40px;height:40px;border:0;outline:none;"></td>
+<td style="vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:24px;font-weight:bold;color:#FFFFFF;">{{ marca }}</td>
+</tr></table>
+</td></tr>
+<tr><td class="tarjeta relleno texto" style="background:#FFFFFF;border:1px solid #D9D4F2;border-top:0;border-radius:0 0 10px 10px;padding:32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;color:#211B50;">
 {% block contenido %}{% endblock %}
 </td></tr>
-<tr><td class="suave" style="padding:20px 8px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#5A6283;">Recibes este correo porque alguien usó esta dirección en {{ marca }}. Nunca te pediremos tu contraseña por correo. Si no fuiste tú, puedes ignorar este mensaje.</td></tr>
+<tr><td class="suave" style="padding:20px 8px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:20px;color:#4F5880;">Recibes este correo porque alguien usó esta dirección en {{ marca }}. Nunca te pediremos tu contraseña por correo. Si no fuiste tú, puedes ignorar este mensaje.</td></tr>
 </table>
 <!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
