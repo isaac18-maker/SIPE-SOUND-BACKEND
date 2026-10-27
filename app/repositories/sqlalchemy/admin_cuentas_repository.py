@@ -17,6 +17,7 @@ COLUMNAS = f"""
   p.id, p.nombre, p.apellido, u.email, p.rol, p.puede_editar_nombre, p.creado_en,
   p.correo_verificado_en, p.suspendido_en, p.motivo_suspension,
   u.last_sign_in_at as ultimo_acceso,
+  (u.email_confirmed_at is not null) as correo_confirmado_en_proveedor,
   {ESTADO_SQL} as estado,
   (select jsonb_build_object('estado', e.estado, 'creado_en', e.creado_en)
      from public.envios_correo e

@@ -281,7 +281,11 @@ def codigo_service() -> CodigoService:
 @lru_cache
 def verificacion_service() -> VerificacionService:
     return VerificacionService(
-        session_scope, SqlCuentaRepository(), codigo_service(), correo_service()
+        session_scope,
+        SqlCuentaRepository(),
+        codigo_service(),
+        correo_service(),
+        origen_frontend=get_settings().origen_frontend,
     )
 
 
@@ -315,6 +319,7 @@ def admin_cuentas_service() -> AdminCuentasService:
         correo_service(),
         SqlAccionAdminRepository(),
         progreso_de,
+        origen_frontend=get_settings().origen_frontend,
     )
 
 
