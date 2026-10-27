@@ -1,0 +1,13 @@
+{% extends "_base.txt" %}
+{% block contenido %}
+Hola, {{ nombre }}.
+
+El administrador te asignó el curso "{{ curso }}" en {{ marca }}.
+
+Nivel: {{ nivel }}. Estudiantes inscritos: {{ estudiantes }}.
+Ya puedes crear su contenido, definir su ruta y acompañar a tus estudiantes.
+
+Abre tu curso:
+
+{{ enlace }}
+{% endblock %}

@@ -13,6 +13,7 @@ from app.core.constants import (
     EVALUACION_BORRADOR,
     EVALUACION_CERRADA,
     EVALUACION_PUBLICADA,
+    MENSAJE_SIN_CURSO_ASIGNADO,
     ROL_ADMIN,
 )
 from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio, SinPermiso
@@ -51,6 +52,7 @@ class RepositorioGestionEvaluaciones(Protocol):
 
 
 class PropiedadCurso(Protocol):
+    def tiene_curso_asignado(self, sesion: Any, usuario: CurrentUser) -> bool: ...
     def curso_propio(
         self, sesion: Any, usuario: CurrentUser, curso_id: int, *, activo: bool = False
     ) -> Fila: ...
@@ -86,6 +88,9 @@ class GestionEvaluacionService:
 
     def crear(self, usuario: CurrentUser, datos: Fila) -> Fila:
         with self._abrir_sesion() as sesion:
+            # Un docente sin curso activo asignado no crea contenido (HU-B-417).
+            if not self._cursos.tiene_curso_asignado(sesion, usuario):
+                raise SinPermiso(MENSAJE_SIN_CURSO_ASIGNADO)
             if datos.get("curso_id") is None and not _es_admin(usuario):
                 raise SinPermiso("Solo un administrador crea evaluaciones de bloque (globales).")
             if datos.get("curso_id") is not None:

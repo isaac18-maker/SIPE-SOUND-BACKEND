@@ -20,7 +20,12 @@ from app.models.ejercicio import Ejercicio
 from app.models.evaluacion import Evaluacion
 from app.models.leccion import Leccion
 from app.models.progreso_contenido import ProgresoEjercicio, ProgresoLeccion
-from app.repositories.sqlalchemy._autoria import alcance_de_ejercicios, alcance_de_lecciones
+from app.repositories.sqlalchemy._autoria import (
+    alcance_de_ejercicios,
+    alcance_de_lecciones,
+    referencia_de_ejercicio,
+    referencia_de_leccion,
+)
 from app.repositories.sqlalchemy.accion_admin_repository import SqlAccionAdminRepository
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
 from app.repositories.sqlalchemy.admin_cuentas_repository import SqlAdminCuentasRepository
@@ -212,11 +217,13 @@ def leccion_contenido_service() -> ContenidoService:
         filtros=("estado", "bloque_id"),
         en_uso=lambda i: exists().where(ProgresoLeccion.leccion_id == i),
         alcance=alcance_de_lecciones,
+        referencia=referencia_de_leccion,
     )
     return ContenidoService(
         session_scope,
         repositorio,
         SqlCatalogoRepository(),
+        SqlCursoRepository(),
         nombre="la lección",
         con_autor=True,
         referencias={"bloque_id": "bloques"},
@@ -232,11 +239,13 @@ def ejercicio_contenido_service() -> ContenidoService:
         filtros=("estado", "leccion_id"),
         en_uso=lambda i: exists().where(ProgresoEjercicio.ejercicio_id == i),
         alcance=alcance_de_ejercicios,
+        referencia=referencia_de_ejercicio,
     )
     return ContenidoService(
         session_scope,
         repositorio,
         SqlCatalogoRepository(),
+        SqlCursoRepository(),
         nombre="el ejercicio",
         con_autor=True,
         referencias={"leccion_id": "lecciones"},
@@ -258,6 +267,7 @@ def bloque_contenido_service() -> ContenidoService:
         session_scope,
         repositorio,
         SqlCatalogoRepository(),
+        SqlCursoRepository(),
         nombre="el bloque",
         con_autor=False,
         referencias={},
@@ -332,6 +342,8 @@ def admin_cursos_service() -> AdminCursosService:
         SqlCursoRepository(),
         SqlSeguimientoRepository(),
         SqlAccionAdminRepository(),
+        correo_service(),
+        origen_frontend=get_settings().origen_frontend,
     )
 
 

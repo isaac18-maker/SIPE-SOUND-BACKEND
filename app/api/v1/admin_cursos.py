@@ -48,22 +48,35 @@ def listar_cursos():
 @bp.post("/admin/cursos")
 @roles_required(ROL_ADMIN)
 def crear_curso():
-    """Crea un curso. Sin `docente_id` queda disponible: un docente se asigna desde su panel."""
+    """Crea un curso. Sin `docente_id` queda disponible hasta que el admin le asigne uno; con
+    `docente_id`, ese docente recibe el correo de asignacion."""
     datos = CursoAdminCrear.model_validate(request.get_json(silent=True) or {})
     cuerpo = datos.model_dump()
     cuerpo["docente_id"] = str(datos.docente_id) if datos.docente_id else None
-    return created(admin_cursos_service().crear(cuerpo), mensaje="Curso creado.")
+    return created(
+        admin_cursos_service().crear(get_current_user().id, cuerpo), mensaje="Curso creado."
+    )
 
 
 @bp.patch("/admin/cursos/<int:curso_id>/docente")
 @roles_required(ROL_ADMIN)
-def reasignar_curso(curso_id: int):
-    """Pasa el curso a otro docente con la cuenta activa (sus estudiantes y evaluaciones se
-    mantienen). Permite reasignar cursos archivados: la FK de cursos impide eliminar a un docente
-    que aun los tiene."""
+def asignar_docente(curso_id: int):
+    """Asigna el curso a un docente con la cuenta activa: si no tenia docente lo asigna; si tenia,
+    lo reasigna (sus estudiantes y evaluaciones se mantienen). El docente de destino recibe un
+    correo. Permite cursos archivados: la FK de cursos impide eliminar a un docente que aun los
+    tiene."""
     datos = ReasignarCursoIn.model_validate(request.get_json(silent=True) or {})
-    curso = admin_cursos_service().reasignar(get_current_user().id, curso_id, str(datos.docente_id))
-    return ok(curso, mensaje="Curso reasignado.")
+    curso = admin_cursos_service().asignar(get_current_user().id, curso_id, str(datos.docente_id))
+    return ok(curso, mensaje="Curso asignado.")
+
+
+@bp.delete("/admin/cursos/<int:curso_id>/docente")
+@roles_required(ROL_ADMIN)
+def quitar_docente(curso_id: int):
+    """El curso queda disponible: sus estudiantes, ruta y evaluaciones se conservan. 409 si ya
+    no tenia docente."""
+    curso = admin_cursos_service().quitar_docente(get_current_user().id, curso_id)
+    return ok(curso, mensaje="El curso quedó sin docente y disponible.")
 
 
 @bp.get("/admin/cursos/<int:curso_id>/estudiantes")

@@ -164,3 +164,9 @@ hace con funciones `SECURITY DEFINER` de `public`, con `search_path = ''` y `EXE
 | `cerrar_sesiones(uuid, uuid)` | 0021 | Borra las sesiones de la cuenta, salvo una |
 | `cambiar_correo(uuid, text)` | 0022 | Cambia el correo en `auth.users` y `auth.identities` |
 | `confirmar_correo_auth(uuid)` | 0032 | `email_confirmed_at = coalesce(email_confirmed_at, now())`: Supabase Auth rechaza el inicio de sesión de una cuenta sin confirmar, aunque el backend ya la haya verificado (`profiles.correo_verificado_en`) |
+
+## 10. Valores permitidos que crecen con las HU
+
+`acciones_admin.accion` y `envios_correo.tipo` tienen un `CHECK` con la lista de valores. Agregar uno
+es una revisión que reemplaza el `CHECK` (la lista vive en `app/core/constants.py`). La revisión
+`0033` (HU-B-417) agrega las acciones `asignar_curso` y `quitar_docente_curso` y el correo `curso_asignado`.
