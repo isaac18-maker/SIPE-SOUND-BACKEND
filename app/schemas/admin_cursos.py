@@ -30,6 +30,8 @@ class FiltrosCursosAdmin(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     docente_id: UUID | None = None
+    # Solo los cursos disponibles, sin docente (HU-B-418: cifra del panel de docentes).
+    sin_docente: bool = False
     estado: Literal["activo", "archivado"] | None = None
     q: Busqueda | None = None
     pagina: int = Field(default=1, ge=1)

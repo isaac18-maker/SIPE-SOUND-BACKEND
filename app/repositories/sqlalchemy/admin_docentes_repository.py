@@ -55,6 +55,7 @@ with base as (
     {ESTUDIANTES_DEL_CURSO} as estudiantes, {BLOQUES_DEL_CURSO} as bloques_en_ruta
   from public.cursos c left join public.profiles d on d.id = c.docente_id
   where (cast(:docente as uuid) is null or c.docente_id = cast(:docente as uuid))
+    and (not :sin_docente or c.docente_id is null)
     and (cast(:q as text) is null or c.nombre ilike :patron or d.nombre ilike :patron
          or d.apellido ilike :patron or c.codigo_invitacion ilike :patron)
 )
@@ -103,6 +104,7 @@ class SqlAdminDocentesRepository:
         sesion: Session,
         *,
         docente_id: str | None,
+        sin_docente: bool,
         estado: str | None,
         q: str | None,
         pagina: int,
@@ -113,6 +115,7 @@ class SqlAdminDocentesRepository:
             CURSOS,
             {
                 "docente": docente_id,
+                "sin_docente": sin_docente,
                 "estado": estado,
                 "q": q,
                 "patron": _patron(q),

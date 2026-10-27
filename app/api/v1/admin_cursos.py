@@ -70,7 +70,7 @@ def cursos_de_docente(docente_id):
 @bp.get("/admin/cursos")
 @roles_required(ROL_ADMIN)
 def listar_cursos():
-    """Todos los cursos. ?docente_id=&estado=activo|archivado&q=&pagina=&por_pagina=."""
+    """Todos los cursos. ?docente_id=&sin_docente=true&estado=activo|archivado&q=&pagina=."""
     filtros = FiltrosCursosAdmin.model_validate(request.args.to_dict())
     consulta = filtros.model_dump()
     if filtros.docente_id is not None:
