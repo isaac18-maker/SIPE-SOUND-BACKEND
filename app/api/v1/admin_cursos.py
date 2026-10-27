@@ -1,14 +1,17 @@
 from flask import Blueprint, request
 
-from app.container import admin_cursos_service
+from app.container import actividad_docente_service, admin_cursos_service
 from app.core.constants import ROL_ADMIN
 from app.core.responses import created, ok, paginated
 from app.core.security import get_current_user, roles_required
 from app.schemas.admin_cursos import (
     CursoAdminCrear,
+    FiltrosActividadDocentes,
     FiltrosCursosAdmin,
     FiltrosDocentes,
+    LineaDeTiempoQuery,
     ReasignarCursoIn,
+    ResumenActividadQuery,
 )
 from app.schemas.curso import EstudiantesQuery
 
@@ -26,6 +29,37 @@ def listar_docentes():
     return paginated(filas, pagina=filtros.pagina, por_pagina=filtros.por_pagina, total=total)
 
 
+@bp.get("/admin/docentes/actividad")
+@roles_required(ROL_ADMIN)
+def actividad_de_docentes():
+    """Un renglon por docente activo con su estado de actividad (activo: algo en los ultimos 7
+    dias; inactivo: entre 8 y 30; sin_actividad: mas de 30 o nunca). ?estado_actividad=&q=
+    &orden=ultima_actividad|-acciones_30d|nombre&pagina=. Sin datos de estudiantes."""
+    filtros = FiltrosActividadDocentes.model_validate(request.args.to_dict())
+    filas, total = actividad_docente_service().listar(filtros.model_dump())
+    return paginated(filas, pagina=filtros.pagina, por_pagina=filtros.por_pagina, total=total)
+
+
+@bp.get("/admin/docentes/<uuid:docente_id>/actividad/resumen")
+@roles_required(ROL_ADMIN)
+def resumen_de_actividad(docente_id):
+    """Actividad por dia (con los dias vacios), por tipo y sus cursos asignados con el avance de
+    sus estudiantes. ?dias= de 7 a 90 (28 por defecto). 404 si no es un docente."""
+    consulta = ResumenActividadQuery.model_validate(request.args.to_dict())
+    return ok(actividad_docente_service().resumen(str(docente_id), consulta.dias))
+
+
+@bp.get("/admin/docentes/<uuid:docente_id>/actividad")
+@roles_required(ROL_ADMIN)
+def linea_de_tiempo_del_docente(docente_id):
+    """Linea de tiempo, la mas reciente primero. ?tipo=&curso_id=&desde=&hasta=&pagina=."""
+    filtros = LineaDeTiempoQuery.model_validate(request.args.to_dict())
+    filas, total = actividad_docente_service().linea_de_tiempo(
+        str(docente_id), filtros.model_dump()
+    )
+    return paginated(filas, pagina=filtros.pagina, por_pagina=filtros.por_pagina, total=total)
+
+
 @bp.get("/admin/docentes/<uuid:docente_id>/cursos")
 @roles_required(ROL_ADMIN)
 def cursos_de_docente(docente_id):
@@ -36,7 +70,7 @@ def cursos_de_docente(docente_id):
 @bp.get("/admin/cursos")
 @roles_required(ROL_ADMIN)
 def listar_cursos():
-    """Todos los cursos. ?docente_id=&estado=activo|archivado&q=&pagina=&por_pagina=."""
+    """Todos los cursos. ?docente_id=&sin_docente=true&estado=activo|archivado&q=&pagina=."""
     filtros = FiltrosCursosAdmin.model_validate(request.args.to_dict())
     consulta = filtros.model_dump()
     if filtros.docente_id is not None:
@@ -48,22 +82,35 @@ def listar_cursos():
 @bp.post("/admin/cursos")
 @roles_required(ROL_ADMIN)
 def crear_curso():
-    """Crea un curso. Sin `docente_id` queda disponible: un docente se asigna desde su panel."""
+    """Crea un curso. Sin `docente_id` queda disponible hasta que el admin le asigne uno; con
+    `docente_id`, ese docente recibe el correo de asignacion."""
     datos = CursoAdminCrear.model_validate(request.get_json(silent=True) or {})
     cuerpo = datos.model_dump()
     cuerpo["docente_id"] = str(datos.docente_id) if datos.docente_id else None
-    return created(admin_cursos_service().crear(cuerpo), mensaje="Curso creado.")
+    return created(
+        admin_cursos_service().crear(get_current_user().id, cuerpo), mensaje="Curso creado."
+    )
 
 
 @bp.patch("/admin/cursos/<int:curso_id>/docente")
 @roles_required(ROL_ADMIN)
-def reasignar_curso(curso_id: int):
-    """Pasa el curso a otro docente con la cuenta activa (sus estudiantes y evaluaciones se
-    mantienen). Permite reasignar cursos archivados: la FK de cursos impide eliminar a un docente
-    que aun los tiene."""
+def asignar_docente(curso_id: int):
+    """Asigna el curso a un docente con la cuenta activa: si no tenia docente lo asigna; si tenia,
+    lo reasigna (sus estudiantes y evaluaciones se mantienen). El docente de destino recibe un
+    correo. Permite cursos archivados: la FK de cursos impide eliminar a un docente que aun los
+    tiene."""
     datos = ReasignarCursoIn.model_validate(request.get_json(silent=True) or {})
-    curso = admin_cursos_service().reasignar(get_current_user().id, curso_id, str(datos.docente_id))
-    return ok(curso, mensaje="Curso reasignado.")
+    curso = admin_cursos_service().asignar(get_current_user().id, curso_id, str(datos.docente_id))
+    return ok(curso, mensaje="Curso asignado.")
+
+
+@bp.delete("/admin/cursos/<int:curso_id>/docente")
+@roles_required(ROL_ADMIN)
+def quitar_docente(curso_id: int):
+    """El curso queda disponible: sus estudiantes, ruta y evaluaciones se conservan. 409 si ya
+    no tenia docente."""
+    curso = admin_cursos_service().quitar_docente(get_current_user().id, curso_id)
+    return ok(curso, mensaje="El curso quedó sin docente y disponible.")
 
 
 @bp.get("/admin/cursos/<int:curso_id>/estudiantes")

@@ -151,6 +151,8 @@ class CuentaService:
                 if self._cuentas.correo_en_uso(sesion, nuevo, excepto_id=usuario.id):
                     raise Conflicto(MENSAJE_CORREO_EN_USO)
                 self._cuentas.cambiar_correo(sesion, usuario.id, nuevo)
+                # El codigo llego al correo nuevo: queda confirmado tambien en Supabase Auth.
+                self._cuentas.confirmar_en_proveedor(sesion, usuario.id)
                 self._cuentas.cerrar_sesiones(sesion, usuario.id, excepto=sesion_id)
         if nuevo is None:
             raise ReglaNegocio(MENSAJE_CODIGO_INVALIDO)

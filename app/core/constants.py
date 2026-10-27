@@ -46,6 +46,9 @@ CORREO_RESTABLECER = "restablecer_contrasena"
 CORREO_CONTRASENA_CAMBIADA = "contrasena_cambiada"
 CORREO_CAMBIAR_CORREO = "cambiar_correo"
 CORREO_CORREO_CAMBIADO = "correo_cambiado"
+CORREO_CURSO_ASIGNADO = "curso_asignado"
+CORREO_ROL_CAMBIADO = "rol_cambiado"
+CORREO_CUENTA_SUSPENDIDA = "cuenta_suspendida"
 TIPOS_CORREO = (
     CORREO_VERIFICAR,
     CORREO_REAUTENTICACION,
@@ -53,6 +56,9 @@ TIPOS_CORREO = (
     CORREO_CONTRASENA_CAMBIADA,
     CORREO_CAMBIAR_CORREO,
     CORREO_CORREO_CAMBIADO,
+    CORREO_CURSO_ASIGNADO,
+    CORREO_ROL_CAMBIADO,
+    CORREO_CUENTA_SUSPENDIDA,
 )
 # Codigos de verificacion (HU-B-402): proposito -> minutos de vigencia. Nunca mas de 15.
 # El del registro dura 1 minuto (HU-B-416): la persona ve la cuenta regresiva y pide otro al vencer.
@@ -93,6 +99,11 @@ TERMINOS_MAX = 60000
 MENSAJE_TERMINOS_PENDIENTES = "Lee y acepta los términos y condiciones actualizados para continuar."
 CODIGO_TERMINOS_PENDIENTES = "TERMINOS_PENDIENTES"
 
+# Un docente crea contenido solo dentro de la ruta de un curso suyo (HU-B-417).
+MENSAJE_SIN_CURSO_ASIGNADO = (
+    "Necesitas un curso asignado por el administrador para crear contenido."
+)
+
 # Auditoria del administrador (HU-B-405). Las que usan HU posteriores ya estan permitidas.
 ACCIONES_ADMIN = (
     "reenviar_verificacion",
@@ -104,7 +115,45 @@ ACCIONES_ADMIN = (
     "revocar_curso",
     "reasignar_curso",
     "permiso_nombre",
+    "asignar_curso",
+    "quitar_docente_curso",
+    "editar_cuenta",
 )
+
+# Actividad del docente en la plataforma (HU-B-418): que tipo de cosa hizo y en que curso, nunca
+# el contenido. Se conserva ACTIVIDAD_RETENCION_DIAS.
+TIPOS_ACTIVIDAD = (
+    "sesion",
+    "leccion",
+    "ejercicio",
+    "evaluacion",
+    "retroalimentacion",
+    "mensaje",
+    "curso",
+)
+ACCIONES_ACTIVIDAD = (
+    "inicio",
+    "creo",
+    "edito",
+    "publico",
+    "archivo",
+    "elimino",
+    "comento",
+    "envio",
+    "retiro_estudiante",
+    "regenero_codigo",
+    "definio_ruta",
+)
+ACTIVIDAD_RETENCION_DIAS = 180
+ACTIVIDAD_LIMPIEZA_LOTE = 500
+ACTIVIDAD_INICIO_CADA_MIN = 60
+# Estado de actividad del docente: lo calcula el backend, una sola vez.
+ACTIVIDAD_ACTIVO = "activo"
+ACTIVIDAD_INACTIVO = "inactivo"
+ACTIVIDAD_SIN_ACTIVIDAD = "sin_actividad"
+ESTADOS_ACTIVIDAD = (ACTIVIDAD_ACTIVO, ACTIVIDAD_INACTIVO, ACTIVIDAD_SIN_ACTIVIDAD)
+ACTIVIDAD_ACTIVO_DIAS = 7
+ACTIVIDAD_INACTIVO_DIAS = 30
 
 ENVIO_ENVIADO = "enviado"
 ENVIO_FALLIDO = "fallido"

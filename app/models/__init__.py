@@ -2,6 +2,7 @@
 
 from app.models.accion_admin import AccionAdmin
 from app.models.acorde import Acorde
+from app.models.actividad_docente import ActividadDocente
 from app.models.base import Base, auth_users
 from app.models.bloque import Bloque
 from app.models.codigo_verificacion import CodigoVerificacion
@@ -23,6 +24,7 @@ from app.models.solicitud_nombre import SolicitudNombre
 
 __all__ = [
     "AccionAdmin",
+    "ActividadDocente",
     "Acorde",
     "Base",
     "Bloque",

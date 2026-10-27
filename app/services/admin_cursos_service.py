@@ -3,6 +3,8 @@
 #   - Ver los cursos de cada docente y reasignarlos a otro docente ACTIVO (la FK
 #     cursos.docente_id es RESTRICT: un docente con cursos no se puede eliminar hasta
 #     reasignarlos, ni siquiera los archivados).
+#   - Asignar y quitar al docente de un curso: solo el admin (HU-B-417). Al docente de destino le
+#     llega el correo `curso_asignado` DESPUES de confirmar; si falla, la asignacion no se revierte.
 #   - Revocar el acceso de un estudiante a un curso (o a todos): borra la inscripcion, nunca
 #     el progreso del estudiante, que es suyo.
 # Toda accion queda en acciones_admin. El admin ve el correo completo del estudiante.
@@ -11,8 +13,8 @@ from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 
-from app.core.constants import CUENTA_ACTIVA, ROL_DOCENTE
-from app.core.errors import NoEncontrado, ReglaNegocio
+from app.core.constants import CORREO_CURSO_ASIGNADO, CUENTA_ACTIVA, ROL_DOCENTE
+from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio
 from app.repositories.base import (
     AbrirSesion,
     RepositorioAcciones,
@@ -21,9 +23,13 @@ from app.repositories.base import (
     RepositorioCursos,
 )
 from app.services.curso_service import INTENTOS_CODIGO, RepositorioSeguimiento, generar_codigo
+from app.services.verificacion_service import EnviadorDeCorreo
 
 MENSAJE_DESTINO = "El curso solo puede pasar a un docente con la cuenta activa."
 MENSAJE_MISMO_DOCENTE = "Ese curso ya está a cargo de ese docente."
+MENSAJE_SIN_DOCENTE = "Ese curso ya no tiene docente."
+MENSAJE_CODIGO = "No se pudo generar un código de invitación. Inténtalo de nuevo."
+RUTA_CURSO_DOCENTE = "/docente/cursos"
 SUGERENCIA_CODIGO = "Si compartió el código del curso, pídele al docente que lo regenere."
 
 
@@ -36,6 +42,9 @@ class AdminCursosService:
         cursos: RepositorioCursos,
         seguimiento: RepositorioSeguimiento,
         auditoria: RepositorioAcciones,
+        correo: EnviadorDeCorreo,
+        *,
+        origen_frontend: str,
     ) -> None:
         self._abrir_sesion = abrir_sesion
         self._docentes = docentes
@@ -43,6 +52,8 @@ class AdminCursosService:
         self._cursos = cursos
         self._seguimiento = seguimiento
         self._auditoria = auditoria
+        self._correo = correo
+        self._origen_frontend = origen_frontend
 
     # --- Consulta -------------------------------------------------------------------------
     def listar_docentes(self, filtros: dict[str, Any]) -> tuple[list[dict], int]:
@@ -67,58 +78,62 @@ class AdminCursosService:
             return self._seguimiento.estudiantes(sesion, curso_id, **filtros)
 
     # --- Crear ----------------------------------------------------------------------------
-    def crear(self, datos: dict[str, Any]) -> dict[str, Any]:
-        """Crea un curso, con docente o sin el (queda disponible, HU-B-413), y su codigo unico."""
+    def crear(self, admin_id: str, datos: dict[str, Any]) -> dict[str, Any]:
+        """Crea un curso, con docente o sin el (queda disponible, HU-B-413), y su codigo unico.
+        Con docente, este recibe el correo de asignacion."""
+        docente_id = datos.get("docente_id")
+        destino = None
+        curso = None
         with self._abrir_sesion() as sesion:
-            docente_id = datos.get("docente_id")
             if docente_id is not None:
-                destino = self._cuentas_admin.obtener(sesion, docente_id)
-                if (
-                    destino is None
-                    or destino["rol"] != ROL_DOCENTE
-                    or destino["estado"] != CUENTA_ACTIVA
-                ):
-                    raise ReglaNegocio(MENSAJE_DESTINO)
+                destino = self._docente_activo(sesion, docente_id)
             for _ in range(INTENTOS_CODIGO):
                 fila = {**datos, "codigo_invitacion": generar_codigo()}
                 try:
                     with sesion.begin_nested():  # savepoint: una colision no aborta la transaccion
-                        return self._cursos.crear(sesion, fila)
+                        curso = self._cursos.crear(sesion, fila)
+                        break
                 except IntegrityError:
                     continue
-        raise ReglaNegocio("No se pudo generar un código de invitación. Inténtalo de nuevo.")
+            if curso is None:
+                raise ReglaNegocio(MENSAJE_CODIGO)
+            if destino is not None:
+                self._auditar_asignacion(sesion, admin_id, curso, origen=None, destino=docente_id)
+        if destino is not None:
+            self._avisar_asignacion(destino, curso)
+        return curso
 
-    # --- Reasignar ------------------------------------------------------------------------
-    def reasignar(self, admin_id: str, curso_id: int, docente_id: str) -> dict[str, Any]:
+    # --- Asignar, reasignar y quitar (HU-B-417) --------------------------------------------
+    def asignar(self, admin_id: str, curso_id: int, docente_id: str) -> dict[str, Any]:
+        """Asigna el curso a un docente: si no tenia docente lo asigna; si tenia, lo reasigna.
+        Las evaluaciones del curso conservan su autor_id: el historial no cambia."""
         with self._abrir_sesion() as sesion:
             curso = self._curso(sesion, curso_id, bloquear=True)
-            destino = self._cuentas_admin.obtener(sesion, docente_id)
-            if (
-                destino is None
-                or destino["rol"] != ROL_DOCENTE
-                or destino["estado"] != CUENTA_ACTIVA
-            ):
-                raise ReglaNegocio(MENSAJE_DESTINO)
+            destino = self._docente_activo(sesion, docente_id)
             origen = curso["docente_id"]
             if origen == docente_id:
                 raise ReglaNegocio(MENSAJE_MISMO_DOCENTE)
-            # Las evaluaciones del curso conservan su autor_id: el historial no cambia.
             actualizado = self._cursos.actualizar(sesion, curso_id, {"docente_id": docente_id})
-            detalle = {
-                "curso_id": curso_id,
-                "curso": curso["nombre"],
-                "de": origen,
-                "a": docente_id,
-            }
-            # Una fila por cuenta afectada: cada una la ve en el detalle de su cuenta.
-            for afectada in (a for a in (origen, docente_id) if a is not None):
-                self._auditoria.registrar(
-                    sesion,
-                    admin_id=admin_id,
-                    usuario_id=afectada,
-                    accion="reasignar_curso",
-                    detalle=detalle,
-                )
+            self._auditar_asignacion(sesion, admin_id, curso, origen=origen, destino=docente_id)
+        # Despues de confirmar: el correo no puede llegar antes de que la asignacion exista.
+        self._avisar_asignacion(destino, actualizado)
+        return actualizado
+
+    def quitar_docente(self, admin_id: str, curso_id: int) -> dict[str, Any]:
+        """El curso queda disponible; sus estudiantes, ruta y evaluaciones se conservan."""
+        with self._abrir_sesion() as sesion:
+            curso = self._curso(sesion, curso_id, bloquear=True)
+            origen = curso["docente_id"]
+            if origen is None:
+                raise Conflicto(MENSAJE_SIN_DOCENTE)
+            actualizado = self._cursos.quitar_docente(sesion, curso_id, origen)
+            self._auditoria.registrar(
+                sesion,
+                admin_id=admin_id,
+                usuario_id=origen,
+                accion="quitar_docente_curso",
+                detalle={"curso_id": curso_id, "curso": curso["nombre"]},
+            )
         return actualizado
 
     # --- Accesos ---------------------------------------------------------------------------
@@ -147,6 +162,58 @@ class AdminCursosService:
         if curso is None:
             raise NoEncontrado(f"No existe el curso {curso_id}")
         return curso
+
+    def _docente_activo(self, sesion: Any, docente_id: str) -> dict[str, Any]:
+        destino = self._cuentas_admin.obtener(sesion, docente_id)
+        if destino is None or destino["rol"] != ROL_DOCENTE or destino["estado"] != CUENTA_ACTIVA:
+            raise ReglaNegocio(MENSAJE_DESTINO)
+        return destino
+
+    def _auditar_asignacion(
+        self,
+        sesion: Any,
+        admin_id: str,
+        curso: dict[str, Any],
+        *,
+        origen: str | None,
+        destino: str,
+    ) -> None:
+        detalle = {"curso_id": curso["id"], "curso": curso["nombre"], "de": origen, "a": destino}
+        if origen is None:
+            self._auditoria.registrar(
+                sesion,
+                admin_id=admin_id,
+                usuario_id=destino,
+                accion="asignar_curso",
+                detalle=detalle,
+            )
+            return
+        # Una fila por cuenta afectada: cada una la ve en el detalle de su cuenta.
+        for afectada in (origen, destino):
+            self._auditoria.registrar(
+                sesion,
+                admin_id=admin_id,
+                usuario_id=afectada,
+                accion="reasignar_curso",
+                detalle=detalle,
+            )
+
+    def _avisar_asignacion(self, docente: dict[str, Any], curso: dict[str, Any]) -> None:
+        """Correo al docente de destino. No revierte nada si falla (queda en envios_correo)."""
+        with self._abrir_sesion() as sesion:
+            estudiantes = self._cursos.contar_estudiantes(sesion, curso["id"])
+        self._correo.enviar(
+            CORREO_CURSO_ASIGNADO,
+            docente["email"],
+            {
+                "nombre": docente["nombre"],
+                "curso": curso["nombre"],
+                "nivel": curso["nivel"],
+                "estudiantes": estudiantes,
+                "enlace": f"{self._origen_frontend}{RUTA_CURSO_DOCENTE}/{curso['id']}",
+            },
+            usuario_id=docente["id"],
+        )
 
     def _exigir_docente(self, sesion: Any, docente_id: str) -> None:
         cuenta = self._cuentas_admin.obtener(sesion, docente_id)
