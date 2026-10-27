@@ -135,11 +135,15 @@ def iniciar_sesion():
 def renovar_sesion():
     """Nuevo access token a partir de la cookie `sipe_refresh` (rota el refresh token).
 
-    Se llama al cargar la app y cuando el access token vence. Sin cookie valida: 401.
+    Se llama al cargar la app y cuando el access token vence. Sin cookie no hay sesion que
+    renovar: responde 200 con `data: null` (no es un error, y asi la consola del visitante
+    no se llena de 401). Con una cookie invalida o vencida: 401.
     """
     _exigir_json()
-    sesion = auth_service().refrescar(request.cookies.get(COOKIE_REFRESCO))
-    return _con_cookie(sesion, "Sesión renovada.")
+    refresh_token = request.cookies.get(COOKIE_REFRESCO)
+    if not refresh_token:
+        return ok(None, mensaje="No hay una sesión abierta.")
+    return _con_cookie(auth_service().refrescar(refresh_token), "Sesión renovada.")
 
 
 @bp.delete("/auth/sesion")
