@@ -8,5 +8,8 @@
 {% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
 {% call parrafo() %}Este es tu código para confirmar tu correo en {{ marca }}:{% endcall %}
 {{ caja_codigo(codigo) }}
-{% call parrafo() %}Vence en {{ minutos }} {{ 'minuto' if minutos == 1 else 'minutos' }} y solo sirve una vez. Escríbelo en la página donde te registraste.{% endcall %}
+{% call parrafo() %}Vence en {{ minutos }} {{ 'minuto' if minutos == 1 else 'minutos' }} y solo sirve una vez. Escríbelo en la página donde te registraste, o abre la página con tu correo ya escrito:{% endcall %}
+{{ boton(enlace, "Confirmar mi correo") }}
+<p class="suave" style="margin:0 0 8px 0;font-size:14px;line-height:20px;color:#4F5880;">Si el botón no funciona, copia este enlace en tu navegador:</p>
+<p style="margin:0 0 16px 0;font-size:14px;line-height:20px;word-break:break-all;"><a class="enlace" href="{{ enlace }}" target="_blank" style="color:#4C33C9;text-decoration:underline;">{{ enlace }}</a></p>
 {% endblock %}

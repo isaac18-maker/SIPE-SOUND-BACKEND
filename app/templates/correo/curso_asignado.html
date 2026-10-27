@@ -1,0 +1,11 @@
+{% extends "_base.html" %}
+{% from "_macros.html" import boton, parrafo %}
+{% block previa %}Te asignaron el curso {{ curso }}.{% endblock %}
+{% block contenido %}
+{% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
+{% call parrafo() %}El administrador te asignó el curso <strong>{{ curso }}</strong> en {{ marca }}.{% endcall %}
+{% call parrafo() %}Nivel: {{ nivel }}. Estudiantes inscritos: {{ estudiantes }}. Ya puedes crear su contenido, definir su ruta y acompañar a tus estudiantes.{% endcall %}
+{{ boton(enlace, "Abrir mi curso") }}
+<p class="suave" style="margin:0 0 8px 0;font-size:14px;line-height:20px;color:#4F5880;">Si el botón no funciona, copia este enlace en tu navegador:</p>
+<p style="margin:0 0 16px 0;font-size:14px;line-height:20px;word-break:break-all;"><a class="enlace" href="{{ enlace }}" target="_blank" style="color:#4C33C9;text-decoration:underline;">{{ enlace }}</a></p>
+{% endblock %}

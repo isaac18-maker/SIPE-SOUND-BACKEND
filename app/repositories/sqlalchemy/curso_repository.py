@@ -1,4 +1,4 @@
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import delete, exists, func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 from sqlalchemy.orm import Session
 
@@ -186,23 +186,11 @@ class SqlCursoRepository:
             consulta = consulta.where(Curso.docente_id == docente_id)
         return self._filas_con_conteos(sesion, consulta.order_by(Curso.creado_en.desc()))
 
-    def listar_disponibles(self, sesion: Session) -> list[Fila]:
-        """Cursos activos sin docente (HU-B-413): los que un docente puede tomar."""
-        consulta = self._con_conteos().where(
-            Curso.docente_id.is_(None), Curso.archivado_en.is_(None)
+    def tiene_curso_activo(self, sesion: Session, docente_id: str) -> bool:
+        consulta = select(
+            exists().where(Curso.docente_id == docente_id, Curso.archivado_en.is_(None))
         )
-        return self._filas_con_conteos(sesion, consulta.order_by(Curso.nombre, Curso.id))
-
-    def asignar_docente(self, sesion: Session, curso_id: int, docente_id: str) -> Fila | None:
-        """Atomico: solo si el curso sigue activo y sin docente (si dos lo piden, gana uno)."""
-        curso = sesion.scalars(
-            update(Curso)
-            .where(Curso.id == curso_id, Curso.docente_id.is_(None), Curso.archivado_en.is_(None))
-            .values(docente_id=docente_id, actualizado_en=func.now())
-            .returning(Curso),
-            execution_options={"populate_existing": True},
-        ).one_or_none()
-        return a_fila(curso) if curso else None
+        return bool(sesion.scalar(consulta))
 
     def quitar_docente(self, sesion: Session, curso_id: int, docente_id: str) -> Fila | None:
         """Deja el curso disponible. Solo si `docente_id` es quien lo tiene."""

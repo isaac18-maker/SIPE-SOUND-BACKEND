@@ -13,7 +13,6 @@ from app.core.responses import created, ok, paginated
 from app.core.security import get_current_user, roles_required
 from app.schemas.contenido import EjercicioCrear, EjercicioEditar, LeccionCrear, LeccionEditar
 from app.schemas.curso import (
-    CursoCreate,
     CursoEditar,
     CursosQuery,
     EstudiantesQuery,
@@ -71,15 +70,6 @@ def listar_cursos():
     return ok(curso_service().listar_de_docente(get_current_user(), archivados=archivados))
 
 
-@bp.post("/docente/cursos")
-@roles_required(*PANEL)
-def crear_curso():
-    """Crear un curso: se genera su codigo de invitacion."""
-    datos = CursoCreate.model_validate(request.get_json(silent=True) or {})
-    curso = curso_service().crear(get_current_user(), datos)
-    return created(curso, mensaje=f"Curso creado. Código: {curso['codigo_invitacion']}.")
-
-
 @bp.get("/docente/solicitudes-inscripcion")
 @roles_required(*PANEL)
 def solicitudes_de_inscripcion():
@@ -107,29 +97,6 @@ def resolver_solicitud(solicitud_id):
         else "Rechazaste la solicitud."
     )
     return ok(solicitud, mensaje=mensaje)
-
-
-@bp.get("/docente/cursos/disponibles")
-@roles_required(ROL_DOCENTE)
-def cursos_disponibles():
-    """Cursos activos sin docente que un docente puede tomar (HU-B-413)."""
-    return ok(curso_service().disponibles())
-
-
-@bp.post("/docente/cursos/<int:curso_id>/asignarme")
-@roles_required(ROL_DOCENTE)
-def asignarme_a_curso(curso_id: int):
-    """Toma un curso disponible. 409 si otro docente se adelantó o ya no está disponible."""
-    curso = curso_service().asignarse(get_current_user(), curso_id)
-    return ok(curso, mensaje="Quedaste a cargo del curso.")
-
-
-@bp.post("/docente/cursos/<int:curso_id>/retirarme")
-@roles_required(ROL_DOCENTE)
-def retirarme_de_curso(curso_id: int):
-    """Deja el curso disponible; sus estudiantes y su ruta se conservan."""
-    curso = curso_service().retirarse(get_current_user(), curso_id)
-    return ok(curso, mensaje="Te retiraste del curso: quedó disponible para otro docente.")
 
 
 @bp.get("/docente/cursos/<int:curso_id>")

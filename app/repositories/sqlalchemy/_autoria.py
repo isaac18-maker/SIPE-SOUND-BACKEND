@@ -7,7 +7,7 @@
 # =========================================================
 from typing import Any
 
-from sqlalchemy import ColumnElement, exists, or_, select
+from sqlalchemy import ColumnElement, exists, literal, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.constants import ESTADO_PUBLICADO
@@ -32,6 +32,17 @@ def condicion_de_bloque(columna: Any, docente_id: str) -> ColumnElement[bool]:
     )
     publicados = select(Bloque.id).where(Bloque.estado == ESTADO_PUBLICADO, curso_sin_ruta)
     return or_(columna.in_(con_ruta_propia), columna.in_(publicados))
+
+
+def referencia_de_leccion(datos: Fila, docente_id: str) -> ColumnElement[bool]:
+    """Un bloque_id recibido (aun sin fila) esta en la ruta de un curso activo del docente."""
+    return condicion_de_bloque(literal(datos["bloque_id"]), docente_id)
+
+
+def referencia_de_ejercicio(datos: Fila, docente_id: str) -> ColumnElement[bool]:
+    """Un leccion_id recibido pertenece a un bloque de la ruta de un curso activo del docente."""
+    lecciones = select(Leccion.id).where(condicion_de_bloque(Leccion.bloque_id, docente_id))
+    return literal(datos["leccion_id"]).in_(lecciones)
 
 
 def alcance_de_lecciones(docente_id: str) -> ColumnElement[bool]:

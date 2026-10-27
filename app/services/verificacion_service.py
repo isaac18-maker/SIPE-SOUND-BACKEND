@@ -5,6 +5,7 @@
 # igual ante un correo inexistente, un codigo errado, vencido o usado.
 # =========================================================
 from typing import Any, Protocol
+from urllib.parse import urlencode
 
 from app.core.constants import (
     CORREO_VERIFICAR,
@@ -17,6 +18,14 @@ from app.repositories.base import AbrirSesion, RepositorioCuentas
 from app.services.codigo_service import CodigoService
 
 MENSAJE_CODIGO_INVALIDO = "El código no es válido o ya venció. Pide uno nuevo."
+
+
+RUTA_VERIFICAR = "/verificar"
+
+
+def enlace_de_verificacion(origen_frontend: str, email: str) -> str:
+    """Abre la pantalla con el correo escrito. Nunca lleva el codigo."""
+    return f"{origen_frontend}{RUTA_VERIFICAR}?{urlencode({'email': email})}"
 
 
 class EnviadorDeCorreo(Protocol):
@@ -34,11 +43,14 @@ class VerificacionService:
         cuentas: RepositorioCuentas,
         codigos: CodigoService,
         correo: EnviadorDeCorreo,
+        *,
+        origen_frontend: str,
     ) -> None:
         self._abrir_sesion = abrir_sesion
         self._cuentas = cuentas
         self._codigos = codigos
         self._correo = correo
+        self._origen_frontend = origen_frontend
 
     def estado_de_registro(self, email: str) -> dict[str, Any] | None:
         """None si el correo no tiene cuenta. Si la tiene: `verificada` (ya puede iniciar
@@ -73,10 +85,21 @@ class VerificacionService:
                 "nombre": cuenta["nombre"],
                 "codigo": codigo,
                 "minutos": VIGENCIA_CODIGO_MIN[PROPOSITO_VERIFICAR_CORREO],
+                "enlace": enlace_de_verificacion(self._origen_frontend, email),
             },
             usuario_id=cuenta["id"],
         )
         return VIGENCIA_VERIFICACION_SEGUNDOS
+
+    def confirmar_si_verificada(self, email: str) -> bool:
+        """Autocuracion al iniciar sesion (HU-B-419): si el perfil ya esta verificado, confirma
+        el correo en Supabase Auth y devuelve True. Con un perfil sin verificar no toca nada."""
+        with self._abrir_sesion() as sesion:
+            cuenta = self._cuentas.buscar_por_email(sesion, email)
+            if cuenta is None or not cuenta["verificada"]:
+                return False
+            self._cuentas.confirmar_en_proveedor(sesion, cuenta["id"])
+            return True
 
     def verificar(self, email: str, codigo: str) -> None:
         with self._abrir_sesion() as sesion:
@@ -87,6 +110,8 @@ class VerificacionService:
             if valido:
                 # El trigger de la base aplica aqui el rol docente si el correo esta preautorizado.
                 self._cuentas.marcar_verificada(sesion, cuenta["id"])
+                # Supabase Auth tambien debe saberlo, o rechaza el inicio de sesion (HU-B-419).
+                self._cuentas.confirmar_en_proveedor(sesion, cuenta["id"])
         # Fuera del with: un codigo errado debe confirmar el intento fallido, no deshacerlo.
         if not valido:
             raise ReglaNegocio(MENSAJE_CODIGO_INVALIDO)

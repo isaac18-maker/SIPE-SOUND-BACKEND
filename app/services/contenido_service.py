@@ -9,10 +9,17 @@
 # =========================================================
 from typing import Any, Protocol
 
-from app.core.constants import ESTADO_ARCHIVADO, ESTADO_BORRADOR, ESTADO_PUBLICADO, ROL_ADMIN
+from app.core.constants import (
+    ESTADO_ARCHIVADO,
+    ESTADO_BORRADOR,
+    ESTADO_PUBLICADO,
+    MENSAJE_SIN_CURSO_ASIGNADO,
+    ROL_ADMIN,
+)
 from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio, SinPermiso, ValidacionError
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila
+from app.services.actividad_docente_service import RegistroDeActividad
 
 MENSAJE_BORRAR_AJENO = (
     "Solo quien creó este contenido puede borrarlo. Puedes archivarlo para ocultarlo."
@@ -22,6 +29,14 @@ TRANSICIONES: dict[str, set[str]] = {
     ESTADO_BORRADOR: {ESTADO_PUBLICADO},
     ESTADO_PUBLICADO: {ESTADO_ARCHIVADO},
     ESTADO_ARCHIVADO: {ESTADO_BORRADOR},
+}
+
+
+# Acciones de actividad (HU-B-418) segun el estado al que pasa el contenido.
+ACCION_POR_ESTADO = {
+    ESTADO_BORRADOR: "edito",
+    ESTADO_PUBLICADO: "publico",
+    ESTADO_ARCHIVADO: "archivo",
 }
 
 
@@ -41,7 +56,12 @@ class RepositorioContenido(Protocol):
     def cambiar_estado(self, sesion: Any, contenido_id: int, estado: str) -> Fila: ...
     def en_uso(self, sesion: Any, contenido_id: int) -> bool: ...
     def en_alcance_de(self, sesion: Any, contenido_id: int, docente_id: str) -> bool: ...
+    def referencia_en_alcance_de(self, sesion: Any, datos: Fila, docente_id: str) -> bool: ...
     def eliminar(self, sesion: Any, contenido_id: int) -> None: ...
+
+
+class RepositorioCursosDelDocente(Protocol):
+    def tiene_curso_activo(self, sesion: Any, docente_id: str) -> bool: ...
 
 
 class RepositorioCatalogo(Protocol):
@@ -55,21 +75,27 @@ class ContenidoService:
         abrir_sesion: AbrirSesion,
         repositorio: RepositorioContenido,
         catalogo: RepositorioCatalogo,
+        cursos: RepositorioCursosDelDocente,
         *,
         nombre: str,
         con_autor: bool,
         referencias: dict[str, str],
         en_uso: str,
+        actividad: RegistroDeActividad | None = None,
+        tipo_actividad: str | None = None,
     ) -> None:
         """nombre: "la lección"; referencias: campo -> tabla (p. ej. bloque_id -> bloques);
         en_uso: mensaje del 409 al borrar."""
         self._abrir_sesion = abrir_sesion
         self._repo = repositorio
         self._catalogo = catalogo
+        self._cursos = cursos
         self._nombre = nombre
         self._con_autor = con_autor
         self._referencias = referencias
         self._mensaje_en_uso = en_uso
+        self._actividad = actividad
+        self._tipo_actividad = tipo_actividad
 
     def listar(
         self, usuario: CurrentUser, filtros: dict[str, Any], *, pagina: int, por_pagina: int
@@ -88,16 +114,23 @@ class ContenidoService:
     def crear(self, usuario: CurrentUser, datos: Fila) -> Fila:
         with self._abrir_sesion() as sesion:
             self._exigir_referencias(sesion, datos)
+            self._exigir_curso_asignado(sesion, usuario, datos)
             nuevo = {**datos, "estado": ESTADO_BORRADOR}
             if self._con_autor:
                 nuevo["autor_id"] = usuario.id
-            return self._repo.crear(sesion, nuevo)
+            creado = self._repo.crear(sesion, nuevo)
+            self._registrar(sesion, usuario, "creo")
+            return creado
 
     def actualizar(self, usuario: CurrentUser, contenido_id: int, cambios: Fila) -> Fila:
         with self._abrir_sesion() as sesion:
             self._propio(sesion, usuario, contenido_id, bloquear=True)
             self._exigir_referencias(sesion, cambios)
-            return self._repo.actualizar(sesion, contenido_id, self._con_editor(usuario, cambios))
+            actualizado = self._repo.actualizar(
+                sesion, contenido_id, self._con_editor(usuario, cambios)
+            )
+            self._registrar(sesion, usuario, "edito")
+            return actualizado
 
     def cambiar_estado(self, usuario: CurrentUser, contenido_id: int, estado: str) -> Fila:
         with self._abrir_sesion() as sesion:
@@ -113,6 +146,7 @@ class ContenidoService:
             cambiado = self._repo.cambiar_estado(sesion, contenido_id, estado)
             if not self._con_autor:
                 return cambiado
+            self._registrar(sesion, usuario, ACCION_POR_ESTADO[estado])
             return self._repo.actualizar(sesion, contenido_id, self._con_editor(usuario, {}))
 
     def eliminar(self, usuario: CurrentUser, contenido_id: int) -> None:
@@ -129,8 +163,13 @@ class ContenidoService:
                     self._mensaje_en_uso, details=[{"campo": "sugerencia", "mensaje": "archivar"}]
                 )
             self._repo.eliminar(sesion, contenido_id)
+            self._registrar(sesion, usuario, "elimino")
 
     # --- Privados ---------------------------------------------------------------
+    def _registrar(self, sesion: Any, usuario: CurrentUser, accion: str) -> None:
+        if self._actividad is not None and self._tipo_actividad is not None:
+            self._actividad.registrar(sesion, usuario, self._tipo_actividad, accion)
+
     def _ve_todo(self, usuario: CurrentUser) -> bool:
         return not self._con_autor or usuario.rol == ROL_ADMIN
 
@@ -145,6 +184,16 @@ class ContenidoService:
         ):
             raise NoEncontrado(f"No existe {self._nombre} {contenido_id}")
         return fila
+
+    def _exigir_curso_asignado(self, sesion: Any, usuario: CurrentUser, datos: Fila) -> None:
+        """Un docente crea contenido solo con un curso activo asignado y dentro de la ruta de
+        sus cursos (HU-B-417). El administrador crea donde quiera."""
+        if self._ve_todo(usuario):
+            return
+        if not self._cursos.tiene_curso_activo(sesion, usuario.id):
+            raise SinPermiso(MENSAJE_SIN_CURSO_ASIGNADO)
+        if not self._repo.referencia_en_alcance_de(sesion, datos, usuario.id):
+            raise NoEncontrado("Ese bloque o lección no está en la ruta de ninguno de tus cursos.")
 
     def _con_editor(self, usuario: CurrentUser, cambios: Fila) -> Fila:
         """Deja constancia de quien modifico el contenido (HU-B-412)."""

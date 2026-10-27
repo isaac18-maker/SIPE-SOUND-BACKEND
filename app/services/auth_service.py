@@ -39,6 +39,13 @@ class EmisorDeCodigos(Protocol):
 
     def enviar_codigo(self, email: str) -> int: ...
     def estado_de_registro(self, email: str) -> dict[str, Any] | None: ...
+    def confirmar_si_verificada(self, email: str) -> bool: ...
+
+
+class RegistroDeInicios(Protocol):
+    """Lo cumple ActividadDocenteService (HU-B-418)."""
+
+    def registrar_inicio_de_sesion(self, docente_id: str) -> None: ...
 
 
 class ProveedorIdentidad(Protocol):
@@ -64,7 +71,9 @@ class AuthService:
         proveedor: ProveedorIdentidad,
         verificacion: EmisorDeCodigos,
         estado_de: Callable[[str], str | None],
+        inicios: RegistroDeInicios,
     ) -> None:
+        self._inicios = inicios
         self._proveedor = proveedor
         self._verificacion = verificacion
         self._estado_de = estado_de
@@ -108,7 +117,17 @@ class AuthService:
         }
 
     def iniciar_sesion(self, datos: InicioSesionIn) -> SesionEmitida:
-        sesion = _sesion(self._proveedor.iniciar_sesion(email=datos.email, password=datos.password))
+        try:
+            respuesta = self._proveedor.iniciar_sesion(email=datos.email, password=datos.password)
+        except ReglaNegocio as sin_confirmar:
+            if not (sin_confirmar.meta or {}).get("requiere_verificacion"):
+                raise
+            # Supabase la ve sin confirmar: si el perfil ya esta verificado, se confirma y se
+            # reintenta UNA vez. Con un perfil sin verificar se mantiene el aviso (HU-B-419).
+            if not self._verificacion.confirmar_si_verificada(datos.email):
+                raise
+            respuesta = self._proveedor.iniciar_sesion(email=datos.email, password=datos.password)
+        sesion = _sesion(respuesta)
         estado = self._estado_de(sesion.publica["usuario"]["id"])
         if estado == CUENTA_SUSPENDIDA:
             self._revocar(sesion.publica["access_token"])
@@ -116,6 +135,8 @@ class AuthService:
         if estado == CUENTA_PENDIENTE:
             self._revocar(sesion.publica["access_token"])
             raise ReglaNegocio(MENSAJE_SIN_CONFIRMAR, meta={"requiere_verificacion": True})
+        # Solo cuenta si es de un docente; como maximo uno por hora (HU-B-418).
+        self._inicios.registrar_inicio_de_sesion(sesion.publica["usuario"]["id"])
         return sesion
 
     def refrescar(self, refresh_token: str | None) -> SesionEmitida:
