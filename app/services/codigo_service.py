@@ -107,6 +107,10 @@ class CodigoService:
         """Deja sin efecto el codigo abierto (p. ej. tras verificar a mano)."""
         self._codigos.invalidar_abiertos(sesion, usuario_id, proposito)
 
+    def segundos_restantes(self, sesion: Any, usuario_id: str, proposito: str) -> int:
+        """Lo que le queda de vida al codigo abierto (0 si no hay): alimenta la cuenta regresiva."""
+        return self._codigos.segundos_restantes(sesion, usuario_id, proposito)
+
     def hay_espera(
         self,
         sesion: Any,
