@@ -19,6 +19,7 @@ from app.core.constants import (
 from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio, SinPermiso, ValidacionError
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila
+from app.services.actividad_docente_service import RegistroDeActividad
 
 MENSAJE_BORRAR_AJENO = (
     "Solo quien creó este contenido puede borrarlo. Puedes archivarlo para ocultarlo."
@@ -28,6 +29,14 @@ TRANSICIONES: dict[str, set[str]] = {
     ESTADO_BORRADOR: {ESTADO_PUBLICADO},
     ESTADO_PUBLICADO: {ESTADO_ARCHIVADO},
     ESTADO_ARCHIVADO: {ESTADO_BORRADOR},
+}
+
+
+# Acciones de actividad (HU-B-418) segun el estado al que pasa el contenido.
+ACCION_POR_ESTADO = {
+    ESTADO_BORRADOR: "edito",
+    ESTADO_PUBLICADO: "publico",
+    ESTADO_ARCHIVADO: "archivo",
 }
 
 
@@ -72,6 +81,8 @@ class ContenidoService:
         con_autor: bool,
         referencias: dict[str, str],
         en_uso: str,
+        actividad: RegistroDeActividad | None = None,
+        tipo_actividad: str | None = None,
     ) -> None:
         """nombre: "la lección"; referencias: campo -> tabla (p. ej. bloque_id -> bloques);
         en_uso: mensaje del 409 al borrar."""
@@ -83,6 +94,8 @@ class ContenidoService:
         self._con_autor = con_autor
         self._referencias = referencias
         self._mensaje_en_uso = en_uso
+        self._actividad = actividad
+        self._tipo_actividad = tipo_actividad
 
     def listar(
         self, usuario: CurrentUser, filtros: dict[str, Any], *, pagina: int, por_pagina: int
@@ -105,13 +118,19 @@ class ContenidoService:
             nuevo = {**datos, "estado": ESTADO_BORRADOR}
             if self._con_autor:
                 nuevo["autor_id"] = usuario.id
-            return self._repo.crear(sesion, nuevo)
+            creado = self._repo.crear(sesion, nuevo)
+            self._registrar(sesion, usuario, "creo")
+            return creado
 
     def actualizar(self, usuario: CurrentUser, contenido_id: int, cambios: Fila) -> Fila:
         with self._abrir_sesion() as sesion:
             self._propio(sesion, usuario, contenido_id, bloquear=True)
             self._exigir_referencias(sesion, cambios)
-            return self._repo.actualizar(sesion, contenido_id, self._con_editor(usuario, cambios))
+            actualizado = self._repo.actualizar(
+                sesion, contenido_id, self._con_editor(usuario, cambios)
+            )
+            self._registrar(sesion, usuario, "edito")
+            return actualizado
 
     def cambiar_estado(self, usuario: CurrentUser, contenido_id: int, estado: str) -> Fila:
         with self._abrir_sesion() as sesion:
@@ -127,6 +146,7 @@ class ContenidoService:
             cambiado = self._repo.cambiar_estado(sesion, contenido_id, estado)
             if not self._con_autor:
                 return cambiado
+            self._registrar(sesion, usuario, ACCION_POR_ESTADO[estado])
             return self._repo.actualizar(sesion, contenido_id, self._con_editor(usuario, {}))
 
     def eliminar(self, usuario: CurrentUser, contenido_id: int) -> None:
@@ -143,8 +163,13 @@ class ContenidoService:
                     self._mensaje_en_uso, details=[{"campo": "sugerencia", "mensaje": "archivar"}]
                 )
             self._repo.eliminar(sesion, contenido_id)
+            self._registrar(sesion, usuario, "elimino")
 
     # --- Privados ---------------------------------------------------------------
+    def _registrar(self, sesion: Any, usuario: CurrentUser, accion: str) -> None:
+        if self._actividad is not None and self._tipo_actividad is not None:
+            self._actividad.registrar(sesion, usuario, self._tipo_actividad, accion)
+
     def _ve_todo(self, usuario: CurrentUser) -> bool:
         return not self._con_autor or usuario.rol == ROL_ADMIN
 

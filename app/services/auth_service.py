@@ -42,6 +42,12 @@ class EmisorDeCodigos(Protocol):
     def confirmar_si_verificada(self, email: str) -> bool: ...
 
 
+class RegistroDeInicios(Protocol):
+    """Lo cumple ActividadDocenteService (HU-B-418)."""
+
+    def registrar_inicio_de_sesion(self, docente_id: str) -> None: ...
+
+
 class ProveedorIdentidad(Protocol):
     def registrar(
         self, *, email: str, password: str, nombre: str, apellido: str | None = None
@@ -65,7 +71,9 @@ class AuthService:
         proveedor: ProveedorIdentidad,
         verificacion: EmisorDeCodigos,
         estado_de: Callable[[str], str | None],
+        inicios: RegistroDeInicios,
     ) -> None:
+        self._inicios = inicios
         self._proveedor = proveedor
         self._verificacion = verificacion
         self._estado_de = estado_de
@@ -127,6 +135,8 @@ class AuthService:
         if estado == CUENTA_PENDIENTE:
             self._revocar(sesion.publica["access_token"])
             raise ReglaNegocio(MENSAJE_SIN_CONFIRMAR, meta={"requiere_verificacion": True})
+        # Solo cuenta si es de un docente; como maximo uno por hora (HU-B-418).
+        self._inicios.registrar_inicio_de_sesion(sesion.publica["usuario"]["id"])
         return sesion
 
     def refrescar(self, refresh_token: str | None) -> SesionEmitida:

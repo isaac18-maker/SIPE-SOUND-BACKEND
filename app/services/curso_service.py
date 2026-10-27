@@ -14,6 +14,7 @@ from app.core.privacidad import enmascarar_email
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila, RepositorioCursos
 from app.schemas.curso import RutaCursoIn
+from app.services.actividad_docente_service import RegistroDeActividad
 
 INTENTOS_CODIGO = 5
 MENSAJE_CODIGO_INVALIDO = (
@@ -110,11 +111,13 @@ class CursoService:
         cursos: RepositorioCursos,
         seguimiento: RepositorioSeguimiento | None = None,
         ruta: RutaDeEstudiante | None = None,
+        actividad: RegistroDeActividad | None = None,
     ) -> None:
         self._abrir_sesion = abrir_sesion
         self._cursos = cursos
         self._seguimiento = seguimiento
         self._ruta = ruta
+        self._actividad = actividad
 
     # --- Docente: cursos --------------------------------------------------------
     def listar_de_docente(self, usuario: CurrentUser, *, archivados: bool) -> list[Fila]:
@@ -139,12 +142,14 @@ class CursoService:
     def actualizar(self, usuario: CurrentUser, curso_id: int, cambios: Fila) -> Fila:
         with self._abrir_sesion() as sesion:
             self._curso_propio(sesion, usuario, curso_id, bloquear=True, activo=True)
+            self._registrar(sesion, usuario, "curso", "edito", curso_id)
             return self._cursos.actualizar(sesion, curso_id, cambios)
 
     def regenerar_codigo(self, usuario: CurrentUser, curso_id: int) -> Fila:
         """Los estudiantes ya inscritos siguen en el curso; el codigo anterior deja de servir."""
         with self._abrir_sesion() as sesion:
             self._curso_propio(sesion, usuario, curso_id, bloquear=True, activo=True)
+            self._registrar(sesion, usuario, "curso", "regenero_codigo", curso_id)
             for _ in range(INTENTOS_CODIGO):
                 try:
                     with sesion.begin_nested():
@@ -159,6 +164,7 @@ class CursoService:
         """Soft delete: el curso y su historial se conservan."""
         with self._abrir_sesion() as sesion:
             self._curso_propio(sesion, usuario, curso_id, bloquear=True)
+            self._registrar(sesion, usuario, "curso", "archivo", curso_id)
             return self._cursos.archivar(sesion, curso_id)
 
     def definir_ruta(self, usuario: CurrentUser, curso_id: int, ruta: RutaCursoIn) -> list[Fila]:
@@ -174,6 +180,7 @@ class CursoService:
             self._cursos.reemplazar_ruta(
                 sesion, curso_id, [(b.bloque_id, b.orden) for b in ruta.bloques]
             )
+            self._registrar(sesion, usuario, "curso", "definio_ruta", curso_id)
         return [b.model_dump() for b in sorted(ruta.bloques, key=lambda b: b.orden)]
 
     # --- Docente: estudiantes ---------------------------------------------------
@@ -214,6 +221,7 @@ class CursoService:
             self._curso_propio(sesion, usuario, curso_id, bloquear=True)
             if not self._cursos.retirar(sesion, curso_id, estudiante_id):
                 raise NoEncontrado("Ese estudiante no está inscrito en el curso.")
+            self._registrar(sesion, usuario, "curso", "retiro_estudiante", curso_id)
 
     def comentar(
         self, usuario: CurrentUser, curso_id: int, estudiante_id: str, mensaje: str
@@ -221,6 +229,7 @@ class CursoService:
         with self._abrir_sesion() as sesion:
             self._curso_propio(sesion, usuario, curso_id, activo=True)
             self._inscrito(sesion, curso_id, estudiante_id)
+            self._registrar(sesion, usuario, "retroalimentacion", "comento", curso_id)
             return self._cursos.crear_retroalimentacion(
                 sesion,
                 {
@@ -279,6 +288,13 @@ class CursoService:
         return self._curso_propio(sesion, usuario, curso_id, activo=activo)
 
     # --- Privados ---------------------------------------------------------------
+    def _registrar(
+        self, sesion: Any, usuario: CurrentUser, tipo: str, accion: str, curso_id: int
+    ) -> None:
+        """Actividad del docente (HU-B-418), en la misma transaccion de la accion."""
+        if self._actividad is not None:
+            self._actividad.registrar(sesion, usuario, tipo, accion, curso_id)
+
     def _curso_propio(
         self,
         sesion: Any,

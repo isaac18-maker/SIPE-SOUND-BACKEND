@@ -1,14 +1,17 @@
 from flask import Blueprint, request
 
-from app.container import admin_cursos_service
+from app.container import actividad_docente_service, admin_cursos_service
 from app.core.constants import ROL_ADMIN
 from app.core.responses import created, ok, paginated
 from app.core.security import get_current_user, roles_required
 from app.schemas.admin_cursos import (
     CursoAdminCrear,
+    FiltrosActividadDocentes,
     FiltrosCursosAdmin,
     FiltrosDocentes,
+    LineaDeTiempoQuery,
     ReasignarCursoIn,
+    ResumenActividadQuery,
 )
 from app.schemas.curso import EstudiantesQuery
 
@@ -23,6 +26,37 @@ def listar_docentes():
     """Docentes con su estado, sus cursos (activos y archivados) y sus estudiantes. ?q=&pagina=."""
     filtros = FiltrosDocentes.model_validate(request.args.to_dict())
     filas, total = admin_cursos_service().listar_docentes(filtros.model_dump())
+    return paginated(filas, pagina=filtros.pagina, por_pagina=filtros.por_pagina, total=total)
+
+
+@bp.get("/admin/docentes/actividad")
+@roles_required(ROL_ADMIN)
+def actividad_de_docentes():
+    """Un renglon por docente activo con su estado de actividad (activo: algo en los ultimos 7
+    dias; inactivo: entre 8 y 30; sin_actividad: mas de 30 o nunca). ?estado_actividad=&q=
+    &orden=ultima_actividad|-acciones_30d|nombre&pagina=. Sin datos de estudiantes."""
+    filtros = FiltrosActividadDocentes.model_validate(request.args.to_dict())
+    filas, total = actividad_docente_service().listar(filtros.model_dump())
+    return paginated(filas, pagina=filtros.pagina, por_pagina=filtros.por_pagina, total=total)
+
+
+@bp.get("/admin/docentes/<uuid:docente_id>/actividad/resumen")
+@roles_required(ROL_ADMIN)
+def resumen_de_actividad(docente_id):
+    """Actividad por dia (con los dias vacios), por tipo y sus cursos asignados con el avance de
+    sus estudiantes. ?dias= de 7 a 90 (28 por defecto). 404 si no es un docente."""
+    consulta = ResumenActividadQuery.model_validate(request.args.to_dict())
+    return ok(actividad_docente_service().resumen(str(docente_id), consulta.dias))
+
+
+@bp.get("/admin/docentes/<uuid:docente_id>/actividad")
+@roles_required(ROL_ADMIN)
+def linea_de_tiempo_del_docente(docente_id):
+    """Linea de tiempo, la mas reciente primero. ?tipo=&curso_id=&desde=&hasta=&pagina=."""
+    filtros = LineaDeTiempoQuery.model_validate(request.args.to_dict())
+    filas, total = actividad_docente_service().linea_de_tiempo(
+        str(docente_id), filtros.model_dump()
+    )
     return paginated(filas, pagina=filtros.pagina, por_pagina=filtros.por_pagina, total=total)
 
 

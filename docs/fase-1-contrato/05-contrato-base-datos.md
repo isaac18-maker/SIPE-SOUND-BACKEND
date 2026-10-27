@@ -170,3 +170,20 @@ hace con funciones `SECURITY DEFINER` de `public`, con `search_path = ''` y `EXE
 `acciones_admin.accion` y `envios_correo.tipo` tienen un `CHECK` con la lista de valores. Agregar uno
 es una revisión que reemplaza el `CHECK` (la lista vive en `app/core/constants.py`). La revisión
 `0033` (HU-B-417) agrega las acciones `asignar_curso` y `quitar_docente_curso` y el correo `curso_asignado`.
+
+## 11. `actividad_docente` (HU-B-418, revisión `0034`)
+
+Qué hizo un docente y en qué curso, para que el administrador detecte a tiempo a uno inactivo.
+
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid | PK |
+| `docente_id` | uuid | FK `profiles` **CASCADE** |
+| `curso_id` | integer, nulo | FK `cursos` **SET NULL** |
+| `tipo` | text | `sesion`, `leccion`, `ejercicio`, `evaluacion`, `retroalimentacion`, `mensaje`, `curso` (CHECK) |
+| `accion` | text | `inicio`, `creo`, `edito`, `publico`, `archivo`, `elimino`, `comento`, `envio`, `retiro_estudiante`, `regenero_codigo`, `definio_ruta` (CHECK) |
+| `creado_en` | timestamptz | `now()` |
+
+Índices `(docente_id, creado_en desc)` y `(curso_id, creado_en desc)`. RLS activo y **sin políticas**
+(solo el backend), como `envios_correo`. Nunca guarda contenido ni datos de estudiantes. Se conserva
+180 días: al registrar el inicio de sesión de un docente se borran, por lotes de 500, las filas más viejas.

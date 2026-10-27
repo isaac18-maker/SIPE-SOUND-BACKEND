@@ -2,6 +2,10 @@ from sqlalchemy.orm import Session
 
 from app.repositories.base import Fila
 from app.repositories.sqlalchemy._comun import filas_sql
+from app.repositories.sqlalchemy.actividad_docente_repository import (
+    ULTIMA_ACTIVIDAD_SQL,
+    estado_actividad_sql,
+)
 from app.repositories.sqlalchemy.admin_cuentas_repository import ESTADO_SQL, _escapar_like
 
 # Conteos de un curso; se repiten en varias consultas.
@@ -14,6 +18,8 @@ with base as (
   select p.id, p.nombre, p.apellido, u.email,
     {ESTADO_SQL} as estado,
     u.last_sign_in_at as ultimo_acceso,
+    {ULTIMA_ACTIVIDAD_SQL} as ultima_actividad,
+    {estado_actividad_sql(ULTIMA_ACTIVIDAD_SQL)} as estado_actividad,
     (select count(*) from public.cursos c
       where c.docente_id = p.id and c.archivado_en is null) as cursos_activos,
     (select count(*) from public.cursos c

@@ -31,6 +31,7 @@ from app.core.constants import (
 from app.core.errors import DemasiadasSolicitudes, NoEncontrado, ReglaNegocio, SinPermiso
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila
+from app.services.actividad_docente_service import RegistroDeActividad
 
 MENSAJE_DESTINO = "No puedes enviar mensajes a ese destino."
 MENSAJE_ESTUDIANTE = "Solo puedes escribirle a los docentes de tus cursos."
@@ -106,7 +107,13 @@ def _remitente(fila: Fila, prefijo: str) -> Fila | None:
 
 
 class MensajeriaService:
-    def __init__(self, abrir_sesion: AbrirSesion, mensajes: RepositorioMensajeria) -> None:
+    def __init__(
+        self,
+        abrir_sesion: AbrirSesion,
+        mensajes: RepositorioMensajeria,
+        actividad: RegistroDeActividad,
+    ) -> None:
+        self._actividad = actividad
         self._abrir_sesion = abrir_sesion
         self._mensajes = mensajes
 
@@ -197,6 +204,9 @@ class MensajeriaService:
                 # Dentro del with: la transaccion se deshace y no queda un mensaje sin nadie.
                 raise ReglaNegocio(MENSAJE_GRUPO_VACIO)
             self._mensajes.agregar_remitente(sesion, mensaje["id"], usuario.id)
+            self._actividad.registrar(
+                sesion, usuario, "mensaje", "envio", curso_id if alcance == ALCANCE_CURSO else None
+            )
         return {"id": mensaje["id"], "hilo_id": mensaje["hilo_id"], "destinatarios": destinatarios}
 
     def solicitar_cambio_de_nombre(self, usuario: CurrentUser, cuerpo: str) -> dict[str, Any]:
