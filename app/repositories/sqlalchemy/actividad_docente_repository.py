@@ -101,13 +101,17 @@ group by tipo
 order by acciones desc, tipo
 """  # noqa: S608
 
+ULTIMA_DEL_DOCENTE = (
+    "(select max(creado_en) from public.actividad_docente where docente_id = cast(:id as uuid))"
+)
+
 TOTALES = f"""
 select
   (select count(distinct (creado_en at time zone :zona)::date)
      from public.actividad_docente
     where docente_id = cast(:id as uuid) and creado_en >= {DESDE}) as dias_activos,
-  (select max(creado_en) from public.actividad_docente
-    where docente_id = cast(:id as uuid)) as ultima_actividad
+  {ULTIMA_DEL_DOCENTE} as ultima_actividad,
+  {estado_actividad_sql(ULTIMA_DEL_DOCENTE)} as estado_actividad
 """  # noqa: S608
 
 CURSOS_ASIGNADOS = """
@@ -248,6 +252,7 @@ class SqlActividadDocenteRepository:
             "por_tipo": filas_sql(sesion, POR_TIPO, parametros),
             "dias_activos": int(totales["dias_activos"]),
             "ultima_actividad": totales["ultima_actividad"],
+            "estado_actividad": totales["estado_actividad"],
             "cursos": [
                 {**c, "avance_promedio_pct": int(c["avance_promedio_pct"])}
                 for c in filas_sql(sesion, CURSOS_ASIGNADOS, {"id": docente_id})
