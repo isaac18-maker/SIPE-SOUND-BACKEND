@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     correo_nombre_remitente: str = "SIPE-SOUND"
     # Origen del frontend para los enlaces de los correos; debe estar en CORS_ORIGINS.
     url_frontend: str | None = None
+    # Cuantos proxies de confianza hay delante de la API (Vercel, Render, Nginx): de ellos se
+    # lee la IP real de cada persona (X-Forwarded-For). Con 0 se usa la IP de la conexion.
+    # Sin esto, tras un proxy todas las personas parecen una sola IP y comparten los limites.
+    proxies_confiables: int = Field(default=0, ge=0, le=3)
+    # Vercel define VERCEL=1 en sus funciones.
+    vercel: str | None = None
 
     @field_validator("auth_cookie_secure", mode="before")
     @classmethod
@@ -69,6 +75,7 @@ class Settings(BaseSettings):
         "smtp_clave_aplicacion",
         "correo_remitente",
         "url_frontend",
+        "vercel",
         mode="before",
     )
     @classmethod
@@ -160,6 +167,16 @@ class Settings(BaseSettings):
 
     def url_base_de_datos(self) -> str:
         return self.database_url.get_secret_value()
+
+    @property
+    def es_serverless(self) -> bool:
+        """En Vercel la funcion se congela al responder: nada puede quedar en segundo plano."""
+        return self.vercel is not None
+
+    @property
+    def proxies_de_confianza(self) -> int:
+        """PROXIES_CONFIABLES, o 1 en Vercel (un solo proxy delante) si no se indica."""
+        return self.proxies_confiables or (1 if self.es_serverless else 0)
 
     @property
     def es_produccion(self) -> bool:
