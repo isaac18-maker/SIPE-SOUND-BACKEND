@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 DIRECTORIO_PLANTILLAS = Path(__file__).resolve().parent.parent / "templates" / "correo"
 MARCA = "SIPE-SOUND"
+# Logo de la cabecera: viaja dentro del correo (cid:logo) para verse sin una URL publica.
+RUTA_LOGO = DIRECTORIO_PLANTILLAS / "logo.png"
 
 # Asunto por tipo. El codigo va en el asunto: se ve en la notificacion del celular.
 ASUNTOS = {
@@ -78,6 +80,7 @@ class CorreoService:
         self._remitente = remitente
         self._nombre_remitente = nombre_remitente
         self._plantillas = crear_plantillas()
+        self._logo = RUTA_LOGO.read_bytes()
 
     def enviar(
         self,
@@ -116,6 +119,9 @@ class CorreoService:
         mensaje.set_content(self._plantillas.get_template(f"{tipo}.txt").render(**datos))
         mensaje.add_alternative(
             self._plantillas.get_template(f"{tipo}.html").render(**datos), subtype="html"
+        )
+        mensaje.get_payload()[-1].add_related(
+            self._logo, maintype="image", subtype="png", cid="<logo>", filename="logo.png"
         )
         return mensaje
 
