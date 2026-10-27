@@ -18,6 +18,7 @@ from app.core.constants import (
 )
 from app.core.errors import (
     AppError,
+    Conflicto,
     CuentaExistente,
     NoAutenticado,
     ReglaNegocio,
@@ -28,12 +29,16 @@ from app.schemas.auth import InicioSesionIn, RegistroIn
 
 MENSAJE_SIN_SESION = "Necesitas iniciar sesión."
 MENSAJE_SESION_VENCIDA = "Tu sesión terminó. Inicia sesión de nuevo."
+MENSAJE_CORREO_REGISTRADO = (
+    "Este correo ya tiene una cuenta. Inicia sesión o, si no recuerdas tu contraseña, recupérala."
+)
 
 
 class EmisorDeCodigos(Protocol):
     """Lo cumple VerificacionService."""
 
-    def enviar_codigo(self, email: str) -> None: ...
+    def enviar_codigo(self, email: str) -> int: ...
+    def estado_de_registro(self, email: str) -> dict[str, Any] | None: ...
 
 
 class ProveedorIdentidad(Protocol):
@@ -65,10 +70,22 @@ class AuthService:
         self._estado_de = estado_de
 
     def registrar(self, datos: RegistroIn) -> dict[str, Any]:
-        """La respuesta es la misma exista o no el correo: no revela que cuentas existen.
+        """Crea la cuenta y envia el codigo (HU-B-402, lo envia el backend, no Supabase).
 
-        El codigo de verificacion lo envia el backend (HU-B-402), no Supabase.
+        Si el correo ya tiene una cuenta verificada responde 409. Si tiene un registro en
+        curso no vuelve a crearla: devuelve `registro_en_curso` y los segundos que le quedan
+        al codigo, para que la persona escriba el que tiene o pida otro (HU-B-416).
         """
+        previo = self._verificacion.estado_de_registro(datos.email)
+        if previo and previo["estado"] == "verificada":
+            raise Conflicto(MENSAJE_CORREO_REGISTRADO, meta={"correo_registrado": True})
+        if previo:
+            return {
+                "email": datos.email,
+                "requiere_confirmacion": True,
+                "registro_en_curso": True,
+                "vence_en_segundos": previo["vence_en_segundos"],
+            }
         try:
             respuesta = self._proveedor.registrar(
                 email=datos.email,
@@ -82,8 +99,13 @@ class AuthService:
         # entrega ni se deja viva (la cuenta aun no esta verificada).
         if token := respuesta.get("access_token"):
             self._revocar(token)
-        self._verificacion.enviar_codigo(datos.email)
-        return {"email": datos.email, "requiere_confirmacion": True}
+        vence = self._verificacion.enviar_codigo(datos.email)
+        return {
+            "email": datos.email,
+            "requiere_confirmacion": True,
+            "registro_en_curso": False,
+            "vence_en_segundos": vence,
+        }
 
     def iniciar_sesion(self, datos: InicioSesionIn) -> SesionEmitida:
         sesion = _sesion(self._proveedor.iniciar_sesion(email=datos.email, password=datos.password))
