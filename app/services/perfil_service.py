@@ -120,7 +120,11 @@ class AdminUsuariosService:
         return actualizados, faltan
 
     def cambiar_rol(self, admin_id: str, usuario_id: str, rol: str) -> dict[str, Any]:
-        """Asigna un rol. Nunca deja el sistema sin al menos un administrador."""
+        """Asigna un rol. Nunca deja el sistema sin al menos un administrador y nadie cambia su
+        propio rol. Un administrador siempre puede cambiar su nombre: al promover se permite y
+        al bajar de rol se bloquea (otro administrador puede volver a permitirlo)."""
+        if usuario_id == admin_id:
+            raise SinPermiso("No puedes cambiar tu propio rol.")
         with self._abrir_sesion() as sesion:
             perfil = self._perfiles.obtener_para_actualizar(sesion, usuario_id)
             if perfil is None:
@@ -133,6 +137,10 @@ class AdminUsuariosService:
                 )
             self._exigir_sin_cursos_a_cargo(sesion, usuario_id, perfil["rol"], rol)
             actualizado = self._perfiles.actualizar_rol(sesion, usuario_id, rol)
+            if rol == ROL_ADMIN:
+                self._perfiles.actualizar_permiso_nombre(sesion, [usuario_id], True)
+            elif perfil["rol"] == ROL_ADMIN:
+                self._perfiles.actualizar_permiso_nombre(sesion, [usuario_id], False)
             self._auditoria.registrar(
                 sesion,
                 admin_id=admin_id,

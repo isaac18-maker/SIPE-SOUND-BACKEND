@@ -46,6 +46,7 @@ LISTADO = f"""
 with base as (
   select p.id as docente_id,
     concat_ws(' ', p.nombre, p.apellido) as nombre,
+    u.email,
     {ULTIMA_ACTIVIDAD_SQL} as ultima_actividad,
     (select count(*) from public.actividad_docente a
       where a.docente_id = p.id and a.creado_en >= now() - interval '30 days') as acciones_30d,
@@ -54,7 +55,8 @@ with base as (
     {ESTUDIANTES_ACTIVOS} as estudiantes
   from public.profiles p join auth.users u on u.id = p.id
   where p.rol = 'docente' and {ESTADO_SQL} = 'activa'
-    and (cast(:q as text) is null or p.nombre ilike :patron or p.apellido ilike :patron)
+    and (cast(:q as text) is null or p.nombre ilike :patron or p.apellido ilike :patron
+         or u.email ilike :patron)
 ), con_estado as (
   select base.*, {estado_actividad_sql("base.ultima_actividad")} as estado_actividad from base
 )
@@ -69,6 +71,8 @@ limit :limite offset :desde
 ORDENES = {
     "ultima_actividad": "ultima_actividad asc nulls first, nombre, docente_id",
     "-acciones_30d": "acciones_30d desc, nombre, docente_id",
+    "-cursos": "cursos_asignados desc, nombre, docente_id",
+    "-estudiantes": "estudiantes desc, nombre, docente_id",
     "nombre": "nombre asc, docente_id",
 }
 
@@ -165,12 +169,19 @@ group by c.id, c.nombre, t.n
 order by c.nombre, c.id
 """
 
+# La línea de tiempo filtra por un tipo o por un grupo: "contenido" (lecciones, ejercicios y
+# cursos) y "evaluacion" (evaluaciones y retroalimentaciones).
+GRUPOS_DE_TIPO = {
+    "contenido": ["leccion", "ejercicio", "curso"],
+    "evaluacion": ["evaluacion", "retroalimentacion"],
+}
+
 LINEA_DE_TIEMPO = """
 select a.creado_en, a.tipo, a.accion, a.curso_id, c.nombre as curso_nombre,
   count(*) over () as total_filas
 from public.actividad_docente a left join public.cursos c on c.id = a.curso_id
 where a.docente_id = cast(:id as uuid)
-  and (cast(:tipo as text) is null or a.tipo = :tipo)
+  and (cast(:tipos as text[]) is null or a.tipo = any(cast(:tipos as text[])))
   and (cast(:curso_id as int) is null or a.curso_id = :curso_id)
   and (cast(:desde as date) is null or (a.creado_en at time zone :zona)::date >= :desde)
   and (cast(:hasta as date) is null or (a.creado_en at time zone :zona)::date <= :hasta)
@@ -276,7 +287,7 @@ class SqlActividadDocenteRepository:
             LINEA_DE_TIEMPO,
             {
                 "id": docente_id,
-                "tipo": tipo,
+                "tipos": GRUPOS_DE_TIPO.get(tipo, [tipo]) if tipo else None,
                 "curso_id": curso_id,
                 "desde": desde,
                 "hasta": hasta,

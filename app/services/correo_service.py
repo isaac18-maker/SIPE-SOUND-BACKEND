@@ -18,9 +18,11 @@ from app.core.constants import (
     CORREO_CAMBIAR_CORREO,
     CORREO_CONTRASENA_CAMBIADA,
     CORREO_CORREO_CAMBIADO,
+    CORREO_CUENTA_SUSPENDIDA,
     CORREO_CURSO_ASIGNADO,
     CORREO_REAUTENTICACION,
     CORREO_RESTABLECER,
+    CORREO_ROL_CAMBIADO,
     CORREO_VERIFICAR,
     ENVIO_ENVIADO,
     ENVIO_FALLIDO,
@@ -44,6 +46,8 @@ ASUNTOS = {
     CORREO_CAMBIAR_CORREO: "Confirma tu correo nuevo: {codigo}",
     CORREO_CORREO_CAMBIADO: "El correo de tu cuenta de SIPE-SOUND cambió",
     CORREO_CURSO_ASIGNADO: "Te asignaron un curso en SIPE-SOUND: {curso}",
+    CORREO_ROL_CAMBIADO: "Tu rol en SIPE-SOUND cambió",
+    CORREO_CUENTA_SUSPENDIDA: "Tu cuenta de SIPE-SOUND quedó suspendida",
 }
 
 

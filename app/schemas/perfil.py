@@ -18,6 +18,7 @@ class CambioRolIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     rol: Literal["estudiante", "docente", "admin"]
+    notificar: StrictBool = False
 
 
 class PerfilEditarIn(BaseModel):

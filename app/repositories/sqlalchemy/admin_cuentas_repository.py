@@ -14,7 +14,8 @@ ESTADO_SQL = """case when p.suspendido_en is not null then 'suspendida'
          else 'activa' end"""
 
 COLUMNAS = f"""
-  p.id, p.nombre, p.apellido, u.email, p.rol, p.puede_editar_nombre, p.creado_en,
+  p.id, p.nombre, p.apellido, u.email, p.rol,
+  (p.rol = 'admin' or p.puede_editar_nombre) as puede_editar_nombre, p.creado_en,
   p.correo_verificado_en, p.suspendido_en, p.motivo_suspension,
   u.last_sign_in_at as ultimo_acceso,
   (u.email_confirmed_at is not null) as correo_confirmado_en_proveedor,
@@ -37,7 +38,8 @@ with base as (
   select {COLUMNAS}
   from public.profiles p join auth.users u on u.id = p.id
   where (cast(:rol as text) is null or p.rol = :rol)
-    and (cast(:permiso as boolean) is null or p.puede_editar_nombre = :permiso)
+    and (cast(:permiso as boolean) is null
+         or (p.rol = 'admin' or p.puede_editar_nombre) = :permiso)
     and (cast(:q as text) is null or p.nombre ilike :patron or p.apellido ilike :patron
          or u.email ilike :patron)
 )
@@ -53,6 +55,11 @@ ORDENES = {
     "nombre": "base.nombre asc, base.apellido asc nulls last, base.id",
     "-creado_en": "base.creado_en desc, base.id",
     "-ultimo_acceso": "base.ultimo_acceso desc nulls last, base.id",
+    "apellido": "base.apellido asc nulls last, base.nombre asc, base.id",
+    "rol": (
+        "case base.rol when 'admin' then 0 when 'docente' then 1 else 2 end, "
+        "base.nombre asc, base.apellido asc nulls last, base.id"
+    ),
 }
 
 DETALLE = f"""
@@ -66,6 +73,12 @@ select {ESTADO_SQL} as estado, count(*) as n
 from public.profiles p
 group by 1
 """  # noqa: S608 - solo fragmentos constantes
+
+TOTALES_POR_ROL = """
+select p.rol, count(*) as n
+from public.profiles p
+group by 1
+"""
 
 INSCRIPCIONES = """
 select i.curso_id, c.nombre as curso, d.nombre as docente, d.apellido as docente_apellido,
@@ -131,6 +144,10 @@ class SqlAdminCuentasRepository:
         filas = filas_sql(sesion, TOTALES, {})
         return {fila["estado"]: int(fila["n"]) for fila in filas}
 
+    def totales_por_rol(self, sesion: Session) -> dict[str, int]:
+        filas = filas_sql(sesion, TOTALES_POR_ROL, {})
+        return {fila["rol"]: int(fila["n"]) for fila in filas}
+
     def obtener(self, sesion: Session, usuario_id: str) -> Fila | None:
         filas = filas_sql(sesion, DETALLE, {"id": usuario_id})
         return filas[0] if filas else None
@@ -149,6 +166,15 @@ class SqlAdminCuentasRepository:
 
     def reactivar(self, sesion: Session, usuario_id: str) -> None:
         self._actualizar(sesion, usuario_id, suspendido_en=None, motivo_suspension=None)
+
+    def actualizar_nombre(
+        self, sesion: Session, usuario_id: str, nombre: str, apellido: str
+    ) -> None:
+        self._actualizar(sesion, usuario_id, nombre=nombre, apellido=apellido)
+
+    def quitar_verificacion(self, sesion: Session, usuario_id: str) -> None:
+        """Deja el correo sin verificar (cuenta pendiente) tras cambiarlo."""
+        self._actualizar(sesion, usuario_id, correo_verificado_en=None)
 
     @staticmethod
     def _actualizar(sesion: Session, usuario_id: str, **valores: Any) -> None:

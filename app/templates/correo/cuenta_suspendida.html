@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% from "_macros.html" import parrafo %}
+{% block previa %}Tu cuenta de {{ marca }} quedó suspendida.{% endblock %}
+{% block contenido %}
+{% call parrafo() %}Hola, {{ nombre }}.{% endcall %}
+{% call parrafo() %}Un administrador suspendió tu cuenta de {{ marca }}. No podrás iniciar sesión ni ver tus cursos hasta que la reactive. Tu progreso se conserva.{% endcall %}
+{% call parrafo() %}Si crees que es un error, escribe al administrador de tu aula.{% endcall %}
+{% endblock %}
