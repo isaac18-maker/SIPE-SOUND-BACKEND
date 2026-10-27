@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.api.documentacion import registrar_documentacion
 from app.api.v1 import register_blueprints
@@ -41,6 +42,9 @@ def create_app(settings: Settings | None = None) -> Flask:
     configure_logging(settings.log_level)
 
     app = Flask(__name__)
+    if saltos := settings.proxies_de_confianza:
+        # Los limites por IP (app/core/limites.py) necesitan la IP real, no la del proxy.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=saltos, x_proto=saltos)
     # Respetar el orden de la respuesta estandar (statusCode, status, data, ...).
     app.json.sort_keys = False
     CORS(app, **opciones_cors(settings))

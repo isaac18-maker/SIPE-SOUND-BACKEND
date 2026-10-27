@@ -59,7 +59,7 @@ from app.services.auth_service import AuthService
 from app.services.bloque_service import BloqueService
 from app.services.codigo_service import CodigoService
 from app.services.contenido_service import ContenidoService
-from app.services.correo_service import MARCA, CorreoService, Enviador
+from app.services.correo_service import MARCA, CorreoService, EjecutorInmediato, Enviador
 from app.services.cuenta_service import CuentaService
 from app.services.curso_service import CursoService
 from app.services.docente_service import DocenteService
@@ -383,8 +383,11 @@ def correo_service() -> CorreoService:
         session_scope,
         SqlEnvioCorreoRepository(),
         _crear_enviador(),
-        # Dos hilos bastan: los correos son transaccionales (codigos, enlaces y avisos).
-        ThreadPoolExecutor(max_workers=2, thread_name_prefix="correo"),
+        # Dos hilos bastan: los correos son transaccionales (codigos, enlaces y avisos). En
+        # Vercel no hay segundo plano: se envia en la peticion.
+        EjecutorInmediato()
+        if ajustes.es_serverless
+        else ThreadPoolExecutor(max_workers=2, thread_name_prefix="correo"),
         remitente=ajustes.remitente_correo or REMITENTE_LOCAL,
         nombre_remitente=ajustes.correo_nombre_remitente or MARCA,
     )

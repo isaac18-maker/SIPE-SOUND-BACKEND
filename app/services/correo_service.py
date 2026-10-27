@@ -5,7 +5,8 @@
 # resultado queda en envios_correo. Nunca se registran codigos, enlaces ni cuerpos.
 # =========================================================
 import logging
-from concurrent.futures import Executor
+from collections.abc import Callable
+from concurrent.futures import Executor, Future
 from email.message import EmailMessage
 from email.utils import formataddr, formatdate, make_msgid
 from pathlib import Path
@@ -42,6 +43,21 @@ ASUNTOS = {
     CORREO_CAMBIAR_CORREO: "Confirma tu correo nuevo: {codigo}",
     CORREO_CORREO_CAMBIADO: "El correo de tu cuenta de SIPE-SOUND cambió",
 }
+
+
+class EjecutorInmediato(Executor):
+    """Ejecuta el envio en la misma peticion. En Vercel la funcion se congela al responder y un
+    hilo en segundo plano se pierde; esperar al SMTP cuesta un par de segundos, pero el correo
+    sale. Igual que un hilo, un error queda en el Future y no interrumpe a quien lo pidio."""
+
+    def submit(self, fn: Callable[..., Any], /, *args: Any, **kwargs: Any) -> Future:
+        futuro: Future = Future()
+        try:
+            futuro.set_result(fn(*args, **kwargs))
+        except Exception as error:  # noqa: BLE001 - igual que ThreadPoolExecutor
+            logger.exception("Fallo el envio inmediato de un correo")
+            futuro.set_exception(error)
+        return futuro
 
 
 class Enviador(Protocol):
