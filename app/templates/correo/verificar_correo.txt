@@ -10,5 +10,5 @@ Este es tu código para confirmar tu correo en {{ marca }}:
 
     {{ codigo }}
 
-Vence en {{ minutos }} minutos y solo sirve una vez. Escríbelo en la página donde te registraste.
+Vence en {{ minutos }} {{ 'minuto' if minutos == 1 else 'minutos' }} y solo sirve una vez. Escríbelo en la página donde te registraste.
 {% endblock %}

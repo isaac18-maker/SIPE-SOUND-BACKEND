@@ -1,7 +1,8 @@
 # =========================================================
 # Verificacion del correo con un codigo propio (HU-B-402).
-# Ninguna respuesta revela si un correo tiene cuenta: enviar_codigo no devuelve nada y
-# verificar responde igual ante un correo inexistente, un codigo errado, vencido o usado.
+# El registro SI dice si el correo ya tiene cuenta o un registro en curso (HU-B-416): asi la
+# persona sabe si iniciar sesion o pedir otro codigo. Reenviar y verificar siguen respondiendo
+# igual ante un correo inexistente, un codigo errado, vencido o usado.
 # =========================================================
 from typing import Any, Protocol
 
@@ -9,6 +10,7 @@ from app.core.constants import (
     CORREO_VERIFICAR,
     PROPOSITO_VERIFICAR_CORREO,
     VIGENCIA_CODIGO_MIN,
+    VIGENCIA_VERIFICACION_SEGUNDOS,
 )
 from app.core.errors import ReglaNegocio
 from app.repositories.base import AbrirSesion, RepositorioCuentas
@@ -38,15 +40,30 @@ class VerificacionService:
         self._codigos = codigos
         self._correo = correo
 
-    def enviar_codigo(self, email: str) -> None:
-        """Si el correo tiene una cuenta SIN verificar, le envia un codigo nuevo. En cualquier
-        otro caso no hace nada (y quien llama no puede distinguirlo)."""
+    def estado_de_registro(self, email: str) -> dict[str, Any] | None:
+        """None si el correo no tiene cuenta. Si la tiene: `verificada` (ya puede iniciar
+        sesion) o `pendiente` (registro en curso), con los segundos que le quedan al codigo."""
+        with self._abrir_sesion() as sesion:
+            cuenta = self._cuentas.buscar_por_email(sesion, email)
+            if cuenta is None:
+                return None
+            if cuenta["verificada"]:
+                return {"estado": "verificada", "vence_en_segundos": 0}
+            restante = self._codigos.segundos_restantes(
+                sesion, cuenta["id"], PROPOSITO_VERIFICAR_CORREO
+            )
+            return {"estado": "pendiente", "vence_en_segundos": restante}
+
+    def enviar_codigo(self, email: str) -> int:
+        """Si el correo tiene una cuenta SIN verificar, le envia un codigo nuevo y devuelve los
+        segundos que dura. En cualquier otro caso devuelve 0: reenviar no usa el valor y su
+        respuesta es la misma exista o no la cuenta."""
         with self._abrir_sesion() as sesion:
             cuenta = self._cuentas.buscar_pendiente_por_email(sesion, email)
             if cuenta is None or self._codigos.hay_espera(
                 sesion, cuenta["id"], PROPOSITO_VERIFICAR_CORREO
             ):
-                return
+                return 0
             codigo = self._codigos.emitir(sesion, cuenta["id"], PROPOSITO_VERIFICAR_CORREO, email)
         # Despues de confirmar: el correo no puede llegar antes de que el codigo exista.
         self._correo.enviar(
@@ -59,6 +76,7 @@ class VerificacionService:
             },
             usuario_id=cuenta["id"],
         )
+        return VIGENCIA_VERIFICACION_SEGUNDOS
 
     def verificar(self, email: str, codigo: str) -> None:
         with self._abrir_sesion() as sesion:
