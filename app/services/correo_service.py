@@ -18,6 +18,7 @@ from app.core.constants import (
     CORREO_CAMBIAR_CORREO,
     CORREO_CONTRASENA_CAMBIADA,
     CORREO_CORREO_CAMBIADO,
+    CORREO_CURSO_ASIGNADO,
     CORREO_REAUTENTICACION,
     CORREO_RESTABLECER,
     CORREO_VERIFICAR,
@@ -42,6 +43,7 @@ ASUNTOS = {
     CORREO_CONTRASENA_CAMBIADA: "Tu contraseña de SIPE-SOUND cambió",
     CORREO_CAMBIAR_CORREO: "Confirma tu correo nuevo: {codigo}",
     CORREO_CORREO_CAMBIADO: "El correo de tu cuenta de SIPE-SOUND cambió",
+    CORREO_CURSO_ASIGNADO: "Te asignaron un curso en SIPE-SOUND: {curso}",
 }
 
 

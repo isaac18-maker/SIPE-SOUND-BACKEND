@@ -38,6 +38,6 @@ class ReasignarCursoIn(BaseModel):
 
 class CursoAdminCrear(CursoCreate):
     """POST /admin/cursos (HU-B-413): como crear un curso, y opcionalmente con docente.
-    Sin docente queda disponible para que un docente se asigne."""
+    Sin docente queda disponible hasta que el admin le asigne uno (HU-B-417)."""
 
     docente_id: UUID | None = None

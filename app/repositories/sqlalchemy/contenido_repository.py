@@ -35,14 +35,18 @@ class SqlContenidoRepository:
         filtros: tuple[str, ...],
         en_uso: CondicionUso,
         alcance: Callable[[str], ColumnElement[bool]] | None = None,
+        referencia: Callable[[Fila, str], ColumnElement[bool]] | None = None,
     ) -> None:
         """alcance: dado un docente, la condicion de lo que puede gestionar aunque no sea suyo
-        (contenido de los bloques de sus cursos, HU-B-412). Sin ella, solo lo propio."""
+        (contenido de los bloques de sus cursos, HU-B-412). Sin ella, solo lo propio.
+        referencia: dados los datos de un contenido NUEVO y un docente, si lo que referencia (el
+        bloque o la leccion) esta en el alcance del docente (HU-B-417)."""
         self._modelo = modelo
         self._texto = columna_texto
         self._filtros = filtros
         self._en_uso = en_uso
         self._alcance = alcance
+        self._referencia = referencia
         self._con_archivado = hasattr(modelo, "archivado_en")
 
     def listar(
@@ -87,6 +91,12 @@ class SqlContenidoRepository:
             exists().where(self._modelo.id == contenido_id, self._alcance(docente_id))
         )
         return bool(sesion.scalar(consulta))
+
+    def referencia_en_alcance_de(self, sesion: Session, datos: Fila, docente_id: str) -> bool:
+        """Lo que el contenido nuevo referencia esta en un curso activo del docente."""
+        if self._referencia is None:
+            return False
+        return bool(sesion.scalar(select(self._referencia(datos, docente_id))))
 
     def crear(self, sesion: Session, datos: Fila) -> Fila:
         fila = sesion.scalars(insert(self._modelo).values(**datos).returning(self._modelo)).one()

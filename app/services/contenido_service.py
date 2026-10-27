@@ -9,7 +9,13 @@
 # =========================================================
 from typing import Any, Protocol
 
-from app.core.constants import ESTADO_ARCHIVADO, ESTADO_BORRADOR, ESTADO_PUBLICADO, ROL_ADMIN
+from app.core.constants import (
+    ESTADO_ARCHIVADO,
+    ESTADO_BORRADOR,
+    ESTADO_PUBLICADO,
+    MENSAJE_SIN_CURSO_ASIGNADO,
+    ROL_ADMIN,
+)
 from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio, SinPermiso, ValidacionError
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila
@@ -41,7 +47,12 @@ class RepositorioContenido(Protocol):
     def cambiar_estado(self, sesion: Any, contenido_id: int, estado: str) -> Fila: ...
     def en_uso(self, sesion: Any, contenido_id: int) -> bool: ...
     def en_alcance_de(self, sesion: Any, contenido_id: int, docente_id: str) -> bool: ...
+    def referencia_en_alcance_de(self, sesion: Any, datos: Fila, docente_id: str) -> bool: ...
     def eliminar(self, sesion: Any, contenido_id: int) -> None: ...
+
+
+class RepositorioCursosDelDocente(Protocol):
+    def tiene_curso_activo(self, sesion: Any, docente_id: str) -> bool: ...
 
 
 class RepositorioCatalogo(Protocol):
@@ -55,6 +66,7 @@ class ContenidoService:
         abrir_sesion: AbrirSesion,
         repositorio: RepositorioContenido,
         catalogo: RepositorioCatalogo,
+        cursos: RepositorioCursosDelDocente,
         *,
         nombre: str,
         con_autor: bool,
@@ -66,6 +78,7 @@ class ContenidoService:
         self._abrir_sesion = abrir_sesion
         self._repo = repositorio
         self._catalogo = catalogo
+        self._cursos = cursos
         self._nombre = nombre
         self._con_autor = con_autor
         self._referencias = referencias
@@ -88,6 +101,7 @@ class ContenidoService:
     def crear(self, usuario: CurrentUser, datos: Fila) -> Fila:
         with self._abrir_sesion() as sesion:
             self._exigir_referencias(sesion, datos)
+            self._exigir_curso_asignado(sesion, usuario, datos)
             nuevo = {**datos, "estado": ESTADO_BORRADOR}
             if self._con_autor:
                 nuevo["autor_id"] = usuario.id
@@ -145,6 +159,16 @@ class ContenidoService:
         ):
             raise NoEncontrado(f"No existe {self._nombre} {contenido_id}")
         return fila
+
+    def _exigir_curso_asignado(self, sesion: Any, usuario: CurrentUser, datos: Fila) -> None:
+        """Un docente crea contenido solo con un curso activo asignado y dentro de la ruta de
+        sus cursos (HU-B-417). El administrador crea donde quiera."""
+        if self._ve_todo(usuario):
+            return
+        if not self._cursos.tiene_curso_activo(sesion, usuario.id):
+            raise SinPermiso(MENSAJE_SIN_CURSO_ASIGNADO)
+        if not self._repo.referencia_en_alcance_de(sesion, datos, usuario.id):
+            raise NoEncontrado("Ese bloque o lección no está en la ruta de ninguno de tus cursos.")
 
     def _con_editor(self, usuario: CurrentUser, cambios: Fila) -> Fila:
         """Deja constancia de quien modifico el contenido (HU-B-412)."""

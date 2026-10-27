@@ -176,7 +176,7 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/docente/resumen` | Totales: cursos, estudiantes, evaluaciones pendientes, actividad reciente. |
-| GET · POST | `/docente/cursos` | Listar / crear cursos propios. |
+| GET | `/docente/cursos` | Listar cursos propios (activos o `?estado=archivado`). El docente **no crea** cursos: los asigna el administrador (HU-B-417). |
 | GET · PATCH · DELETE | `/docente/cursos/{id}` | Detalle / editar / archivar (soft delete). |
 | POST | `/docente/cursos/{id}/codigo` | Regenerar código de invitación. |
 | PUT | `/docente/cursos/{id}/bloques` | Definir ruta del curso: `[{ bloque_id, orden }]`. |
@@ -184,13 +184,13 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | GET | `/docente/cursos/{id}/estudiantes/{estudiante_id}` | Detalle: progreso por lección/ejercicio e intentos. |
 | DELETE | `/docente/cursos/{id}/estudiantes/{estudiante_id}` | Retirar del curso (borra inscripción). |
 | POST | `/docente/cursos/{id}/estudiantes/{estudiante_id}/retroalimentaciones` | Enviar comentario. |
-| GET · POST | `/docente/lecciones` | Lecciones propias **y las de los bloques de tus cursos activos aunque las haya creado el admin** (HU-B-412; admin: todas) con `?estado=&bloque_id=&q=&pagina=&por_pagina=` / crear en `borrador`. |
+| GET · POST | `/docente/lecciones` | Lecciones propias **y las de los bloques de tus cursos activos aunque las haya creado el admin** (HU-B-412; admin: todas) con `?estado=&bloque_id=&q=&pagina=&por_pagina=` / crear en `borrador`. **Crear** (lección, ejercicio y evaluación) exige un curso activo asignado: 403 "Necesitas un curso asignado por el administrador para crear contenido."; y la lección/ejercicio debe quedar en un bloque de la ruta de sus cursos (404 si no) (HU-B-417). |
 | GET · PATCH · DELETE | `/docente/lecciones/{id}` | Detalle / editar / borrar (409 si tiene progreso → archivar). Cada fila trae `autor` y `modificado_por` (nombre o `null`) y `actualizado_por` (id). Un docente edita y publica lo de sus cursos aunque sea del admin, pero **solo borra lo que creó** (403 en lo ajeno: se archiva). |
 | PATCH | `/docente/lecciones/{id}/estado` | `borrador` · `publicado` · `archivado`. |
 | GET · POST | `/docente/ejercicios` | Igual que lecciones. |
 | GET · PATCH · DELETE | `/docente/ejercicios/{id}` | |
 | PATCH | `/docente/ejercicios/{id}/estado` | |
-| GET · POST | `/docente/evaluaciones` | Por curso (`?curso_id=`). El docente también ve las evaluaciones globales de los bloques que recorren sus cursos (HU-B-412): puede editarlas, cambiar su estado y ver los resultados de **sus** estudiantes; no puede crearlas ni borrar las que no creó (403: se cierran). Con `autor` y `modificado_por`. |
+| GET · POST | `/docente/evaluaciones` | Por curso (`?curso_id=`). El docente también ve las evaluaciones globales de los bloques que recorren sus cursos (HU-B-412): puede editarlas, cambiar su estado y ver los resultados de **sus** estudiantes; no puede crearlas ni borrar las que no creó (403: se cierran). Con `autor` y `modificado_por`. Crear exige un curso activo asignado (403, HU-B-417). |
 | GET · PATCH · DELETE | `/docente/evaluaciones/{id}` | Incluye preguntas **con** respuesta correcta. |
 | PUT | `/docente/evaluaciones/{id}/preguntas` | Reemplaza el set de preguntas (solo si no hay intentos). |
 | PATCH | `/docente/evaluaciones/{id}/estado` | Publicar / cerrar. |
@@ -199,9 +199,7 @@ Los administradores **nunca** se crean por la API: el primero con `scripts.promo
 | POST · DELETE | `/cursos/{id}/solicitudes` | 🎓 (10/min) | Pedir entrar a un curso → 201 / retirar la solicitud pendiente. 409 si ya estás inscrito o ya hay una pendiente; 404 si el curso no existe o está archivado. El código de invitación (`/cursos/unirse`) sigue entrando directo. |
 | GET | `/docente/solicitudes-inscripcion` | Solicitudes de inscripción a **tus** cursos (el admin, todas; también las de cursos sin docente). `?estado=pendiente\|aceptada\|rechazada&curso_id=`. Con `id`, `curso_id`, `curso`, `curso_sin_docente`, `estudiante_id`, `nombre`, `apellido`, `estado`, `creado_en`, `resuelta_en` y quién la resolvió; **sin correos**. `meta.totales`: cuántas hay de cada estado. |
 | PATCH | `/docente/solicitudes-inscripcion/{id}` | `{estado: aceptada\|rechazada}`. Aceptar crea la inscripción. 404 si no es de tus cursos (un curso sin docente solo lo resuelve el admin); 409 si ya se resolvió; 422 si el curso está archivado. |
-| GET | `/docente/cursos/disponibles` | Cursos activos sin docente que puedes tomar (HU-B-413). Solo docentes. |
-| POST | `/docente/cursos/{id}/asignarme` · `/retirarme` | Tomar un curso disponible (409 si otro docente se adelantó) / dejarlo disponible. Sus estudiantes y su ruta se conservan. |
-| POST | `/admin/cursos` | `{nombre, descripcion?, nivel, docente_id?}`. Sin `docente_id` el curso queda disponible. |
+| POST | `/admin/cursos` | `{nombre, descripcion?, nivel, docente_id?}`. Sin `docente_id` el curso queda disponible hasta que el admin le asigne uno. Con `docente_id`, ese docente recibe el correo `curso_asignado` (y se registra `asignar_curso`). |
 | GET · POST | `/me/solicitud-nombre` | 🎓🧑‍🏫🛡️ | `GET` tu última solicitud de cambio de nombre (`estado`, `mensaje`, fechas) o `null`. `POST {cuerpo}` la envía (HU-B-415): además del aviso a los administradores queda una solicitud **pendiente**; 409 si ya tienes una; 422 a un admin. |
 | GET | `/admin/solicitudes-nombre` | Solicitudes de cambio de nombre de estudiantes y docentes: `nombre`, `apellido`, `rol`, `mensaje`, `estado`, fechas y quién la resolvió; **sin correos**. `?estado=&rol=estudiante\|docente`. `meta.totales`: pendientes, aceptadas y rechazadas de cada rol. |
 | PATCH | `/admin/solicitudes-nombre/{id}` | `{estado: aceptada\|rechazada}`. Aceptar activa `puede_editar_nombre` de esa cuenta (queda en la auditoría). 409 si ya se resolvió. |
@@ -220,7 +218,8 @@ Ninguna respuesta de `/docente/progreso*` incluye correos (ni siquiera enmascara
 | GET | `/admin/docentes` | Paginado, `?q=` (nombre, apellido o correo, máx. 80). Por docente: `id`, `nombre`, `apellido`, `email` (completo), `estado`, `ultimo_acceso`, `cursos_activos`, `cursos_archivados` y `estudiantes` (distintos, en sus cursos activos). |
 | GET | `/admin/docentes/{id}/cursos` | Cursos del docente, **activos primero** y luego archivados: `id`, `nombre`, `descripcion`, `nivel`, `codigo_invitacion`, `creado_en`, `archivado_en`, `estudiantes`, `bloques_en_ruta`. 404 si la cuenta no es de un docente. |
 | GET | `/admin/cursos` | Todos los cursos, paginado. Filtros `?docente_id=&estado=activo\|archivado&q=` (nombre del curso, del docente o código). Cada fila trae `docente` y `docente_apellido`. |
-| PATCH | `/admin/cursos/{id}/docente` | `{docente_id}` → pasa el curso (también si está archivado) a otro docente **con la cuenta activa**: 422 si el destino es un estudiante, un docente sin verificar o suspendido, o el mismo docente. Los estudiantes y las evaluaciones se mantienen (cada evaluación conserva su `autor_id`). Registra `reasignar_curso` en la cuenta de origen y en la de destino. |
+| PATCH | `/admin/cursos/{id}/docente` | `{docente_id}` → **asigna** el curso (si no tenía docente) o lo **reasigna** (también si está archivado) a un docente **con la cuenta activa**: 422 si el destino es un estudiante, un docente sin verificar o suspendido, o el mismo docente. Los estudiantes y las evaluaciones se mantienen (cada evaluación conserva su `autor_id`). Registra `asignar_curso` (destino) o `reasignar_curso` (origen y destino). Al docente de destino le llega el correo `curso_asignado` **después** de confirmar; si el envío falla la asignación se conserva y queda `fallido` en `envios_correo`. |
+| DELETE | `/admin/cursos/{id}/docente` | El curso queda **disponible** (sin docente); sus estudiantes, ruta y evaluaciones se conservan. 409 si ya no tenía docente. Registra `quitar_docente_curso`. No se avisa al docente que lo pierde. |
 | GET | `/admin/cursos/{id}/estudiantes` | Igual que `/docente/cursos/{id}/estudiantes` (`?q=&orden=&pagina=&por_pagina=`), sin restricción de propiedad y con el correo **completo**. |
 | DELETE | `/admin/cursos/{id}/estudiantes/{estudiante_id}` | Revoca el acceso: borra la inscripción, **no** el progreso del estudiante. 404 si no estaba inscrito. El mensaje recuerda que, si compartió el código, el docente debe regenerarlo. Registra `revocar_curso`. |
 | DELETE | `/admin/usuarios/{id}/cursos` | Revoca **todas** sus inscripciones en cursos activos → `{revocadas: N}`. Registra una acción `revocar_curso` por curso. |

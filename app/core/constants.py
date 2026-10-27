@@ -46,6 +46,7 @@ CORREO_RESTABLECER = "restablecer_contrasena"
 CORREO_CONTRASENA_CAMBIADA = "contrasena_cambiada"
 CORREO_CAMBIAR_CORREO = "cambiar_correo"
 CORREO_CORREO_CAMBIADO = "correo_cambiado"
+CORREO_CURSO_ASIGNADO = "curso_asignado"
 TIPOS_CORREO = (
     CORREO_VERIFICAR,
     CORREO_REAUTENTICACION,
@@ -53,6 +54,7 @@ TIPOS_CORREO = (
     CORREO_CONTRASENA_CAMBIADA,
     CORREO_CAMBIAR_CORREO,
     CORREO_CORREO_CAMBIADO,
+    CORREO_CURSO_ASIGNADO,
 )
 # Codigos de verificacion (HU-B-402): proposito -> minutos de vigencia. Nunca mas de 15.
 # El del registro dura 1 minuto (HU-B-416): la persona ve la cuenta regresiva y pide otro al vencer.
@@ -93,6 +95,11 @@ TERMINOS_MAX = 60000
 MENSAJE_TERMINOS_PENDIENTES = "Lee y acepta los términos y condiciones actualizados para continuar."
 CODIGO_TERMINOS_PENDIENTES = "TERMINOS_PENDIENTES"
 
+# Un docente crea contenido solo dentro de la ruta de un curso suyo (HU-B-417).
+MENSAJE_SIN_CURSO_ASIGNADO = (
+    "Necesitas un curso asignado por el administrador para crear contenido."
+)
+
 # Auditoria del administrador (HU-B-405). Las que usan HU posteriores ya estan permitidas.
 ACCIONES_ADMIN = (
     "reenviar_verificacion",
@@ -104,6 +111,8 @@ ACCIONES_ADMIN = (
     "revocar_curso",
     "reasignar_curso",
     "permiso_nombre",
+    "asignar_curso",
+    "quitar_docente_curso",
 )
 
 ENVIO_ENVIADO = "enviado"
