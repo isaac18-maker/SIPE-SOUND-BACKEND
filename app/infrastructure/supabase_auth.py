@@ -42,6 +42,11 @@ MENSAJE_SESION_VENCIDA = "Tu sesión terminó. Inicia sesión de nuevo."
 MENSAJE_CONTRASENA_DEBIL = (
     "La contraseña es demasiado débil. Usa al menos 8 caracteres con letras y números."
 )
+CODIGOS_CORREO_RECHAZADO = {"email_address_invalid", "email_address_not_authorized"}
+MENSAJE_CORREO_RECHAZADO = (
+    "No pudimos usar ese correo. Escribe una dirección real y vuelve a intentar."
+)
+MENSAJE_REGISTRO_CERRADO = "El registro no está disponible por ahora. Inténtalo más tarde."
 
 
 class ClienteSupabaseAuth:
@@ -139,6 +144,10 @@ ERRORES_POR_CODIGO: dict[str, Callable[[], AppError]] = {
     "user_already_exists": CuentaExistente,
     "email_exists": CuentaExistente,
     "weak_password": lambda: ValidacionError(MENSAJE_CONTRASENA_DEBIL),
+    # Supabase rechaza el correo: dominio inexistente o de prueba (example.com), o, con su
+    # correo integrado, una direccion que no es del equipo del proyecto.
+    **dict.fromkeys(CODIGOS_CORREO_RECHAZADO, lambda: ValidacionError(MENSAJE_CORREO_RECHAZADO)),
+    "signup_disabled": lambda: ServicioNoDisponible(MENSAJE_REGISTRO_CERRADO),
     **dict.fromkeys(CODIGOS_CREDENCIALES, lambda: NoAutenticado(MENSAJE_CREDENCIALES)),
     **dict.fromkeys(CODIGOS_REFRESCO_INVALIDO, lambda: NoAutenticado(MENSAJE_SESION_VENCIDA)),
 }
