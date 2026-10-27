@@ -9,7 +9,7 @@ from app.container import (
     docente_service,
     solicitud_nombre_service,
 )
-from app.core.constants import ROL_ADMIN
+from app.core.constants import PROPOSITO_VERIFICAR_CORREO, ROL_ADMIN, VIGENCIA_CODIGO_MIN
 from app.core.errors import NoEncontrado
 from app.core.responses import created, ok
 from app.core.security import get_current_user, roles_required
@@ -94,8 +94,10 @@ def detalle_usuario(usuario_id):
 def reenviar_verificacion(usuario_id):
     """Envia un codigo nuevo a una cuenta con el correo sin verificar (el anterior deja de
     servir). El resultado del envio se ve en ultimo_envio_verificacion del detalle."""
-    admin_cuentas_service().reenviar_verificacion(get_current_user().id, str(usuario_id))
-    return ok(None, mensaje="Enviamos un código nuevo al correo de la cuenta.")
+    correo = admin_cuentas_service().reenviar_verificacion(get_current_user().id, str(usuario_id))
+    minutos = VIGENCIA_CODIGO_MIN[PROPOSITO_VERIFICAR_CORREO]
+    vigencia = f"{minutos} {'minuto' if minutos == 1 else 'minutos'}"
+    return ok(None, mensaje=f"Enviamos el código a {correo}. Vence en {vigencia}.")
 
 
 @bp.post("/admin/usuarios/<uuid:usuario_id>/verificacion")

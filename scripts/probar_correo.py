@@ -18,7 +18,13 @@ from app.container import correo_service
 from app.core.config import get_settings
 from app.core.constants import CORREO_VERIFICAR
 
-CONTEXTO_PRUEBA = {"nombre": "Prueba", "codigo": "000000", "minutos": 15, "prueba": True}
+CONTEXTO_PRUEBA = {
+    "nombre": "Prueba",
+    "codigo": "000000",
+    "minutos": 1,
+    "enlace": "http://localhost:5173/verificar?email=prueba%40ejemplo.co",
+    "prueba": True,
+}
 
 
 def main() -> int:

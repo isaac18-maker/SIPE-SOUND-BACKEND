@@ -31,6 +31,9 @@ CERRAR_SESIONES = text("select public.cerrar_sesiones(cast(:id as uuid), cast(:e
 CORREO_EN_USO = text(
     "select 1 from auth.users where lower(email) = :email and id <> cast(:excepto as uuid) limit 1"
 )
+# Funcion SECURITY DEFINER de la revision 0032: Supabase Auth exige email_confirmed_at para
+# iniciar sesion, asi que se confirma ahi cuando el backend verifica el correo.
+CONFIRMAR_CORREO_AUTH = text("select public.confirmar_correo_auth(cast(:id as uuid))")
 # Funcion SECURITY DEFINER de la revision 0022 (EXECUTE solo para el rol del backend).
 CAMBIAR_CORREO = text("select public.cambiar_correo(cast(:id as uuid), :email)")
 # Funcion SECURITY DEFINER de la revision 0024: se niega con un administrador.
@@ -62,6 +65,9 @@ class SqlCuentaRepository:
 
     def marcar_verificada(self, sesion: Session, usuario_id: str) -> None:
         sesion.execute(MARCAR_VERIFICADA, {"id": usuario_id})
+
+    def confirmar_en_proveedor(self, sesion: Session, usuario_id: str) -> None:
+        sesion.execute(CONFIRMAR_CORREO_AUTH, {"id": usuario_id})
 
     def datos_de_aviso(self, sesion: Session, usuario_id: str) -> Fila | None:
         filas = filas_sql(sesion, DATOS_DE_AVISO, {"id": usuario_id})

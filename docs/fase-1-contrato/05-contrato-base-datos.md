@@ -151,3 +151,16 @@ uv run alembic check
 
 - `scripts/seed_dev.py` solo corre si `APP_ENV=local`.
 - Los datos de catálogo que **deben** existir en producción (p. ej. bloques iniciales) se cargan con una revisión de **datos** idempotente (`INSERT … ON CONFLICT DO NOTHING`).
+
+## 9. Funciones `SECURITY DEFINER` sobre `auth`
+
+El backend no usa la clave `service_role` (HU-B-321): lo que necesita escribir en `auth.users` lo
+hace con funciones `SECURITY DEFINER` de `public`, con `search_path = ''` y `EXECUTE` revocado a
+`public`, `anon` y `authenticated` (Supabase expone `public` como RPC). Solo las llama el rol del backend.
+
+| Función | Revisión | Qué hace |
+|---|---|---|
+| `fijar_contrasena(uuid, text)` | 0021 | Valida y guarda el hash de la contraseña |
+| `cerrar_sesiones(uuid, uuid)` | 0021 | Borra las sesiones de la cuenta, salvo una |
+| `cambiar_correo(uuid, text)` | 0022 | Cambia el correo en `auth.users` y `auth.identities` |
+| `confirmar_correo_auth(uuid)` | 0032 | `email_confirmed_at = coalesce(email_confirmed_at, now())`: Supabase Auth rechaza el inicio de sesión de una cuenta sin confirmar, aunque el backend ya la haya verificado (`profiles.correo_verificado_en`) |

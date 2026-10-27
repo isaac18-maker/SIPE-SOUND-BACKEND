@@ -39,6 +39,7 @@ class EmisorDeCodigos(Protocol):
 
     def enviar_codigo(self, email: str) -> int: ...
     def estado_de_registro(self, email: str) -> dict[str, Any] | None: ...
+    def confirmar_si_verificada(self, email: str) -> bool: ...
 
 
 class ProveedorIdentidad(Protocol):
@@ -108,7 +109,17 @@ class AuthService:
         }
 
     def iniciar_sesion(self, datos: InicioSesionIn) -> SesionEmitida:
-        sesion = _sesion(self._proveedor.iniciar_sesion(email=datos.email, password=datos.password))
+        try:
+            respuesta = self._proveedor.iniciar_sesion(email=datos.email, password=datos.password)
+        except ReglaNegocio as sin_confirmar:
+            if not (sin_confirmar.meta or {}).get("requiere_verificacion"):
+                raise
+            # Supabase la ve sin confirmar: si el perfil ya esta verificado, se confirma y se
+            # reintenta UNA vez. Con un perfil sin verificar se mantiene el aviso (HU-B-419).
+            if not self._verificacion.confirmar_si_verificada(datos.email):
+                raise
+            respuesta = self._proveedor.iniciar_sesion(email=datos.email, password=datos.password)
+        sesion = _sesion(respuesta)
         estado = self._estado_de(sesion.publica["usuario"]["id"])
         if estado == CUENTA_SUSPENDIDA:
             self._revocar(sesion.publica["access_token"])

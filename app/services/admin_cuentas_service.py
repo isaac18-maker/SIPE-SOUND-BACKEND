@@ -34,7 +34,7 @@ from app.repositories.base import (
     RepositorioCuentas,
 )
 from app.services.codigo_service import CodigoService
-from app.services.verificacion_service import EnviadorDeCorreo
+from app.services.verificacion_service import EnviadorDeCorreo, enlace_de_verificacion
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,8 @@ class AdminCuentasService:
         correo: EnviadorDeCorreo,
         auditoria: RepositorioAcciones,
         progreso_de: Callable[[str], dict[str, Any]],
+        *,
+        origen_frontend: str,
     ) -> None:
         self._abrir_sesion = abrir_sesion
         self._cuentas_admin = cuentas_admin
@@ -63,6 +65,7 @@ class AdminCuentasService:
         self._correo = correo
         self._auditoria = auditoria
         self._progreso_de = progreso_de
+        self._origen_frontend = origen_frontend
 
     # --- Consulta -------------------------------------------------------------------------
     def listar(self, filtros: dict[str, Any]) -> tuple[list[dict], int, dict[str, int]]:
@@ -88,7 +91,8 @@ class AdminCuentasService:
         return cuenta
 
     # --- Verificacion del correo ----------------------------------------------------------
-    def reenviar_verificacion(self, admin_id: str, usuario_id: str) -> None:
+    def reenviar_verificacion(self, admin_id: str, usuario_id: str) -> str:
+        """Devuelve el correo al que se envio el codigo."""
         with self._abrir_sesion() as sesion:
             cuenta = self._obtener(sesion, usuario_id)
             if cuenta["correo_verificado_en"] is not None:
@@ -112,9 +116,11 @@ class AdminCuentasService:
                 "nombre": cuenta["nombre"],
                 "codigo": codigo,
                 "minutos": VIGENCIA_CODIGO_MIN[PROPOSITO_VERIFICAR_CORREO],
+                "enlace": enlace_de_verificacion(self._origen_frontend, cuenta["email"]),
             },
             usuario_id=usuario_id,
         )
+        return cuenta["email"]
 
     def verificar_manual(self, admin_id: str, usuario_id: str, motivo: str) -> None:
         """Para aulas donde la persona no puede abrir su correo. Es la unica forma de verificar
@@ -125,6 +131,7 @@ class AdminCuentasService:
                 raise Conflicto(MENSAJE_YA_VERIFICADA)
             # El trigger de la base aplica aqui el rol docente si el correo esta preautorizado.
             self._cuentas.marcar_verificada(sesion, usuario_id)
+            self._cuentas.confirmar_en_proveedor(sesion, usuario_id)
             self._codigos.invalidar(sesion, usuario_id, PROPOSITO_VERIFICAR_CORREO)
             self._auditoria.registrar(
                 sesion,
