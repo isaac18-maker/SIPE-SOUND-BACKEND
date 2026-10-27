@@ -28,6 +28,7 @@ from app.repositories.sqlalchemy._autoria import (
 )
 from app.repositories.sqlalchemy.accion_admin_repository import SqlAccionAdminRepository
 from app.repositories.sqlalchemy.acorde_repository import SqlAcordeRepository
+from app.repositories.sqlalchemy.actividad_docente_repository import SqlActividadDocenteRepository
 from app.repositories.sqlalchemy.admin_cuentas_repository import SqlAdminCuentasRepository
 from app.repositories.sqlalchemy.admin_docentes_repository import SqlAdminDocentesRepository
 from app.repositories.sqlalchemy.bloque_repository import SqlBloqueRepository
@@ -58,6 +59,7 @@ from app.repositories.sqlalchemy.solicitud_inscripcion_repository import (
 from app.repositories.sqlalchemy.solicitud_nombre_repository import SqlSolicitudNombreRepository
 from app.repositories.sqlalchemy.terminos_repository import SqlTerminosRepository
 from app.services.acorde_service import AcordeService
+from app.services.actividad_docente_service import ActividadDocenteService
 from app.services.admin_cuentas_service import AdminCuentasService
 from app.services.admin_cursos_service import AdminCursosService
 from app.services.auth_service import AuthService
@@ -139,9 +141,18 @@ def admin_usuarios_service() -> AdminUsuariosService:
 
 
 @lru_cache
+def actividad_docente_service() -> ActividadDocenteService:
+    return ActividadDocenteService(session_scope, SqlActividadDocenteRepository())
+
+
+@lru_cache
 def curso_service() -> CursoService:
     return CursoService(
-        session_scope, SqlCursoRepository(), SqlSeguimientoRepository(), ruta_service()
+        session_scope,
+        SqlCursoRepository(),
+        SqlSeguimientoRepository(),
+        ruta_service(),
+        actividad_docente_service(),
     )
 
 
@@ -226,6 +237,8 @@ def leccion_contenido_service() -> ContenidoService:
         SqlCursoRepository(),
         nombre="la lección",
         con_autor=True,
+        actividad=actividad_docente_service(),
+        tipo_actividad="leccion",
         referencias={"bloque_id": "bloques"},
         en_uso="La lección tiene avance de estudiantes. Archívala para ocultarla sin perderlo.",
     )
@@ -248,6 +261,8 @@ def ejercicio_contenido_service() -> ContenidoService:
         SqlCursoRepository(),
         nombre="el ejercicio",
         con_autor=True,
+        actividad=actividad_docente_service(),
+        tipo_actividad="ejercicio",
         referencias={"leccion_id": "lecciones"},
         en_uso="El ejercicio tiene avance de estudiantes. Archívalo para ocultarlo sin perderlo.",
     )
@@ -278,7 +293,10 @@ def bloque_contenido_service() -> ContenidoService:
 @lru_cache
 def gestion_evaluacion_service() -> GestionEvaluacionService:
     return GestionEvaluacionService(
-        session_scope, SqlGestionEvaluacionRepository(), curso_service()
+        session_scope,
+        SqlGestionEvaluacionRepository(),
+        curso_service(),
+        actividad_docente_service(),
     )
 
 
@@ -312,7 +330,12 @@ def recuperacion_service() -> RecuperacionService:
 
 @lru_cache
 def auth_service() -> AuthService:
-    return AuthService(ClienteSupabaseAuth(), verificacion_service(), estado_de_usuario)
+    return AuthService(
+        ClienteSupabaseAuth(),
+        verificacion_service(),
+        estado_de_usuario,
+        actividad_docente_service(),
+    )
 
 
 @lru_cache
@@ -360,7 +383,7 @@ def progreso_docente_service() -> ProgresoDocenteService:
 
 @lru_cache
 def mensajeria_service() -> MensajeriaService:
-    return MensajeriaService(session_scope, SqlMensajeriaRepository())
+    return MensajeriaService(session_scope, SqlMensajeriaRepository(), actividad_docente_service())
 
 
 @lru_cache

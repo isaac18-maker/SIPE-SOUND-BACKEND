@@ -19,6 +19,7 @@ from app.core.constants import (
 from app.core.errors import Conflicto, NoEncontrado, ReglaNegocio, SinPermiso
 from app.core.security import CurrentUser
 from app.repositories.base import AbrirSesion, Fila
+from app.services.actividad_docente_service import RegistroDeActividad
 
 MENSAJE_BORRAR_AJENA = (
     "Solo quien creó esta evaluación puede borrarla. Puedes cerrarla para que no se presente."
@@ -29,6 +30,10 @@ TRANSICIONES: dict[str, set[str]] = {
     EVALUACION_PUBLICADA: {EVALUACION_CERRADA},
     EVALUACION_CERRADA: set(),
 }
+
+
+# Acciones de actividad (HU-B-418) segun el estado al que pasa la evaluacion.
+ACCION_POR_ESTADO = {EVALUACION_PUBLICADA: "publico", EVALUACION_CERRADA: "archivo"}
 
 
 class RepositorioGestionEvaluaciones(Protocol):
@@ -64,10 +69,17 @@ class GestionEvaluacionService:
         abrir_sesion: AbrirSesion,
         evaluaciones: RepositorioGestionEvaluaciones,
         cursos: PropiedadCurso,
+        actividad: RegistroDeActividad,
     ) -> None:
         self._abrir_sesion = abrir_sesion
         self._evaluaciones = evaluaciones
         self._cursos = cursos
+        self._actividad = actividad
+
+    def _registrar(
+        self, sesion: Any, usuario: CurrentUser, accion: str, curso_id: int | None
+    ) -> None:
+        self._actividad.registrar(sesion, usuario, "evaluacion", accion, curso_id)
 
     def listar(self, usuario: CurrentUser, filtros: dict[str, Any]) -> list[Fila]:
         with self._abrir_sesion() as sesion:
@@ -95,13 +107,15 @@ class GestionEvaluacionService:
                 raise SinPermiso("Solo un administrador crea evaluaciones de bloque (globales).")
             if datos.get("curso_id") is not None:
                 self._cursos.curso_propio(sesion, usuario, datos["curso_id"], activo=True)
-            return self._evaluaciones.crear(
+            creada = self._evaluaciones.crear(
                 sesion, {**datos, "autor_id": usuario.id, "estado": EVALUACION_BORRADOR}
             )
+            self._registrar(sesion, usuario, "creo", datos.get("curso_id"))
+            return creada
 
     def actualizar(self, usuario: CurrentUser, evaluacion_id: int, cambios: Fila) -> Fila:
         with self._abrir_sesion() as sesion:
-            self._propia(sesion, usuario, evaluacion_id, bloquear=True)
+            evaluacion = self._propia(sesion, usuario, evaluacion_id, bloquear=True)
             if "porcentaje_aprobacion" in cambios and self._evaluaciones.tiene_intentos(
                 sesion, evaluacion_id
             ):
@@ -109,6 +123,7 @@ class GestionEvaluacionService:
                     "Ya hay intentos: cambiar el porcentaje de aprobación alteraría resultados "
                     "pasados. Duplica la evaluación."
                 )
+            self._registrar(sesion, usuario, "edito", evaluacion["curso_id"])
             return self._evaluaciones.actualizar(
                 sesion, evaluacion_id, {**cambios, "actualizado_por": usuario.id}
             )
@@ -117,12 +132,13 @@ class GestionEvaluacionService:
         self, usuario: CurrentUser, evaluacion_id: int, preguntas: list[Fila]
     ) -> list[Fila]:
         with self._abrir_sesion() as sesion:
-            self._propia(sesion, usuario, evaluacion_id, bloquear=True)
+            evaluacion = self._propia(sesion, usuario, evaluacion_id, bloquear=True)
             if self._evaluaciones.tiene_intentos(sesion, evaluacion_id):
                 raise ReglaNegocio(
                     "Ya hay intentos: para cambiar las preguntas, duplica la evaluación."
                 )
             self._evaluaciones.actualizar(sesion, evaluacion_id, {"actualizado_por": usuario.id})
+            self._registrar(sesion, usuario, "edito", evaluacion["curso_id"])
             return self._evaluaciones.reemplazar_preguntas(sesion, evaluacion_id, preguntas)
 
     def cambiar_estado(self, usuario: CurrentUser, evaluacion_id: int, estado: str) -> Fila:
@@ -136,6 +152,7 @@ class GestionEvaluacionService:
                 sesion, evaluacion_id
             ):
                 raise ReglaNegocio("Agrega al menos una pregunta antes de publicar.")
+            self._registrar(sesion, usuario, ACCION_POR_ESTADO[estado], actual["curso_id"])
             return self._evaluaciones.actualizar(
                 sesion, evaluacion_id, {"estado": estado, "actualizado_por": usuario.id}
             )
@@ -151,6 +168,7 @@ class GestionEvaluacionService:
                     details=[{"campo": "sugerencia", "mensaje": "cerrar"}],
                 )
             self._evaluaciones.eliminar(sesion, evaluacion_id)
+            self._registrar(sesion, usuario, "elimino", evaluacion["curso_id"])
 
     def resultados(self, usuario: CurrentUser, evaluacion_id: int) -> Fila:
         with self._abrir_sesion() as sesion:

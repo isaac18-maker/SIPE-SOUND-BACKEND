@@ -115,6 +115,41 @@ ACCIONES_ADMIN = (
     "quitar_docente_curso",
 )
 
+# Actividad del docente en la plataforma (HU-B-418): que tipo de cosa hizo y en que curso, nunca
+# el contenido. Se conserva ACTIVIDAD_RETENCION_DIAS.
+TIPOS_ACTIVIDAD = (
+    "sesion",
+    "leccion",
+    "ejercicio",
+    "evaluacion",
+    "retroalimentacion",
+    "mensaje",
+    "curso",
+)
+ACCIONES_ACTIVIDAD = (
+    "inicio",
+    "creo",
+    "edito",
+    "publico",
+    "archivo",
+    "elimino",
+    "comento",
+    "envio",
+    "retiro_estudiante",
+    "regenero_codigo",
+    "definio_ruta",
+)
+ACTIVIDAD_RETENCION_DIAS = 180
+ACTIVIDAD_LIMPIEZA_LOTE = 500
+ACTIVIDAD_INICIO_CADA_MIN = 60
+# Estado de actividad del docente: lo calcula el backend, una sola vez.
+ACTIVIDAD_ACTIVO = "activo"
+ACTIVIDAD_INACTIVO = "inactivo"
+ACTIVIDAD_SIN_ACTIVIDAD = "sin_actividad"
+ESTADOS_ACTIVIDAD = (ACTIVIDAD_ACTIVO, ACTIVIDAD_INACTIVO, ACTIVIDAD_SIN_ACTIVIDAD)
+ACTIVIDAD_ACTIVO_DIAS = 7
+ACTIVIDAD_INACTIVO_DIAS = 30
+
 ENVIO_ENVIADO = "enviado"
 ENVIO_FALLIDO = "fallido"
 ESTADOS_ENVIO = (ENVIO_ENVIADO, ENVIO_FALLIDO)
